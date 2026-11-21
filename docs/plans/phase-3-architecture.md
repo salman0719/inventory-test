@@ -1,7 +1,8 @@
 # Phase 3: Architecture and data design (Gate C review pack)
 
 - **Date:** 2026-11-21
-- **Status:** Prepared for review. Nothing here is implemented.
+- **Status:** Approved at Gate C on 2026-11-21
+  (`docs/decisions/0007-gate-c-approval.md`). Nothing here is implemented.
 - **Scope:** Implements the decisions in `0004-gate-a-scope.md` (one purchase order
   per supplier with outstanding lines, stock-on-order, staff mobile) and
   `0005-stack-hybrid-supabase.md` (Supabase Postgres and Auth, Drizzle schema and
@@ -419,9 +420,12 @@ separate connection is used), `NEXT_PUBLIC_SUPABASE_URL`,
 4. Retire the placeholder `tenants`/`memberships`/`users` tables in `db/schema.ts`
    in favour of the schema above, in one migration, before any feature code.
 
-## 12. Decisions requested at Gate C
+## 12. Decisions approved at Gate C
 
-| ID   | Decision                                                                                                     | Recommendation                                       |
+All ten were accepted as recommended on 2026-11-21; the record, and the resolved
+questions below, are in `docs/decisions/0007-gate-c-approval.md`.
+
+| ID   | Decision                                                                                                     | Outcome                                              |
 | ---- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
 | DC1  | Naming: `businesses` / `business_members`, retiring the `tenants` placeholders                               | Adopt; matches the product language and the brief    |
 | DC2  | Stock derived from the ledger with no cached column                                                          | Adopt; simpler and cannot disagree with the ledger   |
@@ -434,12 +438,14 @@ separate connection is used), `NEXT_PUBLIC_SUPABASE_URL`,
 | DC9  | Private product-image bucket with signed URLs                                                                | Adopt; tenant isolation beats convenience            |
 | DC10 | Single stock location (no `inventory_locations`)                                                             | Adopt; nothing in scope needs more                   |
 
-Open questions for the owner:
+Resolved questions:
 
-- Should a `viewer` role be able to see costs and stock value, or is that owner/
-  staff only? Current recommendation: viewer sees quantities, not money.
-- Is one open order per supplier workable when a delivery is split across two weeks
-  by the supplier? Current recommendation: yes for the prototype; the outstanding
-  lines carry across.
-- Do we need a CSV import at MVP (Phase 5 item 9), given it changes the product
-  validation surface (duplicate SKUs, units)?
+- **Viewer and money.** Viewers see quantities, never cost or stock value. RLS is
+  row-level, so this is enforced in the query layer and by rejecting the role on
+  cost endpoints; Phase 5 tests that no monetary field reaches a viewer.
+- **Split deliveries.** One open order per supplier stands: a delivery split across
+  weeks is the same order received twice, and outstanding lines carry it. Only two
+  simultaneous orders are blocked, and the UI offers the existing order instead.
+- **CSV.** Export stays in the MVP (read-only, no new validation surface). Import
+  moves to post-MVP, where it gets duplicate-SKU handling, unit parsing, partial
+  failure reporting and a dry run.

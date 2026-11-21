@@ -4,7 +4,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Overall status
 
-- Current phase: Phase 3 review pack complete — Gate C pending approval
+- Current phase: Phase 3 complete (Gate C approved 2026-11-21); Phase 4 infrastructure next — Gate D pending
 - Current deployment: none (no Supabase or Vercel project yet)
 - Last updated: 2026-11-21
 
@@ -34,11 +34,11 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ### Phase 3: Architecture
 
-- [ ] Architecture reviewed
-- [ ] Schema reviewed
-- [ ] RLS plan reviewed
-- [ ] Stock transaction design reviewed
-- [ ] Gate C approved
+- [x] Architecture reviewed
+- [x] Schema reviewed
+- [x] RLS plan reviewed
+- [x] Stock transaction design reviewed
+- [x] Gate C approved
 
 ### Phase 4: Infrastructure
 
@@ -85,6 +85,13 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-21 — Phase 3 complete; Gate C approved.** Architecture pack
+  `docs/plans/phase-3-architecture.md` accepted with all ten decisions (DC1–DC10) as
+  recommended, and the three open questions resolved in
+  `docs/decisions/0007-gate-c-approval.md`. The proposed DDL had been applied to
+  PostgreSQL 17.12 in a scratch database with assertions on tenant foreign keys, the
+  one-open-order index, over-receipt and RLS visibility; all passed. No product code
+  written.
 - **2026-11-21 — Phase 3 architecture pack prepared; Gate C pending.** Architecture,
   schema, RLS and tenant isolation, stock ledger, transactional receiving, auth and
   storage, environments, testing plan, risks and ten decision points recorded in
