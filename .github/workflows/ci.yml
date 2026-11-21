@@ -1,5 +1,7 @@
 name: ci
+
 on: [push]
+
 jobs:
   ci:
     runs-on: ubuntu-latest
@@ -8,15 +10,44 @@ jobs:
         image: postgres:17
         ports: ["5432:5432"]
         env: { POSTGRES_DB: app, POSTGRES_USER: app, POSTGRES_PASSWORD: app }
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
       mailpit:
         image: axllent/mailpit
         ports: ["1025:1025", "8025:8025"]
+    env:
+      PORT: 3000
+      APP_URL: http://localhost:3000
+      DATABASE_URL: postgresql://app:app@localhost:5432/app
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
       - run: npm run check
       - run: npm run db:migrate
       - run: npm run test:run
       - run: npm run build
       - run: npm run perf:budget
-      - run: npm run smoke
-      - run: npm run test:e2e
+      - run: npx playwright install --with-deps chromium
+      # Server and its consumers share one step: a background process from a
+      # previous step is not guaranteed to still be running here.
+      - name: smoke + e2e against a started server
+        run: |
+          npm run start > "$RUNNER_TEMP/app.log" 2>&1 &
+          for _ in $(seq 1 60); do
+            if curl -fsS "$APP_URL/" > /dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          if ! curl -fsS "$APP_URL/" > /dev/null 2>&1; then
+            echo "server did not become ready; app log follows"
+            cat "$RUNNER_TEMP/app.log"
+            exit 1
+          fi
+          npm run smoke
+          npm run test:e2e

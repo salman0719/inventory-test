@@ -14,5 +14,5 @@ async function check(path: string, expect: number) {
   if (r.status !== expect)
     throw new Error(`${path} -> ${r.status}, want ${expect}`);
 }
-await check("/login", 200);
+await check("/", 200);
 console.log(`smoke ok against ${origin}`);
