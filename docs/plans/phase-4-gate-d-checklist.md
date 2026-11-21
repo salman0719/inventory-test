@@ -137,3 +137,78 @@ Reply with approval or amendments for DD1–DD8. Approving DD1–DD8 authorises
 account creation, environment configuration and one preview deployment. It does
 not authorise a custom domain, a paid plan upgrade, or a public production launch;
 those stay separate approvals.
+
+## 10. What the owner needs to do (exact)
+
+Approved at Gate D on 2026-11-21 (`docs/decisions/0008-gate-d-approval.md`). The
+agent cannot create accounts or accept terms, so these are yours. Do not paste
+secret values into chat: put them in `.env.local` (ignored by git) and the Vercel
+dashboard.
+
+### Supabase
+
+1. Sign in at supabase.com (create an account and organisation if you have none).
+2. **New project**: name `inventory-test`, region **Sydney (ap-southeast-2)**,
+   plan **Free**. Generate a strong database password and keep it in your password
+   manager — it is needed in the connection strings and cannot be recovered later,
+   only reset.
+3. Wait for provisioning, then open **Project Settings → Database → Connect** and
+   copy the **Session pooler** connection string (host looks like
+   `aws-N-ap-southeast-2.pooler.supabase.com`, port 5432, user
+   `postgres.<project-ref>`).
+4. Open **Project Settings → API** and copy the **Project URL** and the **anon
+   public** key.
+5. Open **Authentication → URL configuration** and set:
+   - Site URL: your Vercel URL (tell me the preview URL and I will give you the
+     exact string, or set it once step 4 of Vercel is done).
+   - Redirect URLs: `http://localhost:25000/**` and
+     `https://<your-vercel-project>.vercel.app/**`.
+6. Open **Storage** and create a bucket named `product-images`, **private**, no
+   public access. I will add the tenant policy.
+7. Put these values in `.env.local`, which is ignored by git (`APP_URL` is
+   already there for local development):
+
+```
+SUPABASE_DB_URL=postgresql://postgres.<ref>:<db-password>@<session-pooler-host>:5432/postgres?sslmode=require
+NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-public-key>
+```
+
+`SUPABASE_DB_URL_APP` comes later: I create `app_user`, generate its password,
+write the URL into `.env.local` myself and tell you it is ready. Never the `postgres`
+URL in Vercel.
+
+### Vercel
+
+1. Sign in at vercel.com and **Add New → Project**, importing
+   `salman0719/inventory-test`. Keep the detected Next.js settings; no build
+   overrides.
+2. Add environment variables for **Preview and Production**:
+   - `NEXT_PUBLIC_SUPABASE_URL` — the project URL from Supabase.
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — the anon key.
+   - `APP_URL` — the deployment URL (or `http://localhost:25000` for local only).
+   - `DATABASE_URL_APP` — only after I hand it to you from `.env.local`.
+3. Do **not** add `DATABASE_URL` (owner) or `SUPABASE_SERVICE_ROLE_KEY`. The first
+   would bypass RLS; the second is deliberately unused.
+4. Deploy once and send me the preview URL.
+
+### What I need back from you (non-secret)
+
+- Confirmation the project is created, with its **project ref** and **region**.
+- The **session pooler host** (not the password).
+- Confirmation the `product-images` bucket exists and is private.
+- The **Vercel preview URL** once the first deployment finishes.
+- A yes/no on whether the working database should stay compose for day-to-day work
+  while hosted is used only for review; my default is yes.
+
+### What I do as soon as those exist
+
+1. Apply the four migrations to `SUPABASE_DB_URL` and confirm the count.
+2. Create `app_user` (login, `noinherit`, member of `authenticated`, no
+   `BYPASSRLS`), generate its password, write `SUPABASE_DB_URL_APP` into
+   `.env.local`, and verify it cannot see another tenant's rows.
+3. Run `npm run test:db` against the hosted project — the suite creates and deletes
+   its own fixtures, so it is safe on a fresh database — plus the storage policy.
+4. Give you the exact Auth Site URL and redirect strings, then verify sign-in, one
+   product create, one adjusted movement and one partial receipt on the preview
+   origin before I call anything working.

@@ -4,7 +4,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Overall status
 
-- Current phase: Phase 4 local tooling and DB tests complete; Gate D checklist prepared — awaiting approval
+- Current phase: Phase 4 hosted setup in progress (Gate D approved 2026-11-21)
 - Current deployment: none (no Supabase or Vercel project yet)
 - Last updated: 2026-11-21
 
@@ -49,7 +49,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [ ] Auth configured
 - [ ] Storage configured
 - [ ] Vercel configured
-- [ ] Gate D approved
+- [x] Gate D approved
 
 ### Phase 5: Implementation
 
@@ -87,6 +87,13 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-21 — Gate D approved.** DD1–DD8 accepted as recommended: Supabase Free
+  in Sydney, Vercel Hobby while internal, owner connection only for migrations,
+  `app_user` through the transaction pooler as `authenticated`, no service-role key,
+  private image bucket, migrations run from this machine. Record in
+  `docs/decisions/0008-gate-d-approval.md`. Nothing hosted existed at approval;
+  Phase 4 stays in progress until the hosted database is migrated and
+  `npm run test:db` passes against it.
 - **2026-11-21 — Database integration tests added; Gate D checklist prepared.**
   `tests/db/tenant-isolation.test.ts` runs against real migrations in CI and
   proves cross-tenant reads return nothing, a non-member sees nothing, and the
