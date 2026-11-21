@@ -4,7 +4,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Overall status
 
-- Current phase: Phase 1 complete (Gate A approved 2026-11-21); Phase 2 design exploration next — Gate B pending
+- Current phase: Phase 2 complete (Gate B approved 2026-11-21); Phase 3 architecture next — Gate C pending
 - Current deployment: none (no Supabase or Vercel project yet)
 - Last updated: 2026-11-21
 
@@ -26,11 +26,11 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ### Phase 2: Design exploration
 
-- [ ] Direction A interactive prototype
-- [ ] Direction B interactive prototype
-- [ ] Direction C interactive prototype
-- [ ] Comparison and recommendation
-- [ ] Gate B approved
+- [x] Direction A interactive prototype
+- [x] Direction B interactive prototype
+- [x] Direction C interactive prototype
+- [x] Comparison and recommendation
+- [x] Gate B approved
 
 ### Phase 3: Architecture
 
@@ -85,6 +85,15 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-21 — Phase 2 complete; Gate B approved.** Three interactive
+  directions and a comparison built and exercised in `local/phase-2-design/`
+  (unversioned by design). Verified in a browser: business switching, partial
+  receiving with over-receipt capped at the outstanding quantity, adjustments
+  writing one ledger row, drawer and modal flows, split-view selection, and
+  keyboard shortcuts; no console errors. Direction A adopted with B's mobile
+  receiving modal reserved as fallback; rationale in
+  `docs/decisions/0006-gate-b-design.md`, design system in
+  `docs/design-exploration.md`.
 - **2026-11-21 — Phase 1 complete; Gate A approved.** Twenty public sources
   reviewed and logged; findings, matrix and synthesis in
   `docs/competitor-research.md`; personas in `docs/personas.md`; D1–D6 accepted

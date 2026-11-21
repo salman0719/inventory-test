@@ -23,8 +23,8 @@ theming, Postgres via compose, Drizzle schema, Vitest, Playwright and a CI job t
 runs the gates, then smoke and E2E against a started server. It has **no product
 features and no authentication yet**. See `docs/implementation-status.md`.
 
-Phase 1 research is complete and Gate A is approved; Phase 2 design exploration is
-next. No product code exists yet.
+Gates A and B are approved: scope, personas and a design direction are settled.
+Phase 3 architecture is next. No product code exists yet.
 
 ## Stack
 
