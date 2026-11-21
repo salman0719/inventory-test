@@ -90,9 +90,9 @@ Add date, task, verification method, and result.
   (unversioned by design). Verified in a browser: business switching, partial
   receiving with over-receipt capped at the outstanding quantity, adjustments
   writing one ledger row, drawer and modal flows, split-view selection, and
-  keyboard shortcuts; no console errors. Direction A adopted with B's mobile
-  receiving modal reserved as fallback; rationale in
-  `docs/decisions/0006-gate-b-design.md`, design system in
+  keyboard shortcuts; no console errors. Direction C adopted, with readability
+  floors, a visible panel close and optional shortcuts recorded as required
+  fixes; rationale in `docs/decisions/0006-gate-b-design.md`, design system in
   `docs/design-exploration.md`.
 - **2026-11-21 — Phase 1 complete; Gate A approved.** Twenty public sources
   reviewed and logged; findings, matrix and synthesis in

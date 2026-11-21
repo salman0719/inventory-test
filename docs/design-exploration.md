@@ -87,83 +87,107 @@ Document:
 
 Approval: user chooses or combines a direction before full application implementation.
 
-## Selected direction (Gate B, approved 2026-11-21)
+## Selected direction (Gate B, approved 2026-11-21; revised to C)
 
-Direction A, calm operational, with Direction B's focused receiving modal reserved
-for narrow screens. Full rationale in `docs/decisions/0006-gate-b-design.md`.
+Direction C, compact and productive. First recorded with Direction A as the base
+and revised the same day at the project owner's request after reviewing the
+prototypes. Full rationale, accepted risks and mitigations are in
+`docs/decisions/0006-gate-b-design.md`.
 
-The three prototype files were built in the untracked sandbox
-(`local/phase-2-design/`) and are not versioned, so the direction is specified
-here.
+The prototype was built in the untracked sandbox (`local/phase-2-design/`) and is
+not versioned, so the direction is specified here.
 
 ### Structure
 
-- Persistent left sidebar: brand, Demo Cafe / Demo Retail switch, seven sections
-  (Dashboard, Products, Inventory, Suppliers, Purchase orders, Reports, Settings),
-  reset at the foot.
-- Dashboard: four metrics (products, stock value, needs attention, open orders),
-  then two balanced panels — needs attention with stock on order, and recent
-  movements.
-- Products and Inventory: tables with numeric alignment; search and low/out
-  filters; row opens product detail.
-- Product detail: six value boxes (on hand, on order, reorder, unit cost, stock
-  value, status), then movement history.
-- Forms: full page, with a reason field and an explicit note that on-hand is never
-  edited directly.
-- Purchase orders: list of one order per supplier showing outstanding quantity;
-  detail shows ordered / received / outstanding per line with a receive field and
-  a single receive action.
-- Mobile: sidebar becomes a horizontal section bar at 980px; tables scroll
-  horizontally; forms stack in one column.
+- 54 px icon rail: brand block, then seven sections with a glyph and short label —
+  Dash, Prod, Inv, Supp, POs, Rep, Set — with reset at the foot. The active
+  section is marked with a lighter rail background and white text.
+- 46 px top bar: product search (max 380 px) with a `/` key hint, a Cafe / Retail
+  segmented control, and a shortcut legend that hides below 900 px.
+- Split view: flexible list pane plus a 372 px contextual panel. The list takes
+  the full width when nothing is selected.
+- Dashboard: five-stat strip (products, stock value, low/out, open POs, suppliers),
+  then a needs-attention table (out of stock first, then low, with on-order), then
+  recent movements.
+- Products: table of product, SKU, on hand, reorder, on order, cost, value, status.
+  Selecting a row fills the panel instead of navigating away.
+- Inventory: the same table plus a per-row `adj` button and low/out counts in the
+  pane header.
+- Product detail panel: 2×2 key values (on hand, on order, reorder, cost), an
+  inline "Record movement" form (type, reason, quantity, save), and a compact
+  movements table. On-hand is never typed directly.
+- Purchase order panel: per-line ordered / received / outstanding with an inline
+  receive input pre-filled to outstanding and bounded by it, one Receive action,
+  line totals, and a warning that drafts reserve no stock.
+- New product and new purchase order are panel forms, not separate pages.
+- Feedback is a toast; empty search and empty needs-attention each have a written
+  state rather than a blank region.
 
 ### Design system
 
-Role tokens only, no raw palette utilities.
+Ten role tokens, no raw palette utilities.
 
-| Role token  | Prototype value        | Use                                    |
-| ----------- | ---------------------- | -------------------------------------- |
-| `ink`       | #111827                | Body text, headings                    |
-| `surface`   | #ffffff                | Panels, cards, table background        |
-| `line`      | #e5e7eb                | Borders, dividers, table rules         |
-| `accent`    | #2563eb                | Primary action, active nav, info chip  |
-| `warning`   | #b45309                | Low stock, partially received          |
-| `danger`    | #b91c1c                | Out of stock, destructive action       |
-| `success`   | #15803d                | Received, healthy stock                |
-| `info`      | #0e7490                | Secondary informational state          |
-| `on-accent` | #ffffff                | Text on accent fills                   |
-| `scrim`     | rgba(17, 24, 39, 0.45) | Overlays, if a modal is used on mobile |
+| Role token  | Value                  | Use                                   |
+| ----------- | ---------------------- | ------------------------------------- |
+| `ink`       | #0f172a                | Body text, headings, rail background  |
+| `surface`   | #ffffff                | Panels, table and form backgrounds    |
+| `line`      | #e2e8f0                | Borders, dividers, table rules        |
+| `accent`    | #4338ca                | Selection, primary action, ordered    |
+| `warning`   | #b45309                | Low stock, partially received         |
+| `danger`    | #b91c1c                | Out of stock, negative movement       |
+| `success`   | #15803d                | Received, healthy stock               |
+| `info`      | maps to `accent`       | C uses no separate informational tone |
+| `on-accent` | #ffffff                | Text on accent fills                  |
+| `scrim`     | rgba(15, 23, 42, 0.45) | Backdrop behind the mobile panel      |
 
-Open token question: the prototype also used a page canvas tint and a muted text
-weight. Neither is one of the ten roles. Resolve by adding `canvas` and `muted`
-roles, or by deriving them from `line` and `ink` at implementation time.
+Derived values, not roles: muted text #64748b, faint text #94a3b8, rail text
+#cbd5e1, panel tint #f8fafc, accent-soft #eef2ff, and soft warning/success/danger
+backgrounds. Implement these as tints derived from `ink`, `line`, `accent` and the
+status roles, or as a small documented derived set — never as raw palette classes —
+with a contrast check at implementation.
 
-**Typography.** 1.4 rem page title, 1.05 rem section, 0.94 rem body, 0.88 rem
-table, 0.83 rem meta; system font stack.
+**Typography.** Base 13 px / 1.45; table 13 px; uppercase column headers 10.5 px at
+0.07 em; panel title 13 px at 650 weight; meta and field labels 10.5–11 px; stat
+values 15 px; numeric columns in a monospaced stack with tabular figures. Nothing
+smaller than 13 px carries prose.
 
-**Spacing.** 4 / 8 / 12 / 16 / 24 px.
+**Spacing.** 2 / 4 / 6 / 8 / 10 / 12 / 16 px — tighter than A by design; the density
+is the point.
 
-**Radius and elevation.** 6 px controls, 8 px panels, 999 px chips; borders
-instead of shadows in the base direction.
+**Radius and elevation.** 3 px tags, 4 px controls, 5 px panels. No shadows; sticky
+headers and the mobile panel overlay are the only raised surfaces.
 
-**Tables.** 11 px vertical and 16 px horizontal cell padding; uppercase 0.72 rem
-column headers; quantities, costs and values right aligned with tabular numerals.
+**Tables.** 6 px vertical and 10 px horizontal cell padding, sticky header, row
+hover and a selected row with a 2 px accent inset on the left; quantities, costs and
+values right aligned and monospaced; SKU, dates and references in faint mono.
 
-**Status.** Chips carry a word as well as a colour, so status never depends on
-colour alone: draft, ordered, partially received, received, cancelled; low and
-out for stock.
+**Status.** A dot plus a word, always: ok / low / out for stock, draft / ordered /
+partially received / received for orders. Colour reinforces the label, never
+replaces it.
 
-**Components.** App shell with sidebar and business switch; metric card; panel
-with header; data table with numeric alignment; status chip; form field and
-full-page form wrapper; movement history table; stock-on-order indicator; toast;
-empty state panel; inline validation message.
+**Components.** Icon rail; command search with key hint; segmented business switch;
+stat strip; dense table with sticky header and selection; contextual detail panel;
+inline form; per-line receive input; status dot and label; toast; warning box;
+keyboard legend; empty state.
 
-**Accessibility.** No overlays in the base direction, so no focus traps; every
-action is a real button; every receiving input is labelled and bounded by the
-outstanding quantity.
+**Interaction.** `/` focuses search, `Esc` closes the panel, `a` focuses the
+adjustment quantity, `r` receives the open order, `1`–`7` switch sections. Each of
+these mirrors a visible control so the app is fully usable without a keyboard.
+
+**Responsive.** Below 900 px the panel becomes a full-width overlay above the list,
+with a visible close button and focus returned to the originating row; the shortcut
+legend hides; tables scroll horizontally; touch targets are at least 44 px. Below
+600 px the rail becomes a horizontal, labelled section bar.
+
+**Accessibility.** Real buttons for every action; labels on every input, including
+per-line receive fields, which are also bounded by the outstanding quantity; the
+selected row is announced, not just tinted; the panel is reachable by keyboard and
+its close is visible, not Esc-only.
 
 ### Rejected
 
-- Direction B as the base: card grid does not survive 160 products, and drawer /
-  modal focus handling is the highest-risk accessibility work.
-- Direction C as the base: 12.5 px density and keyboard-first interaction fail the
-  casual staff persona; the ideas worth keeping are already present in A.
+- Direction A as the base: safe and scannable, but it reads as a generic admin
+  template and spends width on chrome rather than information; kept as the fallback
+  if C fails testing.
+- Direction B as the base: the card grid does not survive 160 products, and drawer
+  and modal focus handling is the highest-risk accessibility work of the three.
