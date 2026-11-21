@@ -2,6 +2,9 @@
 
 This is a staged plan. Do not skip approval gates to save time.
 
+Slice-level progress, the current phase and the next action live in
+`docs/implementation-status.md`. Keep this file as the plan, not the log.
+
 ## Phase 0: Repository and project discovery
 
 **Goal:** Understand the starting point before changing anything.
@@ -132,6 +135,10 @@ Recommended order:
 10. Product image upload and remaining storage UX.
 
 Implement in small vertical slices. Each slice should be usable and tested.
+
+Progress: slice 1 (shell, navigation, responsive layout, business selector) is
+implemented locally and uncommitted, awaiting a layout review before
+authentication. See `docs/implementation-status.md`.
 
 ## Phase 6: Validation and hardening
 

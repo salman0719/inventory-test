@@ -4,9 +4,11 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Overall status
 
-- Current phase: Phase 4 complete except Auth redirect allowlist and the storage
-  policy; Phase 5 (core implementation) not started
-- Current deployment: none (no Supabase or Vercel project yet)
+- Current phase: Phase 5 slice 1 (shell, navigation, responsive layout, business
+  selector) implemented locally, uncommitted, awaiting layout review;
+  authentication is next and deliberately not started
+- Current deployment: Vercel stage at `https://inventory-stage.vercel.app`
+  (public, no deployment protection; it serves the committed shell, not slice 1)
 - Last updated: 2026-11-21
 
 ## Phase checklist
@@ -43,7 +45,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ### Phase 4: Infrastructure
 
-- [x] GitHub setup (repository and CI only; no Supabase or Vercel yet)
+- [x] GitHub setup (repository and CI)
 - [x] Migrations, seed and CI migration gate (local Postgres only)
 - [x] Database integration tests in CI (tenant isolation, ledger writes)
 - [x] Supabase project setup (Free, Sydney; four migrations applied; `app_user` created)
@@ -54,8 +56,8 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ### Phase 5: Implementation
 
-- [ ] App shell and navigation
-- [ ] Business selector
+- [x] App shell and navigation (local only, uncommitted pending review)
+- [x] Business selector (local only; cookie-based, pre-authentication)
 - [ ] Authentication
 - [ ] Products
 - [ ] Suppliers
@@ -82,12 +84,28 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Current blockers
 
-- None recorded.
+- Slice 1 is uncommitted by request while the layout is reviewed.
+- Authentication is not started, so the shell reads the local owner connection
+  (`DATABASE_URL`). It must not hold real tenant data before the authenticated
+  request path replaces it.
 
 ## Recently completed
 
 Add date, task, verification method, and result.
 
+- **2026-11-21 — Phase 5 slice 1 built locally, uncommitted.** Direction C shell:
+  76 px dark rail with 10 px labels from 600 px up, horizontal labelled bar below,
+  compact top bar with the demo business selector, `sr-only` full nav names, and
+  placeholder sections that state what is coming rather than showing dead
+  controls. Settings reads real business fields. Verification: `npm run check` 0
+  errors (2 pre-existing warnings), `npm run test:run` 6/6 (4 new business-selection
+  tests), `npm run build` 0 errors with all 8 routes dynamic, `secrets:check` ok.
+  The business selector was exercised in the browser: changing it fired the server
+  action (`POST /` 200) and both the header and the page switched to Demo Retail;
+  `/settings` with a `demo_business` cookie also rendered that business's name and
+  id. The 375 px accessibility tree shows the horizontal labelled bar with full
+  names. Not run: a human using the native select popup, and visual (pixel) review
+  at any width.
 - **2026-11-21 — Stage deployment live.** Vercel project `inventory-stage` at
   `https://inventory-stage.vercel.app` returns 200 with the tenant shell page, no
   deployment protection. Supabase Site URL set to the same origin; publishable key

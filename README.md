@@ -26,8 +26,12 @@ features and no authentication yet**. See `docs/implementation-status.md`.
 Gates A to D are approved: scope, personas, a design direction, the architecture
 and the hosted infrastructure plan are settled. The hosted database is migrated,
 the application role is provisioned and the stage deployment is live at
-`https://inventory-stage.vercel.app`. Authentication and the first product slices
-are next. No product code exists yet.
+`https://inventory-stage.vercel.app`.
+
+Phase 5 slice 1 is implemented locally: the Direction C shell, navigation,
+responsive layout and demo business selector, reading the local database. It is
+uncommitted pending a layout review. There is no authentication yet, so no screen
+holds real data.
 
 ## Stack
 
