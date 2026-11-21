@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
-import { databaseUrl, needsAuthShim } from "./env";
+import { databaseUrl, hostedOwnerUrl, hostedSsl, needsAuthShim } from "./env";
 
 /**
  * Apply committed migrations from db/migrations in order, exactly once.
@@ -12,8 +12,12 @@ import { databaseUrl, needsAuthShim } from "./env";
  *
  * The development auth shim runs first: the schema references auth.users, which
  * exists on Supabase but not on compose or the CI service.
+ *
+ * `--hosted` applies the same migrations to Supabase using SUPABASE_DB_URL (owner
+ * role, session pooler), so the local compose database stays the working one.
  */
 const REQUIRE_MIGRATIONS = process.argv.includes("--require-migrations");
+const HOSTED = process.argv.includes("--hosted");
 const SHIM_FILE = new URL("./dev/0001-auth-shim.sql", import.meta.url);
 
 async function appliedCount(pool: Pool): Promise<number> {
@@ -28,9 +32,13 @@ async function appliedCount(pool: Pool): Promise<number> {
 }
 
 async function main(): Promise<void> {
-  const url = databaseUrl();
+  const url = HOSTED ? hostedOwnerUrl() : databaseUrl();
   const shim = needsAuthShim(url);
-  const pool = new Pool({ connectionString: url, max: 1 });
+  const pool = new Pool({
+    connectionString: url,
+    max: 1,
+    ssl: HOSTED ? hostedSsl() : undefined,
+  });
 
   try {
     if (shim) {

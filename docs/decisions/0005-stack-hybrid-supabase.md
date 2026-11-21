@@ -23,8 +23,9 @@
   with reset, per the brief. Magic-link is not adopted.
 - **Storage:** Supabase Storage for product images; paths and metadata in Postgres.
 - **Hosting:** Vercel remains the assumed target and is unapproved until Gate D.
-- **Secrets:** the service-role key stays server-side only; the browser sees the
-  anon key and a session.
+- **Secrets:** no secret key is shipped at first; the browser sees only the
+  publishable key (`sb_publishable_…`) and a session. The legacy `anon` JWT that
+  this decision originally named is deprecated by Supabase at the end of 2026.
 
 ## Why not the other options
 

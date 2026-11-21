@@ -45,9 +45,9 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [x] GitHub setup (repository and CI only; no Supabase or Vercel yet)
 - [x] Migrations, seed and CI migration gate (local Postgres only)
 - [x] Database integration tests in CI (tenant isolation, ledger writes)
-- [ ] Supabase project setup
+- [x] Supabase project setup (Free, Sydney; four migrations applied; `app_user` created)
 - [ ] Auth configured
-- [ ] Storage configured
+- [ ] Storage configured (bucket created; tenant policy pending)
 - [ ] Vercel configured
 - [x] Gate D approved
 
@@ -87,6 +87,15 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-21 — Hosted database migrated, app role provisioned.** Applied the four
+  migrations to the Sydney Supabase project (`db:migrate:hosted`: 4 applied, re-run
+  0 of 4 tracked). Created `app_user` with `db:app-role` (login, noinherit, no
+  bypassrls, member of `authenticated`) and wrote `DATABASE_URL_APP` to
+  `.env.local`. Proved hosted isolation as `app_user`: stranger sees 0 rows across
+  four tables, ledger and receipt inserts `42501`, cross-business product insert
+  `42501` by RLS, direct select without `SET ROLE` `42501`. Compose stays the
+  day-to-day database. Key model updated to publishable/secret, since Supabase
+  deprecates `anon`/`service_role` at the end of 2026.
 - **2026-11-21 — Gate D approved.** DD1–DD8 accepted as recommended: Supabase Free
   in Sydney, Vercel Hobby while internal, owner connection only for migrations,
   `app_user` through the transaction pooler as `authenticated`, no service-role key,

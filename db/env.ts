@@ -30,6 +30,53 @@ export function databaseUrl(): string {
 }
 
 /**
+ * The hosted owner connection, used only for migrations.
+ *
+ * Supavisor exposes the same host on 5432 (session mode) and 6543 (transaction
+ * mode). Migrations need session mode: Drizzle takes a session-level advisory
+ * lock, which a transaction pooler can hand to a different backend on unlock.
+ * The dashboard's default connection string is the transaction pooler, so a
+ * 6543 URL is switched to 5432 here and the switch is logged.
+ */
+export function hostedOwnerUrl(): string {
+  loadEnv();
+  const raw = process.env.SUPABASE_DB_URL;
+  if (!raw) {
+    throw new Error(
+      "SUPABASE_DB_URL is not set. Add the Supabase session pooler owner URL to .env.local.",
+    );
+  }
+
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error("SUPABASE_DB_URL is not a valid URL.");
+  }
+
+  if (url.port === "6543") {
+    url.port = "5432";
+    console.log(
+      "hosted: URL uses the transaction pooler (6543); switching to session mode (5432) for migrations",
+    );
+  }
+
+  return url.toString();
+}
+
+/**
+ * Hosted Supabase requires TLS; compose and the CI service do not offer it.
+ *
+ * The Supavisor pooler presents a self-signed chain, so verification fails even
+ * though the connection is encrypted. This matches `sslmode=require` in
+ * Supabase's own connection strings: encryption without CA verification. It is
+ * the same trust level the dashboard string would give, not a weaker one.
+ */
+export function hostedSsl(): { rejectUnauthorized: boolean } {
+  return { rejectUnauthorized: false };
+}
+
+/**
  * The `auth.uid()` shim belongs to development and CI only. Hosted Supabase
  * already owns the `auth` schema. Decide by host so no extra variable is needed,
  * with DB_AUTH_SHIM=1|0 as an explicit override.

@@ -365,20 +365,22 @@ non-negative check, insert, return new on-hand.
 
 ## 8. Environments and deployment
 
-| Environment    | Database                  | Auth            | Notes                                        |
-| -------------- | ------------------------- | --------------- | -------------------------------------------- |
-| Local          | compose Postgres 17       | dev `auth` shim | full RLS exercised locally                   |
-| CI             | postgres:17 service       | same shim       | migrations actually applied                  |
-| Hosted dev     | Supabase project (Gate D) | Supabase Auth   | anon key in browser, service key server-only |
-| Preview / demo | Vercel preview (Gate D)   | same project    | public URL only after approval               |
+| Environment    | Database                  | Auth            | Notes                                     |
+| -------------- | ------------------------- | --------------- | ----------------------------------------- |
+| Local          | compose Postgres 17       | dev `auth` shim | full RLS exercised locally                |
+| CI             | postgres:17 service       | same shim       | migrations actually applied               |
+| Hosted dev     | Supabase project (Gate D) | Supabase Auth   | publishable key in browser, no secret key |
+| Preview / demo | Vercel preview (Gate D)   | same project    | public URL only after approval            |
 
-Env vars (names only; values never committed): `DATABASE_URL` (pooled, owner role
-for migrations), `DATABASE_URL_APP` (authenticated role for request path if a
-separate connection is used), `NEXT_PUBLIC_SUPABASE_URL`,
-`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server only),
-`APP_URL`. `.env.example` gains the new names at Gate D.
+Env vars (names only; values never committed): `DATABASE_URL` (compose, day to
+day), `SUPABASE_DB_URL` (hosted owner, session pooler, migrations only),
+`DATABASE_URL_APP` (authenticated role for the request path), `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (the `sb_publishable_…` key; legacy `anon`
+is deprecated), `SUPABASE_SECRET_KEY` (server only, unused at first), `APP_URL`.
 
-**No hosted resource exists and none will be created before Gate D.**
+Gate D was approved on 2026-11-21 (`docs/decisions/0008-gate-d-approval.md`); the
+hosted project is migrated and `app_user` exists. The compose database stays the
+day-to-day one.
 
 ## 9. Testing plan
 

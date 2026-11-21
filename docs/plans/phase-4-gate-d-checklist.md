@@ -82,15 +82,17 @@ role). Port 5432 is session mode, 6543 is transaction mode. The direct host
 Values are entered by you into `.env.local` and the Vercel dashboard. They never
 go in chat, in the repository, or in any committed file.
 
-| Name                            | Local `.env.local` | Vercel preview/production | Secret | Notes                                                              |
-| ------------------------------- | ------------------ | ------------------------- | ------ | ------------------------------------------------------------------ |
-| `DATABASE_URL`                  | yes                | **no**                    | yes    | Owner role, session pooler, port 5432. Migrations and seed only    |
-| `DATABASE_URL_APP`              | yes                | yes                       | yes    | `app_user.[ref]`, transaction pooler, port 6543, `sslmode=require` |
-| `NEXT_PUBLIC_SUPABASE_URL`      | yes                | yes                       | no     | `https://[ref].supabase.co`                                        |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | yes                | yes                       | no     | Public by design; RLS is what protects data                        |
-| `APP_URL`                       | yes                | yes                       | no     | Local origin, preview origin, or demo origin per environment       |
-| `SUPABASE_SERVICE_ROLE_KEY`     | only if needed     | **not set**               | yes    | Server-only; deliberately absent at first                          |
-| `DB_AUTH_SHIM`                  | as generated       | **no**                    | no     | Local shim switch only; hosted must never apply the shim           |
+| Name                                   | Local `.env.local` | Vercel preview/production | Secret | Notes                                                                |
+| -------------------------------------- | ------------------ | ------------------------- | ------ | -------------------------------------------------------------------- |
+| `DATABASE_URL`                         | yes                | **no**                    | yes    | Compose Postgres, day-to-day work; CI sets it directly               |
+| `SUPABASE_DB_URL`                      | yes                | **no**                    | yes    | Hosted owner, session pooler. `db:migrate:hosted` only               |
+| `DATABASE_URL_APP`                     | yes                | yes                       | yes    | `app_user.[ref]`, transaction pooler, port 6543, `sslmode=no-verify` |
+| `SUPABASE_DB_URL_APP`                  | yes                | **no**                    | yes    | Same value as `DATABASE_URL_APP`; local alias for scripts            |
+| `NEXT_PUBLIC_SUPABASE_URL`             | yes                | yes                       | no     | `https://[ref].supabase.co`                                          |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | yes                | yes                       | no     | `sb_publishable_…`; public by design, RLS protects data              |
+| `APP_URL`                              | yes                | yes                       | no     | Local origin locally; the free `*.vercel.app` alias in Vercel        |
+| `SUPABASE_SECRET_KEY`                  | only if needed     | **not set**               | yes    | `sb_secret_…` bypasses RLS; deliberately absent                      |
+| `DB_AUTH_SHIM`                         | as generated       | **no**                    | no     | Local shim switch only; hosted must never apply the shim             |
 
 Existing variables (`PORT`, `APP_URL`, Mailpit and Adminer ports) stay local-only.
 
@@ -156,8 +158,10 @@ dashboard.
    copy the **Session pooler** connection string (host looks like
    `aws-N-ap-southeast-2.pooler.supabase.com`, port 5432, user
    `postgres.<project-ref>`).
-4. Open **Project Settings → API** and copy the **Project URL** and the **anon
-   public** key.
+4. Open the **Connect** dialog (or **Project Settings → API keys**) and copy the
+   **Project URL** and the **publishable key** (`sb_publishable_…`). Do not use
+   the legacy `anon` JWT: Supabase removes `anon` and `service_role` by the end of
+   2026, and the new keys are not JWTs at all.
 5. Open **Authentication → URL configuration** and set:
    - Site URL: your Vercel URL (tell me the preview URL and I will give you the
      exact string, or set it once step 4 of Vercel is done).
@@ -169,14 +173,16 @@ dashboard.
    already there for local development):
 
 ```
-SUPABASE_DB_URL=postgresql://postgres.<ref>:<db-password>@<session-pooler-host>:5432/postgres?sslmode=require
+SUPABASE_DB_URL=postgresql://postgres.<ref>:<db-password>@<session-pooler-host>:5432/postgres
 NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-public-key>
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 ```
 
-`SUPABASE_DB_URL_APP` comes later: I create `app_user`, generate its password,
-write the URL into `.env.local` myself and tell you it is ready. Never the `postgres`
-URL in Vercel.
+`DATABASE_URL_APP` is generated by `npm run db:app-role`, which creates
+`app_user` and writes both `DATABASE_URL_APP` and `SUPABASE_DB_URL_APP` into
+`.env.local`. Never the `postgres` URL in Vercel. The app URL carries
+`sslmode=no-verify` because the Supavisor pooler presents a self-signed chain and
+`pg` 8.23 treats `require` as `verify-full`; the connection is still encrypted.
 
 ### Vercel
 
@@ -185,11 +191,15 @@ URL in Vercel.
    overrides.
 2. Add environment variables for **Preview and Production**:
    - `NEXT_PUBLIC_SUPABASE_URL` — the project URL from Supabase.
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — the anon key.
-   - `APP_URL` — the deployment URL (or `http://localhost:25000` for local only).
-   - `DATABASE_URL_APP` — only after I hand it to you from `.env.local`.
-3. Do **not** add `DATABASE_URL` (owner) or `SUPABASE_SERVICE_ROLE_KEY`. The first
-   would bypass RLS; the second is deliberately unused.
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — the `sb_publishable_…` key.
+   - `APP_URL` — the project's production alias, `https://<project>.vercel.app`.
+     No domain is purchased yet; the free alias is stable and is also the Auth
+     Site URL. Preview deployments use their own `*.vercel.app` URL and only need
+     to be in the Auth redirect allowlist.
+   - `DATABASE_URL_APP` — the value written into your `.env.local` by
+     `npm run db:app-role`.
+3. Do **not** add `DATABASE_URL` or `SUPABASE_DB_URL` (owner) or
+   `SUPABASE_SECRET_KEY`. The owner URLs bypass RLS; the secret key is unused.
 4. Deploy once and send me the preview URL.
 
 ### What I need back from you (non-secret)

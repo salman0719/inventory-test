@@ -24,8 +24,9 @@ runs the gates, then smoke and E2E against a started server. It has **no product
 features and no authentication yet**. See `docs/implementation-status.md`.
 
 Gates A to D are approved: scope, personas, a design direction, the architecture
-and the hosted infrastructure plan are settled. Hosted setup is in progress. No
-product code exists yet.
+and the hosted infrastructure plan are settled. The hosted database is migrated
+and the application role is provisioned; authentication and the first preview
+deployment are next. No product code exists yet.
 
 ## Stack
 
