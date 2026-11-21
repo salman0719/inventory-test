@@ -4,7 +4,8 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Overall status
 
-- Current phase: Phase 4 hosted setup in progress (Gate D approved 2026-11-21)
+- Current phase: Phase 4 complete except Auth redirect allowlist and the storage
+  policy; Phase 5 (core implementation) not started
 - Current deployment: none (no Supabase or Vercel project yet)
 - Last updated: 2026-11-21
 
@@ -48,7 +49,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [x] Supabase project setup (Free, Sydney; four migrations applied; `app_user` created)
 - [ ] Auth configured
 - [ ] Storage configured (bucket created; tenant policy pending)
-- [ ] Vercel configured
+- [x] Vercel configured (deployed at `https://inventory-stage.vercel.app`; env vars imported, not yet read by app code)
 - [x] Gate D approved
 
 ### Phase 5: Implementation
@@ -87,6 +88,14 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-21 — Stage deployment live.** Vercel project `inventory-stage` at
+  `https://inventory-stage.vercel.app` returns 200 with the tenant shell page, no
+  deployment protection. Supabase Site URL set to the same origin; publishable key
+  accepted by `/auth/v1/health` (200) and `/auth/v1/settings` (200, email enabled,
+  signups open). The deployed build does not read any env var yet, because no
+  product code exists, so the imported Vercel variables are unexercised. Auth
+  redirect allowlist entries for `http://localhost:25000/**` and the stage origin
+  are still to confirm.
 - **2026-11-21 — Hosted database migrated, app role provisioned.** Applied the four
   migrations to the Sydney Supabase project (`db:migrate:hosted`: 4 applied, re-run
   0 of 4 tracked). Created `app_user` with `db:app-role` (login, noinherit, no

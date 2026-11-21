@@ -106,3 +106,16 @@ review and demo checks.
 - Not yet verified hosted: the full `npm run test:db` suite, because it writes to
   `auth.users`; it runs against hosted once Phase 5 creates real users through
   Supabase Auth. Storage policy is also pending.
+
+## Stage deployment, 2026-11-21
+
+- Vercel project `inventory-stage`, origin `https://inventory-stage.vercel.app`.
+  That origin is `APP_URL` in Vercel and the Supabase Auth Site URL.
+- Verified: `/` returns 200 `text/html` with the tenant shell; Supabase
+  `/auth/v1/health` and `/auth/v1/settings` return 200 with the publishable key
+  (email provider enabled, signups allowed); no deployment protection.
+- Because no product code reads configuration yet, this proves the deployment and
+  the key, not that the Vercel environment variables reach application code.
+- Still open: Auth redirect allowlist entries, storage policy, and the first
+  authenticated request path. A public launch remains a separate approval; the
+  stage URL is public by design for review.
