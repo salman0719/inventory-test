@@ -1,12 +1,29 @@
+/**
+ * Role tokens are the only palette the UI may reference (AGENTS.md). Direction C
+ * adds a small set of derived tints, documented in 0006 DC2: neutrals from `ink`,
+ * the rail surface, and soft status backgrounds. Every derived value is checked
+ * against `surface` (#fff) and `panel` (#f8fafc) at 4.5:1 or better for text.
+ */
 :root {
-  --ink: #111;
-  --surface: #fff;
-  --line: #ddd;
-  --accent: #06c;
-  --warning: #a60;
-  --danger: #c00;
-  --success: #080;
-  --info: #08c;
-  --on-accent: #fff;
-  --scrim: rgba(0, 0, 0, 0.5);
+  --ink: #0f172a;
+  --surface: #ffffff;
+  --line: #e2e8f0;
+  --accent: #4338ca;
+  --warning: #b45309;
+  --danger: #b91c1c;
+  --success: #15803d;
+  --info: #4338ca;
+  --on-accent: #ffffff;
+  --scrim: rgb(15 23 42 / 0.55);
+
+  --ink-muted: #475569;
+  --ink-faint: #5b6a7e;
+  --rail: #0f172a;
+  --rail-ink: #cbd5e1;
+  --rail-active: #1e293b;
+  --panel: #f8fafc;
+  --accent-soft: #eef2ff;
+  --warning-soft: #fffbeb;
+  --danger-soft: #fef2f2;
+  --success-soft: #f0fdf4;
 }
