@@ -4,7 +4,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Overall status
 
-- Current phase: Phase 4 local tooling complete; hosted infrastructure next — Gate D pending
+- Current phase: Phase 4 local tooling and DB tests complete; Gate D checklist prepared — awaiting approval
 - Current deployment: none (no Supabase or Vercel project yet)
 - Last updated: 2026-11-21
 
@@ -44,6 +44,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 - [x] GitHub setup (repository and CI only; no Supabase or Vercel yet)
 - [x] Migrations, seed and CI migration gate (local Postgres only)
+- [x] Database integration tests in CI (tenant isolation, ledger writes)
 - [ ] Supabase project setup
 - [ ] Auth configured
 - [ ] Storage configured
@@ -86,6 +87,13 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-21 — Database integration tests added; Gate D checklist prepared.**
+  `tests/db/tenant-isolation.test.ts` runs against real migrations in CI and
+  proves cross-tenant reads return nothing, a non-member sees nothing, and the
+  ledger and receipts reject direct writes. Nine tests pass locally; the suite was
+  mutation-checked (RLS disabled fails four; granting INSERT on `stock_movements`
+  fails one), so the assertions are not vacuous. Gate D costs, credential split and
+  env vars are in `docs/plans/phase-4-gate-d-checklist.md`; nothing hosted created.
 - **2026-11-21 — Phase 4 local tooling complete.** `drizzle-kit` with a real config,
   three migrations (schema, placeholder retirement, RLS and tenant isolation), real
   `db:migrate` and `db:seed` runners, and a CI step that fails when no migration
