@@ -14,7 +14,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 - [x] Repository inspected
 - [x] Existing conventions documented
-- [x] Risks and assumptions listed
+- [x] Risks and assumptions listed (see `docs/plans/phase-0-assessment.md`)
 
 ### Phase 1: Product research
 
@@ -85,6 +85,9 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-21 — Phase 0 closed.** Repository assessment, proposed immediate plan
+  and the assumptions/questions list recorded in
+  `docs/plans/phase-0-assessment.md`. Gate A not yet requested.
 - **2026-11-21 — Repository assessed and shell made runnable.** Declared and
   installed the toolchain, added the configs and a minimal App Router entry, and
   fixed two scripts that failed on their own. Verified: `npm run check`,
