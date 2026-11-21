@@ -36,6 +36,7 @@ The business selector should be visible and easy to understand. Switching it mus
 - Low-stock and out-of-stock counts.
 - Open and overdue purchase orders.
 - Recent stock movements.
+- Stock on order for products with open purchase orders.
 - Useful links to common actions.
 - All figures must come from the selected business's real data.
 
@@ -53,6 +54,7 @@ The business selector should be visible and easy to understand. Switching it mus
 ### Inventory
 
 - Current stock by product.
+- Stock on order beside on-hand where an open purchase order exists.
 - Stock-in.
 - Stock-out.
 - Adjustment with reason.
@@ -102,7 +104,7 @@ The business selector should be visible and easy to understand. Switching it mus
 
 ### Demo Cafe
 
-Seed approximately 50 to 70 products/ingredients:
+Seed approximately 60 products/ingredients (Gate A decision):
 
 - Produce, meat, dairy, dry goods, beverages, packaging, cleaning supplies.
 - Several fictional suppliers.
@@ -114,7 +116,7 @@ Do not build recipes, recipe-based ingredient consumption, POS integration, or a
 
 ### Demo Retail
 
-Seed approximately 150 to 200 products:
+Seed approximately 160 products (Gate A decision):
 
 - Several categories.
 - Some simple product variants if useful.
@@ -186,3 +188,27 @@ Do not implement without approval:
 - Automated tests for critical inventory and purchasing logic.
 - Basic accessibility and keyboard usability.
 - No unnecessary infrastructure complexity.
+
+## 9. Prioritisation (Gate A, approved 2026-11-21)
+
+Detail in `docs/decisions/0004-gate-a-scope.md`; personas in `docs/personas.md`.
+
+### P0 — demo-critical
+
+Business selector and isolation; seeded datasets and safe reset; dashboard
+metrics; product CRUD with search, filter and pagination; inventory list with
+on-hand and low/out states; stock in and out; adjustment with reason; movement
+history; suppliers; purchase order with lines; PO statuses; partial and full
+receiving with outstanding quantities; stock on order; receipt records; low-stock
+list; responsive tables and forms; empty, loading, success and error states.
+
+### P1 — should ship
+
+CSV export; reports (movement, PO status, valuation); product images; archive
+products and suppliers; search on suppliers and POs; unit cost captured on
+receipt; reorder suggestions from reorder levels and stock on order.
+
+### P2 — later or requires a decision
+
+CSV import; product variants; multiple locations; expiry/batch tracking; supplier
+price comparison and variance flags.

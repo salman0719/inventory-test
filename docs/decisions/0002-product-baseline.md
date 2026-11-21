@@ -32,10 +32,10 @@
 
 - **Status:** Accepted as default direction
 - Use Supabase Storage for product images and optional attachments. Do not add
-  UploadThing. Depends on the stack decision in `0003-stack-target.md`.
+  UploadThing. Realised by the stack decision in `0005-stack-hybrid-supabase.md`.
 
 ## Supabase Auth as the auth default
 
 - **Status:** Accepted as default direction
 - Use Supabase Auth. Do not add Better Auth alongside it, and do not build a
-  custom authentication system. Depends on `0003-stack-target.md`.
+  custom authentication system. Realised by `0005-stack-hybrid-supabase.md`.

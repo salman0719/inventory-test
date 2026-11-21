@@ -4,7 +4,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Overall status
 
-- Current phase: Phase 0 complete; Phase 1 (product research) next — Gate A pending
+- Current phase: Phase 1 complete (Gate A approved 2026-11-21); Phase 2 design exploration next — Gate B pending
 - Current deployment: none (no Supabase or Vercel project yet)
 - Last updated: 2026-11-21
 
@@ -18,11 +18,11 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ### Phase 1: Product research
 
-- [ ] Public sources reviewed
-- [ ] Research log completed
-- [ ] Requirements prioritised
-- [ ] Navigation and journeys proposed
-- [ ] Gate A approved
+- [x] Public sources reviewed
+- [x] Research log completed
+- [x] Requirements prioritised
+- [x] Navigation and journeys proposed
+- [x] Gate A approved
 
 ### Phase 2: Design exploration
 
@@ -85,6 +85,13 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-21 — Phase 1 complete; Gate A approved.** Twenty public sources
+  reviewed and logged; findings, matrix and synthesis in
+  `docs/competitor-research.md`; personas in `docs/personas.md`; D1–D6 accepted
+  in `docs/decisions/0004-gate-a-scope.md` and
+  `docs/decisions/0005-stack-hybrid-supabase.md`. Verified: every claim traces to
+  a dated public source, no product code written, research deliverables in
+  `local/phase-1-discovery/`.
 - **2026-11-21 — Phase 0 closed.** Repository assessment, proposed immediate plan
   and the assumptions/questions list recorded in
   `docs/plans/phase-0-assessment.md`. Gate A not yet requested.

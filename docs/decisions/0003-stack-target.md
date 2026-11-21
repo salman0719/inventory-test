@@ -1,7 +1,7 @@
 # 0003 Stack target: Supabase or the current Postgres/Drizzle setup
 
 - **Date:** 2026-11-21
-- **Status:** Proposed — needs Approval Gate C
+- **Status:** Superseded by `0005-stack-hybrid-supabase.md` (2026-11-21)
 - **Context:** The brief targets Supabase PostgreSQL, Supabase Auth, Supabase
   Storage and Vercel, and asks to avoid Docker. This repository already ships
   Postgres 17 through `docker-compose.yml`, a Drizzle schema in `db/schema.ts`,

@@ -49,10 +49,9 @@ Current, verified:
 - Postgres 17 via `docker-compose.yml`; Drizzle schema in `db/schema.ts`
 - npm, Node 22 (`.nvmrc`), Vitest, Playwright
 
-Target direction and the auth/storage approach are in
-`docs/technical-architecture.md`. Adopting Supabase, and retiring compose and
-Drizzle, is open in `docs/decisions/0003-stack-target.md`: do not move either way
-without approval.
+Target stack: hybrid Supabase (Postgres, Auth, Storage) with Drizzle migrations,
+per `docs/decisions/0005-stack-hybrid-supabase.md`. Do not create hosted resources
+before Gate D.
 
 ## Repository rules not recorded in docs
 

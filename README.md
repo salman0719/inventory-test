@@ -23,7 +23,8 @@ theming, Postgres via compose, Drizzle schema, Vitest, Playwright and a CI job t
 runs the gates, then smoke and E2E against a started server. It has **no product
 features and no authentication yet**. See `docs/implementation-status.md`.
 
-Documentation and tooling are in place; Phase 1 discovery research is next.
+Phase 1 research is complete and Gate A is approved; Phase 2 design exploration is
+next. No product code exists yet.
 
 ## Stack
 
@@ -33,10 +34,10 @@ Current implementation:
 - Postgres 17 (`docker-compose.yml`), Drizzle schema in `db/schema.ts`
 - npm + Node 22 (`.nvmrc`), Vitest, Playwright
 
-Target direction from the brief, pending Approval Gate C: Supabase
-PostgreSQL/Auth/Storage, `shadcn/ui`, Vercel. The conflict between that target and
-the current compose/Drizzle setup is recorded in
-`docs/decisions/0003-stack-target.md`.
+Target stack, decided at Gate A: hybrid Supabase (Postgres, Auth, Storage) with
+Drizzle migrations, plus `shadcn/ui` and Vercel. See
+`docs/decisions/0005-stack-hybrid-supabase.md`; RLS mechanics are ratified at
+Gate C and no hosted resource exists yet.
 
 Keep the architecture simple. Do not introduce Redis, microservices, a separate
 backend service, Docker infrastructure beyond the local database, UploadThing,
@@ -62,6 +63,7 @@ Quality gates: `npm run check`, `npm run test`, `npm run build`,
 | `AGENTS.md`                      | Operating instructions, stack rules, approval gates    |
 | `docs/product-requirements.md`   | Product vision, scope, workflows, exclusions           |
 | `docs/product-scope.md`          | Short in/out-of-scope summary                          |
+| `docs/personas.md`               | Hypothesis personas and jobs to be done                |
 | `docs/plans/roadmap.md`          | Staged execution plan and approval gates               |
 | `docs/competitor-research.md`    | Public-source competitor research and constraints      |
 | `docs/design-exploration.md`     | Interactive design exploration requirements            |
