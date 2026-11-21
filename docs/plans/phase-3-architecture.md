@@ -15,7 +15,8 @@ pack resolves the questions it leaves open.
 
 ## 1. Current state, verified
 
-What exists today, checked in this repository:
+What exists today, checked in this repository. This is the snapshot taken at the
+Gate C review; §13 records what Phase 4 changed.
 
 - Next.js 16 App Router, React 19, TypeScript strict, Tailwind 4. One route, `/`,
   with no auth, no data access, no domain modules.
@@ -193,7 +194,7 @@ Two helper functions, both `stable`, `security definer`, `search_path` pinned to
 `public, pg_temp`:
 
 ```sql
-create function app.is_member(b uuid) returns boolean
+create function private.is_member(b uuid) returns boolean
 language sql stable security definer set search_path = public, pg_temp as $$
   select exists (
     select 1 from business_members m
@@ -202,18 +203,18 @@ language sql stable security definer set search_path = public, pg_temp as $$
 $$;
 ```
 
-and `app.has_role(b uuid, roles text[])` for owner/staff-only writes.
+and `private.has_role(b uuid, roles text[])` for owner/staff-only writes.
 
 Policy shape, one home per intent:
 
-| Table                                     | select                       | insert                              | update                                          | delete         |
-| ----------------------------------------- | ---------------------------- | ----------------------------------- | ----------------------------------------------- | -------------- |
-| businesses                                | `app.is_member(id)`          | none (service role)                 | owner                                           | none           |
-| business_members                          | `app.is_member(business_id)` | owner                               | owner                                           | owner          |
-| categories, suppliers, products           | `app.is_member(business_id)` | owner, staff                        | owner, staff                                    | none (archive) |
-| purchase_orders, purchase_order_lines     | `app.is_member(business_id)` | owner, staff                        | owner, staff (draft only, enforced in function) | none           |
-| purchase_receipts, purchase_receipt_lines | `app.is_member(business_id)` | **no direct grant** — function only | none                                            | none           |
-| stock_movements                           | `app.is_member(business_id)` | **no direct grant** — function only | none                                            | none           |
+| Table                                     | select                           | insert                              | update                                          | delete         |
+| ----------------------------------------- | -------------------------------- | ----------------------------------- | ----------------------------------------------- | -------------- |
+| businesses                                | `private.is_member(id)`          | none (service role)                 | owner                                           | none           |
+| business_members                          | `private.is_member(business_id)` | owner                               | owner                                           | owner          |
+| categories, suppliers, products           | `private.is_member(business_id)` | owner, staff                        | owner, staff                                    | none (archive) |
+| purchase_orders, purchase_order_lines     | `private.is_member(business_id)` | owner, staff                        | owner, staff (draft only, enforced in function) | none           |
+| purchase_receipts, purchase_receipt_lines | `private.is_member(business_id)` | **no direct grant** — function only | none                                            | none           |
+| stock_movements                           | `private.is_member(business_id)` | **no direct grant** — function only | none                                            | none           |
 
 RLS is enabled on every table above; default is deny with no policy. A policy is
 not a grant: the role also needs table privileges, and a table with a policy but
@@ -313,7 +314,7 @@ language plpgsql security definer set search_path = public, pg_temp
 
 Steps, all in one transaction:
 
-1. Read the order; require `app.is_member(business_id)` and owner/staff role.
+1. Read the order; require `private.is_member(business_id)` and owner/staff role.
 2. Idempotency: if `(business_id, idempotency_key)` already exists, return that
    receipt unchanged and write nothing. Concurrent duplicates collide on the unique
    index instead of double-posting.
@@ -357,7 +358,7 @@ non-negative check, insert, return new on-hand.
 - Storage: private bucket `product-images`, object path
   `{business_id}/{product_id}/{uuid}.{ext}`. Upload is server-issued; the browser
   gets a signed upload URL or posts to a route handler. Read access uses short-lived
-  signed URLs. A storage policy checks `app.is_member((storage.foldername(name))[1]::uuid)`
+  signed URLs. A storage policy checks `private.is_member((storage.foldername(name))[1]::uuid)`
   so the bucket enforces the same tenant rule as the tables.
 - Validate MIME type and size server-side; reject anything over 5 MB for the MVP.
   No attachments bucket until a real workflow needs it.
@@ -393,9 +394,9 @@ separate connection is used), `NEXT_PUBLIC_SUPABASE_URL`,
 - **E2E (Playwright):** sign-in, business switch, create product, adjust stock,
   create order, partial receive, verify on-hand and movement history. The existing
   `e2e/auth.spec.ts` is retargeted when auth lands; it currently asserts the shell.
-- **CI order:** check → migrate (real) → unit → database → build → perf → smoke + e2e.
-  The migration step must fail if it applies nothing, to stop the current vacuous
-  pass.
+- **CI order:** check → `db:migrate:ci` → `db:seed` twice → unit → database →
+  build → perf → smoke + e2e. `db:migrate:ci` fails when it applies nothing, so the
+  vacuous pass is gone.
 
 ## 10. Risks and mitigations
 
@@ -410,7 +411,7 @@ separate connection is used), `NEXT_PUBLIC_SUPABASE_URL`,
 | Money rounding                                          | `numeric` end to end, totals recomputed server-side                                                                    |
 | Migration tooling is fake today                         | Phase 4 prerequisite, below                                                                                            |
 
-## 11. Prerequisites before Phase 4 work (not product code)
+## 11. Prerequisites before Phase 4 work (all completed 2026-11-21)
 
 1. Add `drizzle-kit` and a `drizzle.config.ts`; `db:generate` must emit into
    `db/migrations`.
@@ -419,6 +420,8 @@ separate connection is used), `NEXT_PUBLIC_SUPABASE_URL`,
 3. Make the CI migration step fail when it applies zero migrations.
 4. Retire the placeholder `tenants`/`memberships`/`users` tables in `db/schema.ts`
    in favour of the schema above, in one migration, before any feature code.
+
+All four were completed on 2026-11-21; what the implementation changed is in §13.
 
 ## 12. Decisions approved at Gate C
 
@@ -449,3 +452,37 @@ Resolved questions:
 - **CSV.** Export stays in the MVP (read-only, no new validation surface). Import
   moves to post-MVP, where it gets duplicate-SKU handling, unit parsing, partial
   failure reporting and a dry run.
+
+## 13. Phase 4 implementation notes (2026-11-21)
+
+The local half of Phase 4 is built: `drizzle-kit` with a real `drizzle.config.ts`,
+three committed migrations, working `db:migrate` and `db:seed` runners, an idempotent
+seed, and a CI gate that fails when nothing is applied. No hosted resource was
+created.
+
+Four things did not survive contact with the database, recorded so the contract
+matches the code:
+
+- **The helper schema is `private`, not `app`.** Compose and CI connect as the `app`
+  user, and Postgres resolves unqualified names through `"$user", public`. Creating a
+  schema named `app` made later unqualified objects land in it: `product_stock` was
+  created in schema `app` instead of `public`. The schema is now `private` and the
+  view is explicitly `public.product_stock`.
+- **drizzle-kit emits foreign keys before the unique indexes they depend on.** The
+  composite `(business_id, id)` keys failed with `transformFkeyCheckAttrs` until the
+  generated migration was reordered: tables, then indexes, then constraints. Future
+  composite keys need the same ordering.
+- **compose does not read `.env.local`.** `new:ports` writes a random database host
+  port there, but compose interpolates `.env`, so the database was published on 4432
+  while `DATABASE_URL` said 25002. `npm run db:up` passes `--env-file .env.local`.
+- **The seed is deliberately narrow.** It creates two businesses, three demo users
+  and their memberships, idempotently, and refuses to run against a hosted database.
+  Catalogue rows arrive in Phase 5 with the UI that reads them.
+
+Verified on 2026-11-21 against PostgreSQL 17 in compose: a fresh migrate applies 3
+migrations and exits 0; a second run applies 0 and exits 0; `db:migrate:ci` on a
+current database exits 1; the seed run twice reports 2 businesses, 3 users and 3
+memberships both times; `public` holds 10 tables and the view; `tenants`,
+`memberships`, `users` and `audit_events` are absent; 24 policies exist across the 10
+tables; a cafe owner sees 1 business and 0 rows of Demo Retail; a direct
+`stock_movements` insert as `authenticated` is denied with `permission denied`.

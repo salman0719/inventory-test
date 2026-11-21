@@ -30,7 +30,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
-      - run: npm run db:migrate
+      # Fails when nothing is applied, so an empty or stale migrations folder
+      # cannot pass CI again.
+      - run: npm run db:migrate:ci
+      # Twice: the seed must be idempotent.
+      - run: npm run db:seed && npm run db:seed
       - run: npm run test:run
       - run: npm run build
       - run: npm run perf:budget
