@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NoBusinessNotice } from "@/components/no-business-notice";
 import { getActiveBusiness } from "@/lib/businesses";
 
 const STATS = [
@@ -43,7 +44,7 @@ const SECTIONS = [
 
 export default async function DashboardPage() {
   const { active } = await getActiveBusiness();
-  if (!active) return null;
+  if (!active) return <NoBusinessNotice />;
 
   return (
     <div className="flex flex-col gap-5">

@@ -1,8 +1,9 @@
+import { NoBusinessNotice } from "@/components/no-business-notice";
 import { getActiveBusiness } from "@/lib/businesses";
 
 export default async function SettingsPage() {
   const { active } = await getActiveBusiness();
-  if (!active) return null;
+  if (!active) return <NoBusinessNotice />;
 
   return (
     <section className="flex flex-col gap-4">
