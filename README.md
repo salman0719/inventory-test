@@ -1,9 +1,89 @@
-# saas-shell starter
+# Inventory pre-MVP prototype
 
-Empty multi-tenant app shell. Built from scratch; core only.
+A disposable pre-MVP inventory and purchasing product for small-to-medium
+Australian businesses, built to validate demand before investing in a production
+MVP. The code may later be discarded; the learning, workflows, design decisions,
+customer feedback and technical lessons are kept in `docs/`.
 
-Scope: docs (scope + decisions + plans + runbooks + tech-debt), compose (db + Mailpit + Adminer profile), CI order, `db/` tenants/users/memberships/audit, `src/lib` contracts, role-token CSS + one theme slot, magic-link auth, ops seams, smoke + perf-budget + E2E harness, dynamic ports.
+The demo ships two switchable business datasets on one generic inventory engine:
+**Demo Cafe** and **Demo Retail**.
 
-Core stays small: tenancy, auth, docs, and guards. Add a new domain or billing module only through a decision.
+## Start here
 
-Ports: no hardcoded app port. `PORT` is the single source. Run `npm run new:ports` on creation to generate `.env.local` (`PORT/APP_URL/DATABASE_URL/MAILPIT_URL` + compose host ports). `npm run dev` reads `PORT`.
+1. Read `AGENTS.md` completely — it carries the binding rules and approval gates.
+2. Read `docs/product-requirements.md` and `docs/plans/roadmap.md`.
+3. Complete Phase 0 discovery and design exploration before building the product.
+4. Record material choices in `docs/decisions/`.
+5. Do not skip approval gates.
+
+## Current state
+
+The repository is a runnable shell: Next.js App Router, Tailwind with role-token
+theming, Postgres via compose, Drizzle schema, Vitest, Playwright and a CI job that
+runs the gates, then smoke and E2E against a started server. It has **no product
+features and no authentication yet**. See `docs/implementation-status.md`.
+
+Documentation and tooling are in place; Phase 1 discovery research is next.
+
+## Stack
+
+Current implementation:
+
+- Next.js 16 App Router, React 19, TypeScript strict, Tailwind 4
+- Postgres 17 (`docker-compose.yml`), Drizzle schema in `db/schema.ts`
+- npm + Node 22 (`.nvmrc`), Vitest, Playwright
+
+Target direction from the brief, pending Approval Gate C: Supabase
+PostgreSQL/Auth/Storage, `shadcn/ui`, Vercel. The conflict between that target and
+the current compose/Drizzle setup is recorded in
+`docs/decisions/0003-stack-target.md`.
+
+Keep the architecture simple. Do not introduce Redis, microservices, a separate
+backend service, Docker infrastructure beyond the local database, UploadThing,
+Better Auth, or other services unless a concrete requirement justifies it and the
+user approves.
+
+## Running it
+
+```bash
+npm install
+npm run new:ports     # writes .env.local with free ports (never reuse an existing one)
+npm run dev           # reads PORT from .env.local
+```
+
+Quality gates: `npm run check`, `npm run test`, `npm run build`,
+`npm run secrets:check`. Database: `npm run db:generate`, `npm run db:migrate`,
+`npm run db:seed`.
+
+## Repository documents
+
+| File                             | Purpose                                                |
+| -------------------------------- | ------------------------------------------------------ |
+| `AGENTS.md`                      | Operating instructions, stack rules, approval gates    |
+| `docs/product-requirements.md`   | Product vision, scope, workflows, exclusions           |
+| `docs/product-scope.md`          | Short in/out-of-scope summary                          |
+| `docs/plans/roadmap.md`          | Staged execution plan and approval gates               |
+| `docs/competitor-research.md`    | Public-source competitor research and constraints      |
+| `docs/design-exploration.md`     | Interactive design exploration requirements            |
+| `docs/technical-architecture.md` | Architecture and implementation principles             |
+| `docs/database-schema.md`        | Initial data model guidance                            |
+| `docs/decisions/`                | Decision log, one file per decision                    |
+| `docs/implementation-status.md`  | Progress and verification tracking                     |
+| `docs/known-limitations.md`      | Prototype limitations and risks                        |
+| `docs/customer-validation.md`    | Demo script and customer interview notes               |
+| `docs/mvp-recommendations.md`    | Lessons and recommendations for a later production MVP |
+
+## Definition of success
+
+A potential customer can use the demo without coaching to:
+
+1. Find a product and understand its current stock.
+2. Identify a low-stock item.
+3. Create a purchase order for a supplier.
+4. Receive all or part of that order.
+5. See the stock ledger and current quantity update correctly.
+6. Record a manual adjustment such as wastage or a stock count correction.
+7. Understand recent activity from the dashboard and reports.
+
+The demo should look credible, work on desktop and mobile, and allow switching
+between the Cafe and Retail datasets without cross-business data leakage.
