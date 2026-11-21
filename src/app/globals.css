@@ -1,0 +1,15 @@
+@import "tailwindcss";
+@import "./theme.css";
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-info: var(--info);
+  --color-on-accent: var(--on-accent);
+  --color-scrim: var(--scrim);
+}

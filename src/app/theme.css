@@ -1,0 +1,12 @@
+:root {
+  --ink: #111;
+  --surface: #fff;
+  --line: #ddd;
+  --accent: #06c;
+  --warning: #a60;
+  --danger: #c00;
+  --success: #080;
+  --info: #08c;
+  --on-accent: #fff;
+  --scrim: rgba(0, 0, 0, 0.5);
+}

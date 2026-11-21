@@ -1,0 +1,22 @@
+name: ci
+on: [push]
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        ports: ["5432:5432"]
+        env: { POSTGRES_DB: app, POSTGRES_USER: app, POSTGRES_PASSWORD: app }
+      mailpit:
+        image: axllent/mailpit
+        ports: ["1025:1025", "8025:8025"]
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm run check
+      - run: npm run db:migrate
+      - run: npm run test:run
+      - run: npm run build
+      - run: npm run perf:budget
+      - run: npm run smoke
+      - run: npm run test:e2e
