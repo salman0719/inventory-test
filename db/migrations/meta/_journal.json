@@ -22,6 +22,13 @@
       "when": 1795271034740,
       "tag": "0002_rls_and_tenant_isolation",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795271757976,
+      "tag": "0003_private_schema_usage",
+      "breakpoints": true
     }
   ]
 }

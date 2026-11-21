@@ -36,6 +36,9 @@ jobs:
       # Twice: the seed must be idempotent.
       - run: npm run db:seed && npm run db:seed
       - run: npm run test:run
+      # Real Postgres, real migrations: cross-tenant reads and ledger write
+      # protection are proved here, not by hand.
+      - run: npm run test:db
       - run: npm run build
       - run: npm run perf:budget
       - run: npx playwright install --with-deps chromium

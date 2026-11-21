@@ -18,6 +18,7 @@
     "check": "npm run lint && npm run typecheck && npm run format:check",
     "test": "vitest run",
     "test:run": "vitest run",
+    "test:db": "vitest run --config vitest.db.config.ts",
     "test:e2e": "playwright test",
     "smoke": "tsx scripts/smoke.ts",
     "perf:budget": "tsx scripts/perf-budget.ts",
