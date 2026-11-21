@@ -4,7 +4,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Overall status
 
-- Current phase: Phase 2 complete (Gate B approved 2026-11-21); Phase 3 architecture next — Gate C pending
+- Current phase: Phase 3 review pack complete — Gate C pending approval
 - Current deployment: none (no Supabase or Vercel project yet)
 - Last updated: 2026-11-21
 
@@ -85,6 +85,16 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-21 — Phase 3 architecture pack prepared; Gate C pending.** Architecture,
+  schema, RLS and tenant isolation, stock ledger, transactional receiving, auth and
+  storage, environments, testing plan, risks and ten decision points recorded in
+  `docs/plans/phase-3-architecture.md`. Verified while writing: `drizzle-kit` is not
+  installed, `db/migrations/` is empty, `db/migrate.ts` and `db/seed.ts` only print,
+  and the CI migration step therefore passes without touching a database — listed as
+  Phase 4 prerequisites. The proposed DDL was also applied to PostgreSQL 17.12 in
+  a scratch database with assertions on cross-tenant foreign keys, the
+  one-open-order index, over-receipt and RLS visibility; all passed. No schema or
+  product code in the repository changed.
 - **2026-11-21 — Phase 2 complete; Gate B approved.** Three interactive
   directions and a comparison built and exercised in `local/phase-2-design/`
   (unversioned by design). Verified in a browser: business switching, partial
