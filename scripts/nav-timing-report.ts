@@ -87,13 +87,17 @@ for (const label of [
 }
 
 // Tenant transactions per page load. Each transaction logs one `tenant.connect`,
-// and each request starts at its `proxy.auth`, so the count needs grouping even
-// though no combined timing is reported.
+// and each request starts at its proxy check — `proxy.claims` now, `proxy.auth` on
+// the requests that fall back — so the count needs grouping even though no combined
+// timing is reported.
+const startsRequest = (label: string) =>
+  label === "proxy.claims" || label === "proxy.auth";
+
 const sorted = [...SAMPLES].sort((a, b) => a.t - b.t);
 const groups: Sample[][] = [];
 for (const sample of sorted) {
   const current = groups.at(-1);
-  if (sample.label === "proxy.auth" || current === undefined)
+  if (startsRequest(sample.label) || current === undefined)
     groups.push([sample]);
   else current.push(sample);
 }
