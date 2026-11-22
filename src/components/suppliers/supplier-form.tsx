@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState, useState, type ChangeEvent } from "react";
 import {
   saveSupplier,
   type SupplierFormState,
 } from "@/app/(app)/suppliers/actions";
+import { PanelLink } from "@/components/panel-link";
 import type { SupplierDefaults } from "@/lib/supplier-defaults";
 
 const INPUT =
@@ -143,12 +143,13 @@ export function SupplierForm({
         >
           {pending ? "Saving…" : "Save supplier"}
         </button>
-        <Link
+        {/* Closes the panel the same way its Close button does: no page render. */}
+        <PanelLink
           href={cancelHref}
           className="inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-2.5 text-[12px] font-medium hover:border-accent hover:text-accent"
         >
           Cancel
-        </Link>
+        </PanelLink>
       </div>
     </form>
   );

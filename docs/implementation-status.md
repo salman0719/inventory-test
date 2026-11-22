@@ -145,6 +145,10 @@ Add date, task, verification method, and result.
   errors (2 pre-existing warnings), `npm run test` 103/103 across 20 files. Not
   checked with a screen reader: the announcement's wording and timing are unverified
   by ear, and no panel has been opened signed in.
+  The three forms' Cancel links (`ProductForm`, `SupplierForm`, `PurchaseOrderForm`)
+  now use `PanelLink` too, so cancelling closes the panel with a `replaceState`
+  instead of a page render; `PanelLink` degrades to a normal link outside a provider,
+  so a form rendered without one still works.
 - **2026-11-22 — Every list panel opens without a page render, and Back closes it.**
   Inventory, suppliers and purchase orders joined products. Each screen has its own
   endpoint (`/api/inventory/panel`, `/api/suppliers/panel`,
