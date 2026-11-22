@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { formatMoney } from "@/lib/product-input";
 import type { PurchaseOrderSummary } from "@/lib/purchase-orders";
+import { PanelLink } from "../panel-link";
 import { OrderStatusLabel } from "./order-status-label";
 
 const TH =
@@ -25,13 +25,11 @@ function formatDay(value: string | null): string {
 export function PurchaseOrderTable({
   orders,
   currency,
-  selectedId,
   rowHref,
   canViewValues = true,
 }: {
   orders: PurchaseOrderSummary[];
   currency: string;
-  selectedId: string;
   rowHref: (orderId: string) => string;
   /** Viewers do not receive order values. */
   canViewValues?: boolean;
@@ -69,7 +67,6 @@ export function PurchaseOrderTable({
         </thead>
         <tbody>
           {orders.map((order) => {
-            const selected = order.id === selectedId;
             const progress =
               order.status === "received"
                 ? "all received"
@@ -77,24 +74,17 @@ export function PurchaseOrderTable({
             return (
               <tr
                 key={order.id}
-                className={`border-b border-line last:border-b-0 ${
-                  selected ? "bg-accent-soft" : "hover:bg-panel"
-                }`}
+                className="border-b border-line last:border-b-0 hover:bg-panel"
               >
-                <td
-                  className={`${TD} ${
-                    selected
-                      ? "border-l-2 border-accent"
-                      : "border-l-2 border-transparent"
-                  }`}
-                >
-                  <Link
+                <td className={`${TD} border-l-2 border-transparent`}>
+                  {/* The open row is marked by the link's own state, because the
+                      panel opens without a page render. */}
+                  <PanelLink
                     href={rowHref(order.id)}
-                    aria-current={selected ? "true" : undefined}
                     className="font-mono font-medium hover:text-accent"
                   >
                     {order.orderNumber}
-                  </Link>
+                  </PanelLink>
                 </td>
                 <td className={`${TD} text-ink-muted`}>{order.supplierName}</td>
                 <td className={`${TD} text-ink-muted`}>

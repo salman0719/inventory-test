@@ -1,5 +1,7 @@
-import Link from "next/link";
+"use client";
+
 import type { ReactNode } from "react";
+import { PanelLink } from "@/components/panel-link";
 import { formatMoney, formatQuantity } from "@/lib/product-input";
 import { canReceive, outstandingQuantity } from "@/lib/purchase-order-input";
 import type { PurchaseOrderDetail } from "@/lib/purchase-orders";
@@ -91,13 +93,13 @@ export function PurchaseOrderPanel({
             {order.supplierName}
           </p>
         </div>
-        <Link
+        <PanelLink
           href={closeHref}
           aria-label="Close order panel"
           className={`${BUTTON} ml-auto shrink-0`}
         >
           Close
-        </Link>
+        </PanelLink>
       </header>
 
       {message !== "" ? (
@@ -140,9 +142,9 @@ export function PurchaseOrderPanel({
 
       {order.status === "draft" && canViewValues ? (
         <div className="flex items-center gap-2 border-t border-line px-3 py-2">
-          <Link href={editHref} className={BUTTON}>
+          <PanelLink href={editHref} className={BUTTON}>
             Edit draft
-          </Link>
+          </PanelLink>
           <span className="text-[11px] text-ink-muted">
             A draft is not visible to the supplier yet.
           </span>
