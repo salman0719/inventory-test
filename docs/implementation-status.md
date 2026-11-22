@@ -4,13 +4,14 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Overall status
 
-- Current phase: Phase 5. Slices 1 and 3–8 are committed — shell/selector,
+- Current phase: Phase 5. Slices 1 and 3–9 are committed — shell/selector,
   Supabase Auth with the authenticated `app_user` request path, products and
   categories, suppliers, the stock ledger with inventory screens, purchase orders
-  with transactional receiving, and the dashboard. The Supabase account
-  `owner@cafe.test` is linked to the local Demo Cafe, so signing in with it renders
-  real catalogue data. Slice 9 (reports and CSV export) is implemented locally and
-  uncommitted, awaiting review. Slice 2 (reset workflow) is still outstanding
+  with transactional receiving, the dashboard, and reports with CSV export. The
+  Supabase account `owner@cafe.test` is linked to the local Demo Cafe, so signing in
+  with it renders real catalogue data. Slice 2 (the demo reset workflow) is
+  committed as `906a7c2`; every Phase 5 slice is now built apart from product
+  images and CSV import
 - Current deployment: Vercel stage at `https://inventory-stage.vercel.app`
   (public, no deployment protection; it serves the committed shell, not slices 1
   and 3)
@@ -72,11 +73,11 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [x] Purchase orders (committed `5691948`; drafts, ordering, cancelling)
 - [x] Partial receiving (committed `5691948`; `private.receive_purchase_order`)
 - [x] Dashboard (committed `0291bad`; live figures, needs attention, movements)
-- [x] Reports (local, uncommitted; stock, low stock, movements, order status, valuation)
-- [x] CSV export (local, uncommitted; every report, filters respected)
+- [x] Reports (committed `d2d0149`; stock, low stock, movements, order status, valuation)
+- [x] CSV export (committed `d2d0149`; every report, filters respected)
 - [ ] CSV import (P2: not started, no decision to build it)
 - [ ] Image upload
-- [ ] Seed and reset (catalogue seeded; reset workflow outstanding)
+- [x] Seed and reset (committed `906a7c2`; `private.reset_demo_business` and the Settings panel)
 
 ### Phase 6: Validation
 
@@ -91,8 +92,8 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Current blockers
 
-- Slice 9 is implemented and uncommitted, awaiting review; slices 1 and 3–8 are
-  committed.
+- Phase 5 is complete apart from product image upload (slice 10) and CSV import
+  (P2, not started); slices 1–9 are committed. Phase 6 validation has not started.
 - Verification note, not a page defect: when the automated preview tab is
   hidden (`document.visibilityState` is `hidden`), React defers the streamed
   Suspense reveal to `requestAnimationFrame`, which a hidden tab pauses. The
@@ -109,7 +110,41 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
-- **2026-11-22 — Phase 5 slice 9 built locally, uncommitted.** Reports and CSV
+- **2026-11-22 — Phase 5 slice 2 committed as `906a7c2`.** Demo reset. Settings
+  gains a Demo data panel showing what the business currently holds (products,
+  categories, suppliers, orders, movements, receipts) and a typed-confirmation
+  reset. The work goes through `private.reset_demo_business(business_id, payload)`,
+  a `SECURITY DEFINER` function that checks the caller owns the business, deletes
+  its rows in foreign-key order (receipt lines, receipts, order lines, orders,
+  ledger, products, suppliers, categories) and rebuilds the catalogue, opening
+  balances and demonstration orders from the payload. The payload is built from
+  `db/seed-demo.ts`, which `db:seed` now also uses, so a reset lands on exactly the
+  seeded baseline rather than a second, drifting copy: 60 cafe products, 160 retail
+  lines, 9/6 suppliers and the same two cafe orders (PO-0001 ordered, PO-0002
+  draft). The function bounds the payload (50 categories, 50 suppliers, 500
+  products, 20 orders), refuses any status other than draft/ordered, and raises
+  rather than writing a product or order line it cannot resolve. The app still
+  never holds an owner connection; owners see the panel, staff and viewers get a
+  line saying only an owner can reset. Verified: seed refactored and run twice with
+  identical output (2 businesses, 3 demo users, 4 memberships, 220 products, 219
+  opening movements, 2 purchase orders); unit 72/72 (6 new for the payload);
+  database 44/44 (6 new: rebuild and reported counts, the payload's on-hand and
+  order values, another business untouched, staff/viewer/stranger refused with the
+  same message, no-session refusal, and rollback when an order line names an
+  unknown product); check 0 errors (2 pre-existing warnings); production build 0
+  errors; `secrets:check` ok. In a browser as `owner@cafe.test`, the panel read 60
+  products, 9 categories, 9 suppliers, 2 orders, 60 movements and 0 receipts after
+  a deliberate 2 kg stock-in, the button stayed disabled until RESET was typed, and
+  the reset reported "Demo data restored: 60 products, 9 suppliers, 2 orders and 59
+  opening movements." Postgres then showed the drift gone (tomatoes 18 again, 59
+  movements, no receipts, PO-0001 ordered with three lines and nothing received,
+  PO-0002 still draft) and the retail business untouched at 160 products and 160
+  movements; the dashboard returned to $4,505.30 with one open order and $131.80 on
+  order. Not verified: a staff or viewer signed in against the panel (the database
+  refuses them, and the screen reads the role); the retail business's reset in a
+  browser (only the cafe account is linked, though the retail payload is unit
+  tested); narrow widths and touch targets.
+- **2026-11-22 — Phase 5 slice 9 committed as `d2d0149`.** Reports and CSV
   export. The placeholder is replaced by five reports over the same rows the
   operational screens use: stock on hand (search, stock status), low stock (the
   same query pinned to shortages, out of stock first), the movement ledger with a

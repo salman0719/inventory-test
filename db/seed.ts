@@ -4,17 +4,12 @@ import { Pool } from "pg";
 import { databaseUrl, needsAuthShim } from "./env";
 import * as schema from "./schema";
 import {
-  CAFE_CATEGORIES,
-  CAFE_PRODUCTS,
-  CAFE_SUPPLIER_BY_CATEGORY,
-  CAFE_SUPPLIERS,
-  RETAIL_CATEGORIES,
-  RETAIL_PRODUCTS,
-  RETAIL_SUPPLIER_BY_CATEGORY,
-  RETAIL_SUPPLIERS,
-  type SeedProduct,
-  type SeedSupplier,
-} from "./seed-catalogue";
+  CATALOGUES,
+  DEMO_BUSINESSES,
+  DEMO_ORDERS,
+  demoProductSku,
+  type DemoCatalogue,
+} from "./seed-demo";
 
 /**
  * Idempotent demo seed: two businesses, three demo users, their memberships,
@@ -30,21 +25,6 @@ import {
  * Development and CI only: it writes to auth.users, which Supabase owns. A hosted
  * database is rejected until Phase 5 adds a Supabase Auth seeding path.
  */
-const DEMO_BUSINESSES = [
-  {
-    id: "11111111-1111-1111-1111-111111111111",
-    name: "Demo Cafe",
-    businessType: "cafe",
-    currencyCode: "AUD",
-  },
-  {
-    id: "22222222-2222-2222-2222-222222222222",
-    name: "Demo Retail",
-    businessType: "retail",
-    currencyCode: "AUD",
-  },
-] as const;
-
 /**
  * Reserved `.invalid` addresses (RFC 2606), deliberately unusable as real
  * accounts. `email` is unique in both this shim and Supabase Auth, so fixtures
@@ -65,36 +45,6 @@ const DEMO_USERS = [
     email: "staff@demo-cafe.invalid",
   },
 ] as const;
-
-/** Each business's catalogue, with the owner who signs the opening balances. */
-const CATALOGUES: ReadonlyArray<{
-  businessId: string;
-  skuPrefix: string;
-  categories: readonly string[];
-  products: SeedProduct[];
-  suppliers: SeedSupplier[];
-  supplierByCategory: Record<string, string>;
-  ownerId: string;
-}> = [
-  {
-    businessId: DEMO_BUSINESSES[0].id,
-    skuPrefix: "CAF",
-    categories: CAFE_CATEGORIES,
-    products: CAFE_PRODUCTS,
-    suppliers: CAFE_SUPPLIERS,
-    supplierByCategory: CAFE_SUPPLIER_BY_CATEGORY,
-    ownerId: DEMO_USERS[0].id,
-  },
-  {
-    businessId: DEMO_BUSINESSES[1].id,
-    skuPrefix: "RET",
-    categories: RETAIL_CATEGORIES,
-    products: RETAIL_PRODUCTS,
-    suppliers: RETAIL_SUPPLIERS,
-    supplierByCategory: RETAIL_SUPPLIER_BY_CATEGORY,
-    ownerId: DEMO_USERS[1].id,
-  },
-];
 
 const DEMO_MEMBERSHIPS = [
   {
@@ -119,10 +69,7 @@ const DEMO_MEMBERSHIPS = [
  * role allowed to write opening movements: the application role can read the
  * ledger but never insert into it directly.
  */
-async function seedCatalogue(
-  pool: Pool,
-  catalogue: (typeof CATALOGUES)[number],
-) {
+async function seedCatalogue(pool: Pool, catalogue: DemoCatalogue) {
   for (const name of catalogue.categories) {
     await pool.query(
       `insert into categories (business_id, name)
@@ -174,7 +121,7 @@ async function seedCatalogue(
 
   for (const [index, product] of catalogue.products.entries()) {
     const [name, category, unit, cost, price, reorder, onHand] = product;
-    const sku = `${catalogue.skuPrefix}-${String(index + 1).padStart(3, "0")}`;
+    const sku = demoProductSku(catalogue.skuPrefix, index);
 
     const supplierName = catalogue.supplierByCategory[category];
     const saved = await pool.query<{ id: string }>(
@@ -230,76 +177,64 @@ async function seedCatalogue(
 }
 
 /**
- * One ordered and one draft purchase order for the cafe.
+ * The demonstration orders: one ordered with three produce lines, one draft with
+ * two dairy lines.
  *
- * Guarded on both the order number and the supplier's open order, because the
+ * Each order is guarded on its number and on the supplier's open order, because the
  * database allows only one open order per supplier: a database used for a while
  * before re-seeding must not fail, and a second run must add nothing.
  */
 async function seedPurchaseOrders(pool: Pool): Promise<void> {
   const businessId = DEMO_BUSINESSES[0].id;
 
-  const ordered = await pool.query<{ id: string }>(
-    `insert into purchase_orders
-       (business_id, supplier_id, order_number, status, ordered_at,
-        expected_delivery_at, notes)
-     select $1, s.id, 'PO-0001', 'ordered', now() - interval '2 days',
-            current_date + 3,
-            'Weekly produce order. Check the tomatoes before signing.'
-       from suppliers s
-      where s.business_id = $1 and s.name = 'Fresh Fields Produce'
-        and not exists (
-          select 1 from purchase_orders po
-           where po.business_id = $1 and po.order_number = 'PO-0001'
-        )
-        and not exists (
-          select 1 from purchase_orders po
-           where po.business_id = $1 and po.supplier_id = s.id
-             and po.status in ('draft', 'ordered', 'partially_received')
-        )
-     returning id`,
-    [businessId],
-  );
-
-  if (ordered.rows[0]) {
-    await pool.query(
-      `insert into purchase_order_lines
-         (business_id, purchase_order_id, product_id, quantity_ordered, unit_cost)
-       select $1, $2, p.id, v.quantity, p.cost_price
-         from (values ('CAF-001', 12::numeric), ('CAF-004', 20::numeric),
-                      ('CAF-011', 3::numeric)) as v(sku, quantity)
-         join products p on p.business_id = $1 and p.sku = v.sku`,
-      [businessId, ordered.rows[0].id],
+  for (const order of DEMO_ORDERS) {
+    const saved = await pool.query<{ id: string }>(
+      `insert into purchase_orders
+         (business_id, supplier_id, order_number, status, ordered_at,
+          expected_delivery_at, notes)
+       select $1, s.id, $2, $3::text,
+              case
+                when $4::int is null then null
+                else now() - ($4::int || ' days')::interval
+              end,
+              case
+                when $5::int is null then null
+                else current_date + $5::int
+              end,
+              $6
+         from suppliers s
+        where s.business_id = $1 and s.name = $7
+          and not exists (
+            select 1 from purchase_orders po
+             where po.business_id = $1 and po.order_number = $2
+          )
+          and not exists (
+            select 1 from purchase_orders po
+             where po.business_id = $1 and po.supplier_id = s.id
+               and po.status in ('draft', 'ordered', 'partially_received')
+          )
+       returning id`,
+      [
+        businessId,
+        order.orderNumber,
+        order.status,
+        order.orderedDaysAgo,
+        order.expectedInDays,
+        order.notes,
+        order.supplierName,
+      ],
     );
-  }
 
-  const draft = await pool.query<{ id: string }>(
-    `insert into purchase_orders
-       (business_id, supplier_id, order_number, expected_delivery_at, notes)
-     select $1, s.id, 'PO-0002', current_date + 5, 'Standing dairy order.'
-       from suppliers s
-      where s.business_id = $1 and s.name = 'Coldstream Dairy'
-        and not exists (
-          select 1 from purchase_orders po
-           where po.business_id = $1 and po.order_number = 'PO-0002'
-        )
-        and not exists (
-          select 1 from purchase_orders po
-           where po.business_id = $1 and po.supplier_id = s.id
-             and po.status in ('draft', 'ordered', 'partially_received')
-        )
-     returning id`,
-    [businessId],
-  );
+    if (!saved.rows[0]) continue;
 
-  if (draft.rows[0]) {
     await pool.query(
       `insert into purchase_order_lines
-         (business_id, purchase_order_id, product_id, quantity_ordered, unit_cost)
-       select $1, $2, p.id, v.quantity, p.cost_price
-         from (values ('CAF-021', 24::numeric), ('CAF-022', 6::numeric)) as v(sku, quantity)
-         join products p on p.business_id = $1 and p.sku = v.sku`,
-      [businessId, draft.rows[0].id],
+         (business_id, purchase_order_id, product_id, quantity_ordered,
+          unit_cost)
+       select $1, $2, p.id, x.quantity, p.cost_price
+         from jsonb_to_recordset($3::jsonb) as x(sku text, quantity numeric)
+         join products p on p.business_id = $1 and p.sku = x.sku`,
+      [businessId, saved.rows[0].id, JSON.stringify(order.lines)],
     );
   }
 }

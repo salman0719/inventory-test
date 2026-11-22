@@ -125,3 +125,15 @@ Record limitations honestly. Include severity, workaround, and whether the issue
 | CSV text cells starting `=`, `+`, `-` or `@` gain a leading apostrophe | low      | Keeps a spreadsheet from running a product name as a formula; quantities and money stay numeric           | No           | By design           |
 | A movement's reference names the type, not the receipt                 | low      | There is no receipt page to link to; the order panel lists each delivery with its date and line count     | No           | Intentional         |
 | Only the cafe account's reports were walked through                    | low      | Every query filters by the active business, and tenant isolation is covered by the database tests         | No           | Verified 2026-11-22 |
+
+## Slice 2 (demo reset) — 2026-11-22
+
+| Limitation or risk                                                               | Severity | Workaround                                                                                                              | Blocks demo? | Status              |
+| -------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------- | ------------ | ------------------- |
+| Reset deletes the business's products, orders, receipts and ledger, with no undo | high     | It exists for demo data only; anything worth keeping belongs in another business, and the restored baseline is the seed | No           | By design           |
+| Reset restores the bundled baseline, not the state before the reset              | medium   | The payload comes from `db/seed-demo.ts`; a customised demo is rebuilt from the catalogue, not snapshotted              | No           | By design           |
+| A reset is not audited                                                           | low      | The action is owner-only, typed-confirmed and logged by the server on failure; no `reset_history` table exists          | No           | Deferred            |
+| The reset function writes opening movements and order status directly            | medium   | It is `SECURITY DEFINER`, owner-checked and payload-bounded; the ordinary app role still cannot write either            | No           | By design           |
+| Business name, type, currency and memberships are not part of a reset            | low      | They are fixed for the prototype; a rename is a profile edit, not demo data                                             | No           | Intentional         |
+| Only the cafe reset was walked through in a browser                              | low      | The retail payload is unit tested and the function's tests use their own fixtures                                       | No           | Verified 2026-11-22 |
+| Staff and viewers do not see the panel                                           | low      | The screen checks the membership role and the database refuses them anyway; neither can reach the action                | No           | By design           |
