@@ -14,15 +14,23 @@ import { loadEnv } from "./env";
  * It refuses anything that is not a loopback database, so it cannot touch a hosted
  * project. It is not authentication: it grants no password and sets no session.
  *
- * Usage: `npm run db:link-user -- <user-uuid> <email> [cafe|retail]`
+ * By default the user joins both demo businesses, so the business selector can
+ * be demonstrated without hand-written SQL. Pass `cafe` or `retail` to link one.
+ *
+ * Usage: `npm run db:link-user -- <user-uuid> <email> [cafe|retail|both]`
  */
 const input = z.object({
   userId: z.uuid(
     "Pass the user's UUID from Supabase Auth as the first argument.",
   ),
   email: z.email("Pass the user's email as the second argument."),
-  demo: z.enum(["cafe", "retail"]).default("cafe"),
+  demo: z.enum(["cafe", "retail", "both"]).default("both"),
 });
+
+const BUSINESS_IDS = {
+  cafe: "11111111-1111-1111-1111-111111111111",
+  retail: "22222222-2222-2222-2222-222222222222",
+} as const;
 
 async function main(): Promise<void> {
   loadEnv();
@@ -30,7 +38,7 @@ async function main(): Promise<void> {
   const parsed = input.safeParse({
     userId: process.argv[2],
     email: process.argv[3],
-    demo: process.argv[4] ?? "cafe",
+    demo: process.argv[4] ?? "both",
   });
   if (!parsed.success) {
     throw new Error(
@@ -48,10 +56,10 @@ async function main(): Promise<void> {
     );
   }
 
-  const businessId =
-    parsed.data.demo === "cafe"
-      ? "11111111-1111-1111-1111-111111111111"
-      : "22222222-2222-2222-2222-222222222222";
+  const demos =
+    parsed.data.demo === "both"
+      ? (["cafe", "retail"] as const)
+      : ([parsed.data.demo] as const);
 
   const client = new Client({ connectionString: url });
   await client.connect();
@@ -62,12 +70,14 @@ async function main(): Promise<void> {
        on conflict (id) do update set email = excluded.email`,
       [parsed.data.userId, parsed.data.email],
     );
-    await client.query(
-      `insert into business_members (business_id, user_id, role)
-       values ($1, $2, 'owner')
-       on conflict (business_id, user_id) do update set role = excluded.role`,
-      [businessId, parsed.data.userId],
-    );
+    for (const demo of demos) {
+      await client.query(
+        `insert into business_members (business_id, user_id, role)
+         values ($1, $2, 'owner')
+         on conflict (business_id, user_id) do update set role = excluded.role`,
+        [BUSINESS_IDS[demo], parsed.data.userId],
+      );
+    }
     await client.query("commit");
   } catch (error) {
     await client.query("rollback").catch(() => undefined);
@@ -77,10 +87,12 @@ async function main(): Promise<void> {
   }
 
   console.log(
-    `link-user: ${parsed.data.email} (${parsed.data.userId}) is now an owner of ${parsed.data.demo}`,
+    `link-user: ${parsed.data.email} (${parsed.data.userId}) is now an owner of ${demos.join(" and ")}`,
   );
   console.log(
-    "link-user: sign in with that account; the selector will list that business only.",
+    demos.length > 1
+      ? "link-user: sign in with that account; the selector lists both demo businesses."
+      : "link-user: sign in with that account; the selector will list that business only.",
   );
 }
 
