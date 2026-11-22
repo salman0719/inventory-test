@@ -3,7 +3,7 @@ import {
   parseStockFilter,
   parseStockSort,
   signedQuantity,
-  type MovementType,
+  type LedgerMovementType,
   type StockMovementInput,
 } from "./stock-input";
 
@@ -31,7 +31,7 @@ export type InventoryItem = {
 
 export type StockMovement = {
   id: string;
-  movementType: MovementType;
+  movementType: LedgerMovementType;
   quantityDelta: string;
   reason: string | null;
   referenceType: string | null;
@@ -243,7 +243,7 @@ export async function getInventoryDetail(
       item: toItem(item),
       movements: movements.rows.map((row) => ({
         id: row.id,
-        movementType: row.movement_type as MovementType,
+        movementType: row.movement_type as LedgerMovementType,
         quantityDelta: row.quantity_delta,
         reason: row.reason,
         referenceType: row.reference_type,

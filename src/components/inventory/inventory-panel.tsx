@@ -2,7 +2,10 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { formatMoney, formatQuantity, stockStatus } from "@/lib/product-input";
 import { StatusLabel } from "@/components/products/status-label";
-import { MOVEMENT_LABELS, formatSignedQuantity } from "@/lib/stock-input";
+import {
+  LEDGER_MOVEMENT_LABELS,
+  formatSignedQuantity,
+} from "@/lib/stock-input";
 import type { InventoryItem, StockMovement } from "@/lib/stock";
 import { MovementForm } from "./movement-form";
 
@@ -125,7 +128,7 @@ export function InventoryPanel({
                   {formatSignedQuantity(movement.quantityDelta)}
                 </span>
                 <span className="shrink-0 text-ink-muted">
-                  {MOVEMENT_LABELS[movement.movementType]}
+                  {LEDGER_MOVEMENT_LABELS[movement.movementType]}
                 </span>
                 <span className="min-w-0 truncate text-ink-muted">
                   {movement.reason ?? ""}

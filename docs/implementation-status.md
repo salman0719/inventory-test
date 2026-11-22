@@ -4,13 +4,13 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Overall status
 
-- Current phase: Phase 5. Slices 1, 3, 4, 5 and 6 are committed — shell/selector,
-  Supabase Auth with the authenticated `app_user` request path, products and
-  categories, suppliers, and the stock ledger with inventory screens. The
-  Supabase account `owner@cafe.test` is linked to the local Demo Cafe, so signing
-  in with it renders real catalogue data. Slice 7 (purchase orders and
-  transactional receiving) is implemented locally and uncommitted, awaiting
-  review. Slice 2 (reset workflow) is still outstanding
+- Current phase: Phase 5. Slices 1, 3, 4, 5, 6 and 7 are committed —
+  shell/selector, Supabase Auth with the authenticated `app_user` request path,
+  products and categories, suppliers, the stock ledger with inventory screens, and
+  purchase orders with transactional receiving. The Supabase account
+  `owner@cafe.test` is linked to the local Demo Cafe, so signing in with it renders
+  real catalogue data. Slice 8 (dashboard) is implemented locally and uncommitted,
+  awaiting review. Slice 2 (reset workflow) is still outstanding
 - Current deployment: Vercel stage at `https://inventory-stage.vercel.app`
   (public, no deployment protection; it serves the committed shell, not slices 1
   and 3)
@@ -69,9 +69,9 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [x] Suppliers (committed `cd8361d`; walked through in a browser)
 - [x] Stock ledger (committed `872555d`; `private.record_stock_movement`)
 - [x] Inventory screens (committed `872555d`; walked through in a browser)
-- [x] Purchase orders (local, uncommitted; drafts, ordering, cancelling)
-- [x] Partial receiving (local, uncommitted; `private.receive_purchase_order`)
-- [ ] Dashboard
+- [x] Purchase orders (committed `5691948`; drafts, ordering, cancelling)
+- [x] Partial receiving (committed `5691948`; `private.receive_purchase_order`)
+- [x] Dashboard (local, uncommitted; live figures, needs attention, movements)
 - [ ] Reports
 - [ ] CSV workflows
 - [ ] Image upload
@@ -90,7 +90,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Current blockers
 
-- Slice 7 is implemented and uncommitted by request; slices 1 and 3–6 are
+- Slice 8 is implemented and uncommitted, awaiting review; slices 1 and 3–7 are
   committed.
 - Verification note, not a page defect: when the automated preview tab is
   hidden (`document.visibilityState` is `hidden`), React defers the streamed
@@ -108,7 +108,28 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
-- **2026-11-22 — Phase 5 slice 7 built locally, uncommitted.** Purchase orders and
+- **2026-11-22 — Phase 5 slice 8 built locally, uncommitted.** Dashboard. The
+  placeholder is replaced by figures read from the tables on every request: a
+  five-stat strip (products, stock value at cost, low or out, open orders with the
+  value on order, suppliers), a needs-attention table (out of stock first, then
+  low, each with on-hand, reorder level, quantity on order and supplier) and the
+  eight most recent ledger lines. `src/lib/dashboard.ts` runs three reads in one
+  `withTenant` transaction, and stock on order counts `ordered` and
+  `partially_received` orders only, so a draft reserves nothing. Each stat links
+  to the screen behind it. The movement labels now cover `opening` and `received`,
+  which the inventory history previously rendered blank; both screens share
+  `LEDGER_MOVEMENT_LABELS`. Verified: check 0 errors (2 pre-existing warnings);
+  unit 45/45 (1 new); database 38/38; production build 0 errors; `secrets:check`
+  ok. In a browser as `owner@cafe.test` the page showed 60 products, $4,505.30 at
+  cost, 2 low or out (1 out · 1 low), 1 open order with $131.80 on order and 9
+  suppliers, each equal to the same figures queried directly in Postgres; Pork
+  belly (0 of 2) sorted above Cocoa powder (1 of 1) with their suppliers; and the
+  eight newest movements all carried "Opening balance". A scratch ordered order
+  for 6 × Cocoa powder raised open orders to 2, the value on order to $223.00 and
+  showed 6 on order on Cocoa's row, then was deleted to restore the baseline. Not
+  verified: the retail business's dashboard in a browser (the cafe account is the
+  only linked membership); narrow widths and touch targets.
+- **2026-11-22 — Phase 5 slice 7 committed as `5691948`.** Purchase orders and
   transactional receiving. Migration `0005` adds `private.receive_purchase_order`
   and `private.set_purchase_order_status`, and takes the integrity fields away
   from the application role: `authenticated` can no longer insert or update

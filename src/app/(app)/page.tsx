@@ -1,48 +1,18 @@
 import Link from "next/link";
+import { AttentionTable } from "@/components/dashboard/attention-table";
+import { DashboardStats } from "@/components/dashboard/dashboard-stats";
+import { RecentMovements } from "@/components/dashboard/recent-movements";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { getActiveBusiness } from "@/lib/businesses";
+import { ATTENTION_LIMIT, getDashboard } from "@/lib/dashboard";
 import { getSessionUser } from "@/lib/session";
 
-const STATS = [
-  { label: "Products", slice: "slice 4" },
-  { label: "Low stock", slice: "slice 6" },
-  { label: "Open orders", slice: "slice 7" },
-  { label: "Stock value", slice: "slice 8" },
-];
-
-const SECTIONS = [
-  {
-    href: "/products",
-    title: "Products",
-    body: "Catalogue, search, filters, archive.",
-  },
-  {
-    href: "/inventory",
-    title: "Inventory",
-    body: "On-hand, stock in and out, adjustments.",
-  },
-  {
-    href: "/suppliers",
-    title: "Suppliers",
-    body: "Contacts, products supplied, order history.",
-  },
-  {
-    href: "/purchase-orders",
-    title: "Purchase orders",
-    body: "Draft, send, receive in full or in part.",
-  },
-  {
-    href: "/reports",
-    title: "Reports",
-    body: "Stock, low stock and order status exports.",
-  },
-  {
-    href: "/settings",
-    title: "Settings",
-    body: "Business profile, categories, demo reset.",
-  },
-];
-
+/**
+ * The dashboard answers three questions in order: how much stock is there and what
+ * is it worth, what is about to run out, and what moved recently. Every figure is
+ * read from the tables and the ledger, so it is never a separately stored number
+ * that can drift.
+ */
 export default async function DashboardPage() {
   const user = await getSessionUser();
   if (!user) return null;
@@ -50,8 +20,13 @@ export default async function DashboardPage() {
   const { active } = await getActiveBusiness(user.id);
   if (!active) return <NoBusinessNotice />;
 
+  const { summary, attention, movements } = await getDashboard(
+    user.id,
+    active.id,
+  );
+
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       <header>
         <p className="text-[10px] uppercase tracking-[0.08em] text-ink-muted">
           Dashboard
@@ -61,51 +36,36 @@ export default async function DashboardPage() {
         </h1>
         <p className="text-[12px] text-ink-muted">
           {active.businessType === "cafe" ? "Cafe" : "Retail"} ·{" "}
-          {active.currencyCode} · Shell only; every figure below arrives with
-          its data slice.
+          {active.currencyCode} · Live from the catalogue, orders and stock
+          ledger.
         </p>
       </header>
 
-      <section
-        aria-label="Summary figures"
-        className="grid grid-cols-2 gap-2 min-[600px]:grid-cols-4"
-      >
-        {STATS.map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded border border-line bg-panel px-3 py-2.5"
-          >
-            <p className="text-[10px] uppercase tracking-[0.07em] text-ink-muted">
-              {stat.label}
-            </p>
-            <p className="font-mono text-[20px] leading-tight text-ink-faint">
-              —
-            </p>
-            <p className="text-[10px] text-ink-faint">{stat.slice}</p>
-          </div>
-        ))}
-      </section>
+      <DashboardStats summary={summary} currency={active.currencyCode} />
 
-      <section aria-label="Sections" className="flex flex-col gap-2">
-        <h2 className="text-[10px] uppercase tracking-[0.08em] text-ink-muted">
-          Sections
-        </h2>
-        <ul className="grid gap-2 min-[600px]:grid-cols-2">
-          {SECTIONS.map((section) => (
-            <li key={section.href}>
-              <Link
-                href={section.href}
-                className="flex min-h-[52px] flex-col justify-center rounded border border-line bg-surface px-3 py-2 hover:border-accent"
-              >
-                <span className="text-[13px] font-medium">{section.title}</span>
-                <span className="text-[11px] text-ink-muted">
-                  {section.body}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {summary.products === 0 ? (
+        <div className="rounded border border-dashed border-line bg-panel px-4 py-12 text-center">
+          <p className="text-[13px] font-medium">No products yet</p>
+          <p className="mx-auto mt-1 max-w-[46ch] text-[12px] text-ink-muted">
+            Add products and their opening stock, and this page will show what
+            is low, what is on order and what moved.
+          </p>
+          <Link
+            href="/products"
+            className="mt-4 inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
+          >
+            Open products
+          </Link>
+        </div>
+      ) : (
+        <AttentionTable
+          items={attention}
+          total={summary.lowCount + summary.outCount}
+          limit={ATTENTION_LIMIT}
+        />
+      )}
+
+      <RecentMovements movements={movements} />
     </div>
   );
 }

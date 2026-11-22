@@ -18,6 +18,21 @@ export const MOVEMENT_LABELS: Record<MovementType, string> = {
   adjustment: "Adjustment",
 };
 
+/**
+ * Every type the ledger can contain, including the two the manual form does not
+ * offer. History and the dashboard use this map, so a receipt or an opening
+ * balance is never displayed as a blank label.
+ */
+export const LEDGER_MOVEMENT_LABELS = {
+  opening: "Opening balance",
+  received: "Received",
+  stock_in: "Stock in",
+  stock_out: "Stock out",
+  adjustment: "Adjustment",
+} as const;
+
+export type LedgerMovementType = keyof typeof LEDGER_MOVEMENT_LABELS;
+
 export type MovementDirection = "in" | "out";
 
 /** URL values for the stock filter. Anything else means "all". */

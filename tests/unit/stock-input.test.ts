@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  LEDGER_MOVEMENT_LABELS,
   formatSignedQuantity,
   parseStockFilter,
   parseStockSort,
@@ -123,5 +124,15 @@ describe("formatSignedQuantity", () => {
   it("treats zero and blanks as no value", () => {
     expect(formatSignedQuantity("0")).toBe("—");
     expect(formatSignedQuantity(null)).toBe("—");
+  });
+});
+
+describe("LEDGER_MOVEMENT_LABELS", () => {
+  it("names every type the ledger can contain", () => {
+    expect(LEDGER_MOVEMENT_LABELS.opening).toBe("Opening balance");
+    expect(LEDGER_MOVEMENT_LABELS.received).toBe("Received");
+    expect(LEDGER_MOVEMENT_LABELS.stock_in).toBe("Stock in");
+    expect(LEDGER_MOVEMENT_LABELS.stock_out).toBe("Stock out");
+    expect(LEDGER_MOVEMENT_LABELS.adjustment).toBe("Adjustment");
   });
 });
