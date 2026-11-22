@@ -91,7 +91,8 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [x] Tenant isolation verified (2026-11-22: business switch both ways and
       foreign product, supplier and order ids refused)
 - [x] Responsive layouts checked (390 / 768 / 1280, 2026-11-22)
-- [ ] Empty/loading/error states checked
+- [x] Empty/loading/error states checked (2026-11-22: list and report empty
+      states, the route skeleton and both error paths; D4 and D5 open)
 - [ ] Deployment verified
 - [ ] Demo walkthrough ready
 
@@ -103,8 +104,13 @@ Keep this file current. Do not report a task as complete until it has been verif
   server rejected a save) is fixed in `0ef1b41`; D2 (the movement select showed
   "Stock in" after a rejected adjustment) is fixed in `b368be9`; D3 (a stale
   "saved" notice during archive/restore) is fixed in `1219908`. Tenant isolation
-  was walked on 2026-11-22 with no defect found. Empty/loading/error states,
-  deployment verification and the demo walkthrough remain.
+  was walked on 2026-11-22 with no defect found. Empty, loading and error states
+  were walked on 2026-11-22, which found D4 (unknown routes show Next's default
+  unstyled 404, outside the shell) and D5 (a database outage fails in the layout
+  query, above `error.tsx`, so the app's error panel is replaced by Next's generic
+  error page). Deployment verification and the demo walkthrough remain. Business
+  switching is demoable without SQL: `db:link-user` now links the account to both
+  demo businesses by default.
 - Verification note, not a page defect: when the automated preview tab is
   hidden (`document.visibilityState` is `hidden`), React defers the streamed
   Suspense reveal to `requestAnimationFrame`, which a hidden tab pauses. The
@@ -121,6 +127,37 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — Phase 6 empty, loading and error states; demo switching.**
+  Empty states: a no-match search on products, suppliers, inventory and purchase
+  orders each rendered its own copy and a Clear filters control (“No products
+  match those filters”, “No suppliers match those filters”, “No orders match
+  those filters”; screenshot `local/phase-6/empty-products.png`), and the stock,
+  movement and order-status reports did the same while keeping the export link.
+  Loading: with `products` locked inside a transaction, a client navigation to
+  Products showed the route skeleton under the live shell — `aria-busy="true"`,
+  the screen-reader announcement “Loading page”, and the business switcher still
+  usable (`local/phase-6/loading-products-skeleton.png`); releasing the lock
+  resolved to 62 products. Error: revoking `select` on `products` from
+  `authenticated` produced a page-level failure and the app's own panel, “This
+  screen could not load” with a Try again button, inside the shell
+  (`local/phase-6/error-page-boundary.png`); the grant was restored immediately.
+  Stopping Postgres instead failed in `listBusinesses` inside the layout, which
+  sits above that boundary: the browser got Next's generic “This page couldn’t
+  load / Reload” page with no shell or nav (plus the dev overlay), not the app's
+  error panel (`local/phase-6/error-db-down.png`); the container was restarted and
+  the page recovered after a reload. Unknown routes (`/dashboard` — the dashboard
+  lives at `/`) show Next's unstyled default 404 with no shell
+  (`local/phase-6/error-unknown-route-404.png`). Both are logged as D4 (default 404) and D5 (layout failures bypass `error.tsx`) and left unfixed. Not verified:
+  whether Try again recovers without a reload, because the automated tab reports
+  `document.visibilityState: hidden` and pauses the streamed reveal; the reload
+  that flushed the queue returned 62 products. No data changed: the revoked grant
+  was restored and the container is running. Demo switching: `db:link-user` now
+  accepts `both` and defaults to it, linking the Supabase user to Demo Cafe and
+  Demo Retail in one run; rerunning it for `owner@cafe.test` made the selector
+  offer both without SQL, and switching moved 62 cafe products to 160 retail and
+  back with no cross-business row. Gates after the script change: `check` 0 errors
+  (2 pre-existing `_role`/`_action` warnings), unit 79/79 across 13 files, DB
+  44/44, build clean, `secrets:check ok`.
 - **2026-11-22 — Phase 6 tenant isolation walk, no defects.** Signed in as
   `owner@cafe.test`. The account is a member of Demo Cafe only, so foreign ids
   were tried first without any access to Demo Retail: `/products?product=` with
