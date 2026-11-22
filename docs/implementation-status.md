@@ -125,13 +125,15 @@ Keep this file current. Do not report a task as complete until it has been verif
 - Local environment note: wiping and recreating schema `public` no longer needs
   a hand-run grant. `0007_public_schema_usage.sql` grants `USAGE` to
   `authenticated`, so a replay of the committed migrations restores it
-  (see `docs/known-limitations.md`). Hosted Supabase remains at 7 tracked
-  migrations until `db:migrate:hosted` runs; its grants are already present.
+  (see `docs/known-limitations.md`). Hosted Supabase recorded `0007` on
+  2026-11-22 (applied 1, 8 tracked); its `public` ACL already granted
+  `authenticated` USAGE, so only the migration record changed there.
 
 ## Recently completed
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — Migration `0007` applied to hosted Supabase under Gate D.** Pre-flight, read-only: 7 tracked with `0006` newest; `has_schema_privilege('authenticated','public','USAGE')` true and `CREATE` false; `public` owned by `pg_database_owner` with `authenticated=U` already in its ACL; 2 businesses, 220 products, 219 movements, 2 orders. `npm run db:migrate:hosted` printed `applied 1 migration(s), 8 tracked in total` (switched to session mode 5432, auth shim skipped). Post-checks: 8 tracked with newest `1795344385254` (`0007`), USAGE true, CREATE still false, ACL unchanged (the grant added nothing because Supabase already provides it), every count unchanged. Second run: `applied 0 migration(s), 8 tracked in total`. Stage UI sign-in and `test:db` against hosted deliberately not run: the migration only adds a privilege Supabase already had.
 - **2026-11-22 — Schema-wipe recovery is a committed migration (`0007`).** `0007_public_schema_usage.sql` grants `USAGE` on schema `public` to `authenticated` (journal entry 7), so a wiped local database no longer depends on a hand-run grant. Proved on a wiped schema: `public` recreated with an empty ACL left `has_schema_privilege('authenticated','public','USAGE')` false, `npm run db:migrate` applied 8 migrations and set `{app=UC/app,authenticated=U/app}`, `npm run test:db` passed 44/44 with no manual grant, and a second `db:migrate` applied 0. Demo data restored with `db:seed` (2 businesses, 220 products, 219 movements, 2 orders) and `db:link-user`; SQL re-checked 60/9 cafe, 160/6 retail, $4,505.30 at cost, 1 open order, $131.80 on order. Gates: lint 0 errors (2 pre-existing warnings), typecheck clean, `npm run test` 79/79, `npm run build` clean, `secrets:check ok`; `prettier --check .` fails only on the generated, untouched `next-env.d.ts` (CRLF in this working copy). Hosted Supabase is still at 7 tracked migrations until `db:migrate:hosted` runs.
 - **2026-11-22 — Deployment verified on the Vercel stage.** Supabase redirect allowlist confirmed for `http://localhost:25000/**` and `https://inventory-stage.vercel.app/**`; `main` (through `e50688a`) pushed and deployed successfully; a signed-in re-check on the stage returned the seeded baseline — 60 products, 9 suppliers, 1 out / 1 low, $4,505.30 at cost, 1 open order, $131.80 on order. Reported by the user; not re-observed from this machine. `npm run test:db` 44/44 after restoring the `public` schema grant (see known limitations); other gates `Not run` for this docs-only update.
 
