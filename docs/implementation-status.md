@@ -88,7 +88,8 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [x] Partial receiving tested (2026-11-22: two deliveries on PO-0003)
 - [x] Duplicate receiving prevented (2026-11-22: repeat submit and a stale
       second-tab form both refused)
-- [ ] Tenant isolation verified
+- [x] Tenant isolation verified (2026-11-22: business switch both ways and
+      foreign product, supplier and order ids refused)
 - [x] Responsive layouts checked (390 / 768 / 1280, 2026-11-22)
 - [ ] Empty/loading/error states checked
 - [ ] Deployment verified
@@ -101,9 +102,9 @@ Keep this file current. Do not report a task as complete until it has been verif
   three defects. D1 (product and supplier forms lost what was typed when the
   server rejected a save) is fixed in `0ef1b41`; D2 (the movement select showed
   "Stock in" after a rejected adjustment) is fixed in `b368be9`; D3 (a stale
-  "saved" notice during archive/restore) is fixed in `1219908`. Tenant isolation,
-  empty/loading/error states, deployment verification and the demo walkthrough
-  remain.
+  "saved" notice during archive/restore) is fixed in `1219908`. Tenant isolation
+  was walked on 2026-11-22 with no defect found. Empty/loading/error states,
+  deployment verification and the demo walkthrough remain.
 - Verification note, not a page defect: when the automated preview tab is
   hidden (`document.visibilityState` is `hidden`), React defers the streamed
   Suspense reveal to `requestAnimationFrame`, which a hidden tab pauses. The
@@ -120,6 +121,30 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — Phase 6 tenant isolation walk, no defects.** Signed in as
+  `owner@cafe.test`. The account is a member of Demo Cafe only, so foreign ids
+  were tried first without any access to Demo Retail: `/products?product=` with
+  a retail product id, `/suppliers?supplier=` with a retail supplier id and
+  `/inventory?product=` with the same product id each rendered the neutral "not
+  in this business" panel, and no retail name, SKU or cost appeared anywhere on
+  the page (screenshot `local/phase-6/isolation-product-foreign.png`). A random
+  order id on `/purchase-orders?order=` gave the same neutral "That order is not
+  in this business" panel. To walk the switch itself, a temporary `owner`
+  membership in Demo Retail was added for the seed's retail business, because
+  the selector only lists businesses the user belongs to; the page then offered
+  both. Switching to Demo Retail moved every screen to retail data (160 products
+  with `RET-` SKUs, 6 suppliers, 0 orders, $0.00 on order, no `CAF-` or Journey
+  rows; `local/phase-6/isolation-retail-switched.png`), and while it was active
+  the cafe product, supplier and PO-0003 ids each returned "not in this
+  business" with no cafe row or value on screen. Switching back restored 62
+  products and 10 suppliers with no retail row, and the cafe's own PO-0003 still
+  opened normally, so the refusals are tenant-specific rather than a broken
+  lookup. The temporary membership was deleted afterwards: the selector lists
+  Demo Cafe only again, and the retail ids are refused as before. No defect was
+  found; the only caveats are that a business cannot be selected without a
+  membership (by design, `listBusinesses`), and Demo Retail has no purchase
+  orders, so the foreign-order attempt could only run in the retail→cafe
+  direction.
 - **2026-11-22 — Phase 6 journey pass, with D1 and D2 fixed.** Walked the four
   core journeys in the preview as `owner@cafe.test`, checking Postgres after each
   step. Products: created JRN-001 with cost, sell and reorder level, edited name
