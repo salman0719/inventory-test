@@ -133,6 +133,44 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — Stage 3 item 4: one transaction per page, opened in one round trip (`b8bff2a`).**
+  The products, inventory and purchase-orders pages each took a connection per
+  read. Each page now calls one function that reads everything inside a single
+  transaction (`getProductsPage`, `getInventoryPage`, `getPurchaseOrdersPage`), and
+  the per-function wrappers take an optional client so a panel or a server action
+  still works on its own. Opening a transaction is now one statement —
+  `begin; set local role authenticated; select set_config('request.jwt.claims', …)` —
+  instead of three round trips, with the claims inlined after the user id is checked
+  against a UUID pattern (a parameter cannot be used in a multi-statement simple
+  query, and a validated UUID cannot carry a quote). Re-measured with the same
+  protocol as the baseline (fresh marker, 40 signed-in navigations, two batches of
+  20):
+
+  | layer            | before p50 / p95 | after p50 / p95 |
+  | ---------------- | ---------------- | --------------- |
+  | `tenant.connect` | 2.5 / 21.8       | 1.5 / 3.1       |
+  | `tenant.setup`   | 15.2 / 111.8     | 4.8 / 11.6      |
+  | `tenant.work`    | 5.6 / 100.3      | 3.9 / 110.7     |
+  | `tenant.commit`  | 1.3 / 76.3       | 1.0 / 7.9       |
+  | `proxy.auth`     | 89.3 / 623.0     | 53.8 / 432.0    |
+  | `session.auth`   | 92.9 / 510.4     | 66.3 / 440.2    |
+
+  Tenant transactions per page: p50 3 → 2 (range 1–3); the second is the shell's
+  membership read (`getActiveBusiness`, React-cached and shared with the page).
+  Client wall clock, same navigations: p50 333.9 / 213.2 before, 199.7 / 229.1
+  after; p95 884.5 / 910.7 before, 938.9 / 796.8 after. Reading: the database's
+  share of a page fell from roughly 69 ms to 22 ms at p50, and its tail from 112 ms
+  to 11.6 ms per transaction setup; the auth rows moved without any code change on
+  that path, so that difference is run-to-run noise, not an improvement. End-to-end
+  p50/p95 sit inside the same noise, which is what a ~50 ms saving against a ~90 ms
+  auth cost predicts. The report script's per-navigation total is gone (`f24f453`)
+  because overlapping renders made it double-count. Verified: `npm run check` 0
+  errors (2 pre-existing warnings), unit 103/103 across 20 files, `test:db` 44/44
+  (RLS isolation unchanged with the one-statement setup), `npm run build` clean,
+  `secrets:check ok`. Not checked by hand in a browser; the measurement drove
+  fetches from the signed-in tab. Panel endpoints still take up to three
+  transactions per open — the same change applies there.
+
 - **2026-11-22 — Stage 3 baseline measured; instrumentation committed (`2b21ef8`).**
   `src/lib/nav-timing.ts` times three layers behind `NAV_TIMING=1` — the proxy's
   `auth.getUser()`, the page's `getSessionUser()`, and each `withTenant` split into

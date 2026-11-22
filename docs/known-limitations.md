@@ -226,7 +226,10 @@ Windows against Docker Postgres): each of the two auth checks is 89–93 ms at p
 and 510–623 ms at p95, so together they are the larger half of a navigation's
 server time; the three transactions a products page opens cost about 75 ms p50, of
 which `tenant.setup` (begin, role, claims) is the largest single component at
-112 ms p95. Numbers are per layer, not wall clock.
+112 ms p95. Numbers are per layer, not wall clock. After the same-day change to
+one transaction per page and a one-statement begin, `tenant.setup` fell to 4.8 ms
+p50 / 11.6 ms p95 and a page takes two transactions instead of three; the auth
+rows stayed where they were within noise, so they remain the open item.
 
 Correction (2026-11-22): the page-level duplicate is smaller than previously
 recorded here. `getSessionUser()` and `getActiveBusiness()` are both wrapped in
