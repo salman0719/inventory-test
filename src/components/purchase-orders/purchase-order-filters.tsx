@@ -1,9 +1,9 @@
-import Link from "next/link";
+import { FilterForm } from "@/components/filter-form";
 import { ORDER_FILTERS, type OrderFilter } from "@/lib/purchase-order-input";
 
 /**
- * A plain GET form like the other lists: the URL carries the view, so "what is
- * still owing" can be bookmarked or sent to whoever chases the supplier.
+ * The URL carries the view, so "what is still owing" can be bookmarked or sent to
+ * whoever chases the supplier. Applying a filter is a router transition.
  */
 export function PurchaseOrderFilters({
   q,
@@ -15,11 +15,7 @@ export function PurchaseOrderFilters({
   const filtered = q !== "" || status !== "all";
 
   return (
-    <form
-      method="get"
-      action="/purchase-orders"
-      className="flex flex-wrap items-end gap-2 rounded border border-line bg-panel px-2.5 py-2"
-    >
+    <FilterForm action="/purchase-orders" filtered={filtered}>
       <label className="flex flex-col gap-1">
         <span className="text-[10px] uppercase tracking-[0.07em] text-ink-muted">
           Search
@@ -52,22 +48,6 @@ export function PurchaseOrderFilters({
           )}
         </select>
       </label>
-
-      <button
-        type="submit"
-        className="min-h-[36px] rounded bg-accent px-3 text-[12px] font-semibold text-on-accent"
-      >
-        Apply
-      </button>
-
-      {filtered ? (
-        <Link
-          href="/purchase-orders"
-          className="min-h-[36px] rounded border border-line bg-surface px-2.5 text-[12px] font-medium leading-[34px] hover:border-accent hover:text-accent"
-        >
-          Clear
-        </Link>
-      ) : null}
-    </form>
+    </FilterForm>
   );
 }

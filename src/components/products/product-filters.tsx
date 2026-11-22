@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { FilterForm } from "@/components/filter-form";
 import type { CategoryOption } from "@/lib/products";
 import { PRODUCT_SORTS, type ProductSort } from "@/lib/product-input";
 
@@ -14,8 +14,9 @@ const SELECT =
   "h-9 rounded border border-line bg-surface px-2 text-[13px] text-ink";
 
 /**
- * Filters are a plain GET form: the URL is the state, so a filtered list can be
- * bookmarked, shared and reloaded without client JavaScript.
+ * The URL is the state, so a filtered list can be bookmarked and shared. Applying
+ * one goes through the router, so the rows already on screen stay until the new
+ * ones arrive instead of the document reloading.
  */
 export function ProductFilters({
   q,
@@ -33,11 +34,7 @@ export function ProductFilters({
   const filtered = q !== "" || categoryId !== "" || archived;
 
   return (
-    <form
-      method="get"
-      action="/products"
-      className="flex flex-wrap items-end gap-2 rounded border border-line bg-panel px-2.5 py-2"
-    >
+    <FilterForm action="/products" filtered={filtered}>
       <label className="flex flex-col gap-1">
         <span className="text-[10px] uppercase tracking-[0.07em] text-ink-muted">
           Search
@@ -88,22 +85,6 @@ export function ProductFilters({
         />
         Include archived
       </label>
-
-      <button
-        type="submit"
-        className="min-h-[36px] rounded bg-accent px-3 text-[12px] font-semibold text-on-accent"
-      >
-        Apply
-      </button>
-
-      {filtered ? (
-        <Link
-          href="/products"
-          className="min-h-[36px] rounded border border-line bg-surface px-2.5 text-[12px] font-medium leading-[34px] hover:border-accent hover:text-accent"
-        >
-          Clear
-        </Link>
-      ) : null}
-    </form>
+    </FilterForm>
   );
 }
