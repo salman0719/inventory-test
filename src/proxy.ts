@@ -32,6 +32,15 @@ export async function proxy(request: NextRequest) {
     },
   );
 
+  // Cost of this line: a network round trip to Supabase on every matched request,
+  // prefetches included, before the app can send a byte — a large share of the
+  // perceived wait when navigating on a slow connection. `getSessionUser()` then
+  // repeats the same call inside the page.
+  //
+  // Open item: verify claims locally with `getClaims()` instead. That needs the
+  // Supabase project to sign JWTs asymmetrically and publish a JWKS (or it falls
+  // back to the same network call); unconfirmed, so not attempted. Recorded in
+  // docs/known-limitations.md under "Navigation latency".
   const {
     data: { user },
   } = await supabase.auth.getUser();

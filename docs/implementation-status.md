@@ -133,6 +133,24 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — Loud pending state on `feat/navigation-loading-feedback`.** A route
+  click now paints `RouteProgress` — a 3px indeterminate accent bar fixed to the top
+  of the viewport — in the same frame as the click, because a destination's
+  `loading.tsx` cannot paint until that route's first bytes arrive. The reason the
+  skeleton arrived late on a throttled `next dev` session: Next 16 disables viewport
+  prefetching in development (`links.js`, "compiling the target page"), so the click
+  is always a cold round trip and the skeleton commits only when the stream starts.
+  The bar is driven by `useLinkStatus` inside `NavPending` and by `FilterForm`'s
+  transition; it is `aria-hidden` (the destination's `LoadingAnnouncement` carries
+  the announcement) and becomes a static segment under `prefers-reduced-motion`.
+  Verified: `npm run check` 0 errors (2 pre-existing `_role`/`_action` warnings),
+  `npm run test` 88/88 across 16 files (2 new route-progress tests; nav-pending now
+  also asserts the bar), `npm run build` clean (10 routes, all dynamic in this
+  build's output, proxy middleware present), `secrets:check ok`. Not verified in a
+  browser: still no account password, so the bar's visibility and its timing on a
+  throttled connection are unreviewed. The `getClaims` work is recorded in
+  `src/proxy.ts` and `docs/known-limitations.md` ("Navigation latency") and is not
+  implemented.
 - **2026-11-22 — Navigation feedback (Stage 1) on `feat/navigation-loading-feedback`.**
   Three commits, one per slice. Products, inventory, suppliers and purchase orders
   now have their own `loading.tsx` built from `PageSkeleton`,
@@ -152,7 +170,9 @@ Add date, task, verification method, and result.
   navigation timing was taken on the stage. Stage 2 (static chrome outside the
   page's awaits, a panel boundary so a row click stops re-rendering the list) and
   Stage 3 (measure the auth round trip, then `getClaims`, the count inside the list
-  query, one transaction per page) are not started.
+  query, one transaction per page) are not started; the `getClaims` prerequisite —
+  asymmetric JWT signing keys and a published JWKS — is recorded in `src/proxy.ts`
+  and `docs/known-limitations.md` under "Navigation latency".
 - **2026-11-22 — Migration `0007` applied to hosted Supabase under Gate D.** Pre-flight, read-only: 7 tracked with `0006` newest; `has_schema_privilege('authenticated','public','USAGE')` true and `CREATE` false; `public` owned by `pg_database_owner` with `authenticated=U` already in its ACL; 2 businesses, 220 products, 219 movements, 2 orders. `npm run db:migrate:hosted` printed `applied 1 migration(s), 8 tracked in total` (switched to session mode 5432, auth shim skipped). Post-checks: 8 tracked with newest `1795344385254` (`0007`), USAGE true, CREATE still false, ACL unchanged (the grant added nothing because Supabase already provides it), every count unchanged. Second run: `applied 0 migration(s), 8 tracked in total`. Stage UI sign-in and `test:db` against hosted deliberately not run: the migration only adds a privilege Supabase already had.
 - **2026-11-22 — Schema-wipe recovery is a committed migration (`0007`).** `0007_public_schema_usage.sql` grants `USAGE` on schema `public` to `authenticated` (journal entry 7), so a wiped local database no longer depends on a hand-run grant. Proved on a wiped schema: `public` recreated with an empty ACL left `has_schema_privilege('authenticated','public','USAGE')` false, `npm run db:migrate` applied 8 migrations and set `{app=UC/app,authenticated=U/app}`, `npm run test:db` passed 44/44 with no manual grant, and a second `db:migrate` applied 0. Demo data restored with `db:seed` (2 businesses, 220 products, 219 movements, 2 orders) and `db:link-user`; SQL re-checked 60/9 cafe, 160/6 retail, $4,505.30 at cost, 1 open order, $131.80 on order. Gates: lint 0 errors (2 pre-existing warnings), typecheck clean, `npm run test` 79/79, `npm run build` clean, `secrets:check ok`; `prettier --check .` fails only on the generated, untouched `next-env.d.ts` (CRLF in this working copy). Hosted Supabase is still at 7 tracked migrations until `db:migrate:hosted` runs.
 - **2026-11-22 — Deployment verified on the Vercel stage.** Supabase redirect allowlist confirmed for `http://localhost:25000/**` and `https://inventory-stage.vercel.app/**`; `main` (through `e50688a`) pushed and deployed successfully; a signed-in re-check on the stage returned the seeded baseline — 60 products, 9 suppliers, 1 out / 1 low, $4,505.30 at cost, 1 open order, $131.80 on order. Reported by the user; not re-observed from this machine. `npm run test:db` 44/44 after restoring the `public` schema grant (see known limitations); other gates `Not run` for this docs-only update.
