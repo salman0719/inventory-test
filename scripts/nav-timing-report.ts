@@ -1,15 +1,12 @@
 import { readFileSync } from "node:fs";
 
 /**
- * Read `[nav-timing]` lines from a dev-server log and print p50/p95 per layer, plus
- * one total per navigation.
+ * Read `[nav-timing]` lines from a dev-server log and print p50/p95 per layer.
  *
- * A navigation's layers are logged by different parts of the server within the same
- * request. `proxy.auth` runs before the render, so it marks the start of a request:
- * every sample after it belongs to that request until the next one. Groups without a
- * tenant sample are asset or probe requests, not page renders, and are left out of
- * the totals. (Grouping by time gap does not work: requests issued back to back are
- * closer together than the samples inside one request.)
+ * There is deliberately no per-navigation total: a page's layout and page renders
+ * overlap, so summing their samples counts the same wall-clock time twice and reads
+ * higher than the request took. The honest end-to-end number is measured at the
+ * client, in the page, against the same navigations.
  *
  * Usage: `npm run perf:nav -- local/perf/nav-timing.log [--since=<epoch ms>]`
  *
@@ -88,7 +85,9 @@ for (const label of [
   console.log(`${label.padEnd(16)} ${stats(values)}`);
 }
 
-// Group samples into requests: each proxy.auth opens a new one.
+// Tenant transactions per page load. Each transaction logs one `tenant.connect`,
+// and each request starts at its `proxy.auth`, so the count needs grouping even
+// though no combined timing is reported.
 const sorted = [...SAMPLES].sort((a, b) => a.t - b.t);
 const groups: Sample[][] = [];
 for (const sample of sorted) {
@@ -98,35 +97,14 @@ for (const sample of sorted) {
   else current.push(sample);
 }
 
-const navigations = groups.filter((group) =>
-  group.some((sample) => sample.label.startsWith("tenant.")),
-);
-const totals = navigations.map((group) =>
-  group.reduce((sum, sample) => sum + sample.ms, 0),
-);
-const perLayer = new Map<string, number>();
-for (const sample of navigations.flat()) {
-  perLayer.set(sample.label, (perLayer.get(sample.label) ?? 0) + sample.ms);
-}
+const navigations = groups
+  .filter((group) => group.some((sample) => sample.label.startsWith("tenant.")))
+  .map((group) => group.filter((sample) => sample.label === "tenant.connect"));
 
-const transactions = navigations.map(
-  (group) => group.filter((sample) => sample.label === "tenant.connect").length,
-);
-
-console.log(
-  `\nnavigations (requests containing a tenant transaction): ${totals.length}`,
-);
-if (totals.length > 0) {
-  console.log(`navigation total   ${stats(totals)}`);
+if (navigations.length > 0) {
+  const counts = navigations.map((group) => group.length);
   console.log(
-    `tenant transactions per navigation: ${percentile(transactions, 50)} (p50), ${Math.min(...transactions)}-${Math.max(...transactions)} range`,
+    `\ntenant transactions per page load: p50 ${percentile(counts, 50)}, ` +
+      `p95 ${percentile(counts, 95)}, range ${Math.min(...counts)}-${Math.max(...counts)}`,
   );
-  console.log("\nmean contribution per navigation:");
-  for (const [label, total] of [...perLayer.entries()].sort(
-    (a, b) => b[1] - a[1],
-  )) {
-    console.log(
-      `  ${label.padEnd(16)} ${(total / totals.length).toFixed(1)} ms`,
-    );
-  }
 }
