@@ -165,3 +165,15 @@ Record limitations honestly. Include severity, workaround, and whether the issue
 | A database outage shows Next's generic error page, not the app's error panel                                 | medium   | Fixed 2026-11-22: `src/app/error.tsx` sits above `(app)/layout.tsx` and renders the shared `ErrorPanel`; checked by stopping Postgres, which showed the panel instead of Next's page | No           | Fixed 2026-11-22    |
 | Try again after a page-level error was not seen to recover without a reload                                  | low      | The control is wired to the boundary's reset; the automated tab pauses the streamed reveal, so the check was inconclusive (a reload recovered)                                       | No           | Unverified          |
 | Try again did not recover after Postgres restarted; a reload did                                             | low      | The retry hit the same connection error from the pool's stale connections, then a reload read 62 products; not fixed, and no retry-on-reconnect logic exists                         | No           | Open                |
+
+## Demo walkthrough dry run (fresh baseline) — 2026-11-22
+
+| Limitation or risk                                     | Severity | Workaround                                                                                                                                | Blocks demo? | Status                       |
+| ------------------------------------------------------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ---------------------------- |
+| Walkthrough is local-only HTML, verified without gates | low      | `local/` is prettier-ignored; present from a reset local database per Stop 0; no app code changed                                         | No           | Uncommitted, awaiting review |
+| Supplier panel shows no order history                  | low      | The panel reads “Purchase order history arrives with the purchase orders slice”; the walkthrough now points PO-0001 at `/purchase-orders` | No           | Walkthrough corrected        |
+| Product panel carries no ledger lines                  | low      | On-hand/reorder/cost/category/supplier only; the 12-line history is inventory-only                                                        | No           | Walkthrough corrected        |
+
+Note: the 62-product reload above included leftover Journey rows; the fresh-baseline dry run re-confirmed a reload returns the 60-product baseline.
+
+Remains before the demo is ready: walkthrough review/approval, then deployment verification (hosted data path decision, Supabase redirect allowlist, redeploy, stage auth re-checks).
