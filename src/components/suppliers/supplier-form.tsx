@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState, type ChangeEvent } from "react";
 import {
   saveSupplier,
   type SupplierFormState,
@@ -16,6 +16,26 @@ function toField(value: string | null): string {
   return value ?? "";
 }
 
+type Fields = {
+  name: string;
+  contactName: string;
+  email: string;
+  phone: string;
+  address: string;
+  notes: string;
+};
+
+function initialFields(defaults: SupplierDefaults): Fields {
+  return {
+    name: defaults.name,
+    contactName: toField(defaults.contactName),
+    email: toField(defaults.email),
+    phone: toField(defaults.phone),
+    address: toField(defaults.address),
+    notes: toField(defaults.notes),
+  };
+}
+
 export function SupplierForm({
   defaults,
   cancelHref,
@@ -27,6 +47,22 @@ export function SupplierForm({
     SupplierFormState,
     FormData
   >(saveSupplier, {});
+  // Controlled, because React resets an uncontrolled form after every action: a
+  // rejected save (a name that is too long, a malformed email) would otherwise
+  // wipe everything the operator typed. MovementForm documents the same reason.
+  const [fields, setFields] = useState<Fields>(() => initialFields(defaults));
+
+  function bind(key: keyof Fields) {
+    return {
+      name: key,
+      value: fields[key],
+      onChange: (
+        event: ChangeEvent<
+          HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+        >,
+      ) => setFields((current) => ({ ...current, [key]: event.target.value })),
+    };
+  }
 
   return (
     <form action={formAction} className="flex flex-col gap-2.5">
@@ -34,22 +70,15 @@ export function SupplierForm({
 
       <label className="flex flex-col gap-1">
         <span className={LABEL}>Business name</span>
-        <input
-          name="name"
-          required
-          maxLength={120}
-          defaultValue={defaults.name}
-          className={INPUT}
-        />
+        <input {...bind("name")} required maxLength={120} className={INPUT} />
       </label>
 
       <label className="flex flex-col gap-1">
         <span className={LABEL}>Contact name</span>
         <input
-          name="contactName"
+          {...bind("contactName")}
           maxLength={80}
           placeholder="optional"
-          defaultValue={toField(defaults.contactName)}
           className={INPUT}
         />
       </label>
@@ -57,11 +86,10 @@ export function SupplierForm({
       <label className="flex flex-col gap-1">
         <span className={LABEL}>Email</span>
         <input
-          name="email"
+          {...bind("email")}
           type="email"
           maxLength={120}
           placeholder="optional"
-          defaultValue={toField(defaults.email)}
           className={INPUT}
         />
       </label>
@@ -69,10 +97,9 @@ export function SupplierForm({
       <label className="flex flex-col gap-1">
         <span className={LABEL}>Phone</span>
         <input
-          name="phone"
+          {...bind("phone")}
           maxLength={40}
           placeholder="optional"
-          defaultValue={toField(defaults.phone)}
           className={INPUT}
         />
       </label>
@@ -80,11 +107,10 @@ export function SupplierForm({
       <label className="flex flex-col gap-1">
         <span className={LABEL}>Address</span>
         <textarea
-          name="address"
+          {...bind("address")}
           rows={2}
           maxLength={200}
           placeholder="optional"
-          defaultValue={toField(defaults.address)}
           className="w-full rounded border border-line bg-surface px-2 py-1.5 text-[13px]"
         />
       </label>
@@ -92,11 +118,10 @@ export function SupplierForm({
       <label className="flex flex-col gap-1">
         <span className={LABEL}>Notes</span>
         <textarea
-          name="notes"
+          {...bind("notes")}
           rows={3}
           maxLength={2000}
           placeholder="delivery days, order cut-off, account terms"
-          defaultValue={toField(defaults.notes)}
           className="w-full rounded border border-line bg-surface px-2 py-1.5 text-[13px]"
         />
       </label>

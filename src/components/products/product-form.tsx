@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState, type ChangeEvent } from "react";
 import {
   saveProduct,
   type ProductFormState,
@@ -34,6 +34,32 @@ function toField(value: string | null): string {
   return value ?? "";
 }
 
+type Fields = {
+  name: string;
+  sku: string;
+  unitOfMeasure: string;
+  categoryId: string;
+  supplierId: string;
+  costPrice: string;
+  sellingPrice: string;
+  reorderLevel: string;
+  description: string;
+};
+
+function initialFields(defaults: ProductDefaults): Fields {
+  return {
+    name: defaults.name,
+    sku: defaults.sku,
+    unitOfMeasure: defaults.unitOfMeasure,
+    categoryId: defaults.categoryId ?? "",
+    supplierId: defaults.supplierId ?? "",
+    costPrice: defaults.costPrice,
+    sellingPrice: toField(defaults.sellingPrice),
+    reorderLevel: defaults.reorderLevel,
+    description: toField(defaults.description),
+  };
+}
+
 export function ProductForm({
   defaults,
   categories,
@@ -49,6 +75,22 @@ export function ProductForm({
     ProductFormState,
     FormData
   >(saveProduct, {});
+  // Controlled, because React resets an uncontrolled form after every action: a
+  // rejected save (a duplicate SKU, a name that is too long) would otherwise wipe
+  // everything the operator typed. MovementForm documents the same reason.
+  const [fields, setFields] = useState<Fields>(() => initialFields(defaults));
+
+  function bind(key: keyof Fields) {
+    return {
+      name: key,
+      value: fields[key],
+      onChange: (
+        event: ChangeEvent<
+          HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+        >,
+      ) => setFields((current) => ({ ...current, [key]: event.target.value })),
+    };
+  }
 
   return (
     <form action={formAction} className="flex flex-col gap-2.5">
@@ -56,34 +98,26 @@ export function ProductForm({
 
       <label className="flex flex-col gap-1">
         <span className={LABEL}>Name</span>
-        <input
-          name="name"
-          required
-          maxLength={120}
-          defaultValue={defaults.name}
-          className={INPUT}
-        />
+        <input {...bind("name")} required maxLength={120} className={INPUT} />
       </label>
 
       <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col gap-1">
           <span className={LABEL}>SKU</span>
           <input
-            name="sku"
+            {...bind("sku")}
             required
             maxLength={40}
-            defaultValue={defaults.sku}
             className={`${INPUT} font-mono`}
           />
         </label>
         <label className="flex flex-col gap-1">
           <span className={LABEL}>Unit</span>
           <input
-            name="unitOfMeasure"
+            {...bind("unitOfMeasure")}
             required
             maxLength={12}
             list="product-units"
-            defaultValue={defaults.unitOfMeasure}
             className={INPUT}
           />
           <datalist id="product-units">
@@ -96,11 +130,7 @@ export function ProductForm({
 
       <label className="flex flex-col gap-1">
         <span className={LABEL}>Category</span>
-        <select
-          name="categoryId"
-          defaultValue={defaults.categoryId ?? ""}
-          className={INPUT}
-        >
+        <select {...bind("categoryId")} className={INPUT}>
           <option value="">No category</option>
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
@@ -113,8 +143,7 @@ export function ProductForm({
       <label className="flex flex-col gap-1">
         <span className={LABEL}>Supplier</span>
         <select
-          name="supplierId"
-          defaultValue={defaults.supplierId ?? ""}
+          {...bind("supplierId")}
           disabled={suppliers.length === 0}
           className={`${INPUT} disabled:text-ink-muted`}
         >
@@ -138,30 +167,27 @@ export function ProductForm({
         <label className="flex flex-col gap-1">
           <span className={LABEL}>Cost</span>
           <input
-            name="costPrice"
+            {...bind("costPrice")}
             required
             inputMode="decimal"
-            defaultValue={defaults.costPrice}
             className={`${INPUT} font-mono`}
           />
         </label>
         <label className="flex flex-col gap-1">
           <span className={LABEL}>Sell</span>
           <input
-            name="sellingPrice"
+            {...bind("sellingPrice")}
             inputMode="decimal"
             placeholder="optional"
-            defaultValue={toField(defaults.sellingPrice)}
             className={`${INPUT} font-mono`}
           />
         </label>
         <label className="flex flex-col gap-1">
           <span className={LABEL}>Reorder</span>
           <input
-            name="reorderLevel"
+            {...bind("reorderLevel")}
             required
             inputMode="decimal"
-            defaultValue={defaults.reorderLevel}
             className={`${INPUT} font-mono`}
           />
         </label>
@@ -170,10 +196,9 @@ export function ProductForm({
       <label className="flex flex-col gap-1">
         <span className={LABEL}>Description</span>
         <textarea
-          name="description"
+          {...bind("description")}
           rows={3}
           maxLength={2000}
-          defaultValue={toField(defaults.description)}
           className="w-full rounded border border-line bg-surface px-2 py-1.5 text-[13px]"
         />
       </label>
