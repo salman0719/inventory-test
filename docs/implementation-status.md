@@ -133,14 +133,34 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — Table-change loading on products and inventory.** A table change no
+  longer raises the viewport bar; the table carries its own loading state.
+  `ResultsBusy` (`src/components/results-busy.tsx`) wraps the list region with
+  `aria-busy` and `data-busy`, and is driven by reporters rather than by guesswork:
+  `LinkBusy` inside each pager control (`useLinkStatus`) and `TransitionBusy` in
+  `FilterForm`. While busy, `globals.css` hides `tbody[data-rows]` and reveals the
+  `tbody[data-skeleton]` each table always renders, so the header, columns, filter
+  bar and pager never move — the rows are replaced in place. `ProductTable` and
+  `InventoryTable` render eight skeleton rows sized to their own columns (five for a
+  viewer, six otherwise). Reports keeps option D: no skeleton and no bar, only the
+  pager's "Loading page N…", because its four report tables have four shapes. The
+  top bar remains for rail navigation, where there is no table to replace.
+  Verified: `npm run check` 0 errors (2 pre-existing `_role`/`_action` warnings),
+  `npm run test` 94/94 across 18 files (2 new: the region flips with its link and
+  back, the table keeps its rows and skeleton in separate bodies), `npm run build`
+  clean (10 routes, all dynamic), `secrets:check ok`, and the running dev server's
+  compiled stylesheet contains both `data-busy`/`data-skeleton` rules. Not verified
+  in a browser (no account password): how the swap reads on a throttled connection
+  at 50 rows, with the pager below the fold, is unreviewed.
 - **2026-11-22 — Pending state on the list pagers.** `Pagination`
   (`src/components/pagination.tsx`) replaces the three hand-written pagers on
   products, inventory and reports. Every control is still a `<Link>` to a real URL,
   so `/products?page=3` renders from the server on reload and nothing about the
   current page lives in client state; the addition is that `useLinkStatus` inside
-  the anchor swaps the label to "Loading page 3…" and raises the same
-  `RouteProgress` bar. That is the only feedback available for a `searchParams`
-  change, because a resolved `loading.tsx` never re-fires. Verified: `npm run check`
+  the anchor swaps the label to "Loading page 3…" (at the time it also raised the
+  `RouteProgress` bar; the table-loading slice above removed the bar for table
+  changes). A `searchParams` change has no other built-in feedback, because a
+  resolved `loading.tsx` never re-fires. Verified: `npm run check`
   0 errors (2 pre-existing `_role`/`_action` warnings), `npm run test` 92/92 across 17
   files (4 new pagination tests: single page renders nothing, neighbour hrefs,
   end-of-range controls omitted, pending label and bar), `npm run build` clean (10

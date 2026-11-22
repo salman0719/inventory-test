@@ -87,7 +87,7 @@ describe("the list pager", () => {
     expect(hrefs()).toEqual(["/inventory?page=1"]);
   });
 
-  it("names the page being loaded and shows the route bar while pending", async () => {
+  it("names the page being loaded while pending, without a page-level bar", async () => {
     mocks.pending = true;
     await render({
       page: 2,
@@ -97,6 +97,7 @@ describe("the list pager", () => {
     });
 
     expect(container.textContent).toContain("Loading page 3…");
-    expect(container.querySelector(".route-progress-bar")).not.toBeNull();
+    // The table region carries the loading state now, not the viewport top.
+    expect(container.querySelector(".route-progress-bar")).toBeNull();
   });
 });

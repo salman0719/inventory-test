@@ -5,6 +5,7 @@ import { InventoryPanel } from "@/components/inventory/inventory-panel";
 import { InventoryTable } from "@/components/inventory/inventory-table";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { Pagination } from "@/components/pagination";
+import { ResultsBusy } from "@/components/results-busy";
 import { getActiveBusiness } from "@/lib/businesses";
 import { formatMoney } from "@/lib/product-input";
 import { listCategories } from "@/lib/products";
@@ -159,7 +160,7 @@ export default async function InventoryPage({
           </DetailPanel>
         ) : null}
 
-        <div className="flex min-w-0 flex-col gap-3">
+        <ResultsBusy>
           {items.length > 0 ? (
             <InventoryTable
               items={items}
@@ -201,7 +202,7 @@ export default async function InventoryPage({
               page < pageCount ? hrefFor({ page: String(page + 1) }) : undefined
             }
           />
-        </div>
+        </ResultsBusy>
       </div>
     </section>
   );

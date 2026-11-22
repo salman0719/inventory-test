@@ -68,6 +68,25 @@
 }
 
 /*
+ * Table-change loading. While a results region reports itself busy, the table's
+ * real rows step aside and its skeleton rows take their place, so the header,
+ * the columns and the filter bar stay exactly where they are. Plain CSS rather
+ * than a variant because the two bodies are distinguished by data attributes
+ * that the table components own.
+ */
+[data-busy="true"] tbody[data-rows] {
+  display: none;
+}
+
+tbody[data-skeleton] {
+  display: none;
+}
+
+[data-busy="true"] tbody[data-skeleton] {
+  display: table-row-group;
+}
+
+/*
  * Touch pass (Phase 6). Below 900px every control is at least 44px tall and table
  * row links get enough padding to be tapped, which the component classes (36px
  * controls, dense cells) do not provide. Desktop density is untouched.

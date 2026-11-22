@@ -5,6 +5,7 @@ import { Pagination } from "@/components/pagination";
 import { ProductFilters } from "@/components/products/product-filters";
 import { ProductPanel } from "@/components/products/product-panel";
 import { ProductTable } from "@/components/products/product-table";
+import { ResultsBusy } from "@/components/results-busy";
 import { getActiveBusiness } from "@/lib/businesses";
 import { parseProductSort } from "@/lib/product-input";
 import {
@@ -182,7 +183,7 @@ export default async function ProductsPage({
           </DetailPanel>
         ) : null}
 
-        <div className="flex min-w-0 flex-col gap-3">
+        <ResultsBusy>
           {products.length > 0 ? (
             <ProductTable
               products={products}
@@ -221,7 +222,7 @@ export default async function ProductsPage({
               page < pageCount ? hrefFor({ page: String(page + 1) }) : undefined
             }
           />
-        </div>
+        </ResultsBusy>
       </div>
     </section>
   );

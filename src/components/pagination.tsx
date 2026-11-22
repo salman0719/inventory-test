@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useLinkStatus } from "next/link";
-import { RouteProgress } from "./route-progress";
+import { LinkBusy } from "./results-busy";
 
 /**
  * The pager for the paginated list screens.
@@ -11,7 +11,9 @@ import { RouteProgress } from "./route-progress";
  * a reload renders the same page from the server; nothing about the current page
  * lives in component state. What a link cannot do on its own is say that it was
  * clicked: a `searchParams` change never re-fires `loading.tsx`, because the
- * boundary is already resolved and stays resolved.
+ * boundary is already resolved and stays resolved. So the clicked control names
+ * the page it is fetching, and reports the navigation to the table region, which
+ * shows its skeleton rows until the new rows arrive.
  *
  * `useLinkStatus` only sees the navigation it is rendered inside, so the label is
  * produced by a child of the anchor rather than by the nav around it.
@@ -23,12 +25,7 @@ const CONTROL =
 function PendingLabel({ label, target }: { label: string; target: number }) {
   const { pending } = useLinkStatus();
 
-  return (
-    <>
-      <RouteProgress active={pending} />
-      {pending ? `Loading page ${target}…` : label}
-    </>
-  );
+  return <>{pending ? `Loading page ${target}…` : label}</>;
 }
 
 export function Pagination({
@@ -51,6 +48,7 @@ export function Pagination({
     >
       {previousHref ? (
         <Link href={previousHref} className={CONTROL}>
+          <LinkBusy id="pagination-previous" />
           <PendingLabel label="Previous" target={page - 1} />
         </Link>
       ) : null}
@@ -59,6 +57,7 @@ export function Pagination({
       </span>
       {nextHref ? (
         <Link href={nextHref} className={CONTROL}>
+          <LinkBusy id="pagination-next" />
           <PendingLabel label="Next" target={page + 1} />
         </Link>
       ) : null}
