@@ -4,12 +4,13 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Overall status
 
-- Current phase: Phase 5. Slices 1, 3, 4 and 5 are committed — shell/selector,
+- Current phase: Phase 5. Slices 1, 3, 4, 5 and 6 are committed — shell/selector,
   Supabase Auth with the authenticated `app_user` request path, products and
-  categories, and suppliers. The Supabase account `owner@cafe.test` is linked to
-  the local Demo Cafe, so signing in with it renders real catalogue data. Slice 6
-  (stock ledger and inventory) is implemented locally and uncommitted. Slice 2
-  (reset workflow) is still outstanding
+  categories, suppliers, and the stock ledger with inventory screens. The
+  Supabase account `owner@cafe.test` is linked to the local Demo Cafe, so signing
+  in with it renders real catalogue data. Slice 7 (purchase orders and
+  transactional receiving) is implemented locally and uncommitted, awaiting
+  review. Slice 2 (reset workflow) is still outstanding
 - Current deployment: Vercel stage at `https://inventory-stage.vercel.app`
   (public, no deployment protection; it serves the committed shell, not slices 1
   and 3)
@@ -66,10 +67,10 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [x] Authentication (built and linked; one manual browser sign-in pending)
 - [x] Products and categories (committed `c765db0`; walked through in a browser)
 - [x] Suppliers (committed `cd8361d`; walked through in a browser)
-- [x] Stock ledger (local, uncommitted; `private.record_stock_movement`)
-- [x] Inventory screens (local, uncommitted; walked through in a browser)
-- [ ] Purchase orders
-- [ ] Partial receiving
+- [x] Stock ledger (committed `872555d`; `private.record_stock_movement`)
+- [x] Inventory screens (committed `872555d`; walked through in a browser)
+- [x] Purchase orders (local, uncommitted; drafts, ordering, cancelling)
+- [x] Partial receiving (local, uncommitted; `private.receive_purchase_order`)
 - [ ] Dashboard
 - [ ] Reports
 - [ ] CSV workflows
@@ -89,8 +90,14 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Current blockers
 
-- Slice 6 is implemented and uncommitted by request; slices 1, 3, 4 and 5 are
+- Slice 7 is implemented and uncommitted by request; slices 1 and 3–6 are
   committed.
+- Verification note, not a page defect: when the automated preview tab is
+  hidden (`document.visibilityState` is `hidden`), React defers the streamed
+  Suspense reveal to `requestAnimationFrame`, which a hidden tab pauses. The
+  response, the HTML and the data are complete (they were re-fetched and
+  compared); focusing the tab and reloading, or flushing the queued reveal,
+  shows the page. Both `next dev` and `next start` behaved the same way.
 - The hosted stage cannot show catalogue or stock data: `db:seed` refuses
   non-loopback databases, so a hosted demo needs an approved data path first.
 - Auth redirect allowlist entries for `http://localhost:25000/**` and
@@ -101,7 +108,43 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
-- **2026-11-22 — Phase 5 slice 6 built locally, uncommitted.** Stock ledger and
+- **2026-11-22 — Phase 5 slice 7 built locally, uncommitted.** Purchase orders and
+  transactional receiving. Migration `0005` adds `private.receive_purchase_order`
+  and `private.set_purchase_order_status`, and takes the integrity fields away
+  from the application role: `authenticated` can no longer insert or update
+  `status`, `ordered_at`, `received_quantity` or a receipt directly (column-level
+  grants), order edits are draft-only by policy, and the transitions
+  draft→ordered, draft/ordered/partly received→cancelled are the only ones the
+  function allows. Receiving locks the order, replays a repeated idempotency key
+  instead of double-posting, rejects duplicate lines in one payload, refuses a
+  line from another order, rejects over-receipt with the outstanding quantity and
+  product in the message, writes one receipt, its lines and one `received`
+  movement per line, raises the line balances and moves the status. The screens
+  add a dense order list with search and status filters, a supplier-filtered
+  draft editor (cost pre-filled from the product), the detail panel with lines,
+  outstanding quantities, delivery history, mark-ordered and a confirmed cancel,
+  and a per-delivery receiving form pre-filled to what is due with a
+  server-generated idempotency key. The seed adds PO-0001 (ordered, three produce
+  lines) and PO-0002 (draft, dairy) and stays idempotent across runs. Verified:
+  migration applied (1 file, 6 tracked); unit 44/44 (12 new); database 38/38 (18
+  new, including idempotent replay, a reused key on another order, duplicate
+  lines, another order's line, over-receipt writing nothing, direct writes to
+  `received_quantity` refused, draft-only line edits, one-open-order and both
+  concurrency cases); check 0 errors; secrets ok; production build 0 errors. In a
+  browser as `owner@cafe.test`: 2 orders with 1 awaiting delivery and $131.80 on
+  order; PO-0001 showed three lines and the receiving form; a 5-of-12 tomato
+  delivery left the order partly received, 2 of 3 lines complete, $29.40 still on
+  order and one three-line receipt; 8 tomatoes against 7 outstanding was refused
+  with "Only 7 kg of Tomatoes, truss is outstanding on this order." and wrote
+  nothing; the remaining 7 completed the order, produced a second receipt and
+  moved on-hand by exactly 12 kg tomatoes, 20 kg potatoes and 3 kg garlic;
+  PO-0002 opened as a draft with its two lines, saved unchanged as a draft and
+  created PO-0003 for Harbour Line Meats at $95.30, which then marked as ordered.
+  The scratch order was deleted and PO-0001 restored to ordered with no receipts,
+  so the demo baseline is unchanged. Not verified: narrow widths and touch
+  targets; the viewer role through these screens (the database refuses its writes
+  but cost and value are still visible); a real delivery on a phone.
+- **2026-11-22 — Phase 5 slice 6 committed as `872555d`.** Stock ledger and
   inventory. Migration `0004` adds `private.record_stock_movement`, a
   `SECURITY DEFINER` function and the ledger's only write path (`authenticated`
   still holds no INSERT grant): it checks membership and owner/staff, locks the

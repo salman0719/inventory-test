@@ -24,7 +24,8 @@ import {
  * Products upsert on (business_id, sku), so re-running updates rather than
  * duplicates. Opening balances are written as `opening` stock movements, one per
  * product, guarded so a second run adds none: stock is always the ledger's sum.
- * Purchase orders arrive with their slice.
+ * Two cafe purchase orders demonstrate the receiving flow; the retail store stays
+ * empty, which is a valid first state for a new business.
  *
  * Development and CI only: it writes to auth.users, which Supabase owns. A hosted
  * database is rejected until Phase 5 adds a Supabase Auth seeding path.
@@ -228,6 +229,81 @@ async function seedCatalogue(
   }
 }
 
+/**
+ * One ordered and one draft purchase order for the cafe.
+ *
+ * Guarded on both the order number and the supplier's open order, because the
+ * database allows only one open order per supplier: a database used for a while
+ * before re-seeding must not fail, and a second run must add nothing.
+ */
+async function seedPurchaseOrders(pool: Pool): Promise<void> {
+  const businessId = DEMO_BUSINESSES[0].id;
+
+  const ordered = await pool.query<{ id: string }>(
+    `insert into purchase_orders
+       (business_id, supplier_id, order_number, status, ordered_at,
+        expected_delivery_at, notes)
+     select $1, s.id, 'PO-0001', 'ordered', now() - interval '2 days',
+            current_date + 3,
+            'Weekly produce order. Check the tomatoes before signing.'
+       from suppliers s
+      where s.business_id = $1 and s.name = 'Fresh Fields Produce'
+        and not exists (
+          select 1 from purchase_orders po
+           where po.business_id = $1 and po.order_number = 'PO-0001'
+        )
+        and not exists (
+          select 1 from purchase_orders po
+           where po.business_id = $1 and po.supplier_id = s.id
+             and po.status in ('draft', 'ordered', 'partially_received')
+        )
+     returning id`,
+    [businessId],
+  );
+
+  if (ordered.rows[0]) {
+    await pool.query(
+      `insert into purchase_order_lines
+         (business_id, purchase_order_id, product_id, quantity_ordered, unit_cost)
+       select $1, $2, p.id, v.quantity, p.cost_price
+         from (values ('CAF-001', 12::numeric), ('CAF-004', 20::numeric),
+                      ('CAF-011', 3::numeric)) as v(sku, quantity)
+         join products p on p.business_id = $1 and p.sku = v.sku`,
+      [businessId, ordered.rows[0].id],
+    );
+  }
+
+  const draft = await pool.query<{ id: string }>(
+    `insert into purchase_orders
+       (business_id, supplier_id, order_number, expected_delivery_at, notes)
+     select $1, s.id, 'PO-0002', current_date + 5, 'Standing dairy order.'
+       from suppliers s
+      where s.business_id = $1 and s.name = 'Coldstream Dairy'
+        and not exists (
+          select 1 from purchase_orders po
+           where po.business_id = $1 and po.order_number = 'PO-0002'
+        )
+        and not exists (
+          select 1 from purchase_orders po
+           where po.business_id = $1 and po.supplier_id = s.id
+             and po.status in ('draft', 'ordered', 'partially_received')
+        )
+     returning id`,
+    [businessId],
+  );
+
+  if (draft.rows[0]) {
+    await pool.query(
+      `insert into purchase_order_lines
+         (business_id, purchase_order_id, product_id, quantity_ordered, unit_cost)
+       select $1, $2, p.id, v.quantity, p.cost_price
+         from (values ('CAF-021', 24::numeric), ('CAF-022', 6::numeric)) as v(sku, quantity)
+         join products p on p.business_id = $1 and p.sku = v.sku`,
+      [businessId, draft.rows[0].id],
+    );
+  }
+}
+
 async function main(): Promise<void> {
   const url = databaseUrl();
   if (!needsAuthShim(url)) {
@@ -276,6 +352,8 @@ async function main(): Promise<void> {
       await seedCatalogue(pool, catalogue);
     }
 
+    await seedPurchaseOrders(pool);
+
     const [{ businesses }] = await db
       .select({ businesses: sql<number>`count(*)::int` })
       .from(schema.businesses);
@@ -288,9 +366,12 @@ async function main(): Promise<void> {
     const [{ movements }] = await db
       .select({ movements: sql<number>`count(*)::int` })
       .from(schema.stockMovements);
+    const [{ orders }] = await db
+      .select({ orders: sql<number>`count(*)::int` })
+      .from(schema.purchaseOrders);
 
     console.log(
-      `seed: ok — ${businesses} businesses, ${DEMO_USERS.length} demo users, ${members} memberships, ${products} products, ${movements} opening movements (idempotent)`,
+      `seed: ok — ${businesses} businesses, ${DEMO_USERS.length} demo users, ${members} memberships, ${products} products, ${movements} opening movements, ${orders} purchase orders (idempotent)`,
     );
   } finally {
     await pool.end();

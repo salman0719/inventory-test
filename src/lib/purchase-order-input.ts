@@ -1,0 +1,196 @@
+import { z } from "zod";
+
+/**
+ * Purchase order form validation and the status vocabulary the screens share.
+ *
+ * Quantities and money stay numeric strings so nothing rounds on the way to
+ * Postgres. The business id is absent on purpose: it comes from the session, and
+ * the status and received quantities are not fields at all — the database takes
+ * those away from the application role.
+ */
+
+export const ORDER_STATUSES = [
+  "draft",
+  "ordered",
+  "partially_received",
+  "received",
+  "cancelled",
+] as const;
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
+
+export const ORDER_LABELS: Record<OrderStatus, string> = {
+  draft: "Draft",
+  ordered: "Ordered",
+  partially_received: "Partly received",
+  received: "Received",
+  cancelled: "Cancelled",
+};
+
+/** Statuses that still owe stock, so the order can be received. */
+export const AWAITING_STATUSES: OrderStatus[] = [
+  "ordered",
+  "partially_received",
+];
+
+export function canReceive(status: OrderStatus): boolean {
+  return AWAITING_STATUSES.includes(status);
+}
+
+export type OrderFilter = "all" | "open" | OrderStatus;
+
+export const ORDER_FILTERS: ReadonlyArray<{
+  value: OrderFilter;
+  label: string;
+}> = [
+  { value: "all", label: "All orders" },
+  { value: "open", label: "Awaiting delivery" },
+  { value: "draft", label: "Drafts" },
+  { value: "received", label: "Received" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
+export function parseOrderFilter(
+  value: string | undefined | null,
+): OrderFilter {
+  if (value === "open") return "open";
+  return ORDER_STATUSES.find((status) => status === value) ?? "all";
+}
+
+const QUANTITY_PATTERN = /^\d{1,9}(\.\d{1,3})?$/;
+const MONEY_PATTERN = /^\d{1,10}(\.\d{1,2})?$/;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Rejects 2026-02-30, which Date.parse would quietly roll into March. */
+function isCalendarDate(value: string): boolean {
+  if (!DATE_PATTERN.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return (
+    !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+  );
+}
+
+const lineSchema = z.object({
+  productId: z
+    .string()
+    .trim()
+    .refine(
+      (value) => z.uuid().safeParse(value).success,
+      "Choose a product for every line.",
+    ),
+  quantity: z
+    .string()
+    .trim()
+    .regex(
+      QUANTITY_PATTERN,
+      "Enter the quantity as a number, for example 6 or 2.5.",
+    )
+    .refine((value) => Number(value) > 0, "Enter a quantity above zero."),
+  unitCost: z
+    .string()
+    .trim()
+    .regex(
+      MONEY_PATTERN,
+      "Enter the unit cost as an amount, for example 4.50.",
+    ),
+});
+
+export const purchaseOrderInputSchema = z
+  .object({
+    supplierId: z
+      .string()
+      .trim()
+      .refine(
+        (value) => z.uuid().safeParse(value).success,
+        "Choose a supplier.",
+      ),
+    /** A plain date in the URL and the form; empty means no expectation yet. */
+    expectedDeliveryAt: z
+      .string()
+      .trim()
+      .refine(
+        (value) => value === "" || isCalendarDate(value),
+        "Enter the expected delivery as a date.",
+      )
+      .transform((value) => (value === "" ? null : value)),
+    notes: z
+      .string()
+      .trim()
+      .max(2000, "Keep the notes to 2000 characters or fewer.")
+      .transform((value) => (value === "" ? null : value)),
+    lines: z
+      .array(lineSchema)
+      .min(1, "Add at least one line to the order.")
+      .max(60, "Keep an order to 60 lines or fewer."),
+  })
+  .superRefine((value, context) => {
+    // The table has a unique (order, product) index; catching it here gives the
+    // operator a sentence instead of a constraint name.
+    const seen = new Set<string>();
+    value.lines.forEach((line, index) => {
+      if (seen.has(line.productId)) {
+        context.addIssue({
+          code: "custom",
+          path: ["lines", index, "productId"],
+          message: "Each product can appear once. Combine the quantities.",
+        });
+      }
+      seen.add(line.productId);
+    });
+  });
+
+export type PurchaseOrderInput = z.infer<typeof purchaseOrderInputSchema>;
+
+/** One line of a delivery, as the receiving form posts it. */
+export const receiptLineSchema = z.object({
+  lineId: z
+    .string()
+    .trim()
+    .refine(
+      (value) => z.uuid().safeParse(value).success,
+      "Choose an order line to receive.",
+    ),
+  quantity: z
+    .string()
+    .trim()
+    .regex(
+      QUANTITY_PATTERN,
+      "Enter the quantity as a number, for example 6 or 2.5.",
+    )
+    .refine((value) => Number(value) > 0, "Enter a quantity above zero."),
+});
+
+export const receiptSchema = z.object({
+  orderId: z
+    .string()
+    .trim()
+    .refine((value) => z.uuid().safeParse(value).success, "Open an order."),
+  idempotencyKey: z
+    .string()
+    .trim()
+    .refine(
+      (value) => z.uuid().safeParse(value).success,
+      "Reload the order and try again.",
+    ),
+  lines: z
+    .array(receiptLineSchema)
+    .min(1, "Enter a quantity for at least one line.")
+    .max(60, "Receive 60 lines at a time at most."),
+});
+
+export type ReceiptInput = z.infer<typeof receiptSchema>;
+
+/** "6.000" reads as "6" in an input; a stored quantity is not a form value. */
+export function quantityField(value: string | number): string {
+  const quantity = Number(value);
+  return Number.isFinite(quantity) ? String(quantity) : String(value);
+}
+
+/** What is still owed on a line: ordered minus received, never below zero. */
+export function outstandingQuantity(
+  ordered: string | number,
+  received: string | number,
+): number {
+  const difference = Number(ordered) - Number(received);
+  if (!Number.isFinite(difference) || difference <= 0) return 0;
+  return Math.round(difference * 1000) / 1000;
+}
