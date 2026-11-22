@@ -98,6 +98,7 @@ describe("the panel provider", () => {
   it("opens a row without a navigation and records it in the URL", async () => {
     await render("/products?q=apples");
     expect(container.querySelector("[data-panel]")).toBeNull();
+    const entriesBefore = window.history.length;
 
     await click();
 
@@ -111,6 +112,38 @@ describe("the panel provider", () => {
     expect(
       container.querySelector("a")?.getAttribute("data-panel-active"),
     ).toBe("true");
+    // A pushed entry is what makes Back close the panel.
+    expect(window.history.length).toBe(entriesBefore + 1);
+  });
+
+  it("closes by replacing, so closing does not stack another entry", async () => {
+    await render("/products?q=apples");
+    await click();
+    const entriesOpen = window.history.length;
+
+    const close = container.querySelector("button");
+    if (!close) throw new Error("No close control rendered");
+    await act(async () => {
+      close.click();
+    });
+
+    expect(container.querySelector("[data-panel]")).toBeNull();
+    expect(window.history.length).toBe(entriesOpen);
+  });
+
+  it("follows the address bar when the browser goes back", async () => {
+    await render("/products?q=apples&product=p1");
+    expect(container.querySelector("[data-panel]")).not.toBeNull();
+
+    await act(async () => {
+      window.history.replaceState(null, "", "/products?q=apples");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    expect(container.querySelector("[data-panel]")).toBeNull();
+    expect(container.querySelector("[data-href]")?.textContent).toBe(
+      "/products?q=apples",
+    );
   });
 
   it("starts from the URL, so a reload or a shared link opens the panel", async () => {

@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -14,9 +15,13 @@ import {
  *
  * Opening a row used to be a navigation: `?product=<id>` re-rendered the page, and
  * the page fetched the list, the categories and the suppliers again to show one
- * panel. Here the URL changes through `history.replaceState`, which Next folds into
- * the router without asking the server for a render, so the click costs one small
- * JSON request instead of a page.
+ * panel. Here the URL changes through the History API, which Next folds into the
+ * router without asking the server for a render, so the click costs one small JSON
+ * request instead of a page.
+ *
+ * Opening pushes an entry and closing replaces it, so Back from an open panel closes
+ * the panel instead of leaving the screen. Back and forward are read back from
+ * `location`, which keeps the panel and the address bar in step.
  *
  * The URL is still the state: a reload, a shared link or a server action's redirect
  * arrive with the same query string, and `initialHref` puts the panel back.
@@ -31,7 +36,8 @@ type PanelContextValue = {
   /** The current view, panel params included. */
   href: string;
   closeHref: string;
-  open: (href: string) => void;
+  /** Open a panel (pushes), or close one (replaces). */
+  navigate: (href: string) => void;
   close: () => void;
   /** True when `href` points at the row the panel is showing. */
   isActive: (href: string) => boolean;
@@ -43,7 +49,7 @@ function parse(href: string): URLSearchParams {
   return new URL(href, "http://panel.local").searchParams;
 }
 
-/** Drop the panel's own params, keeping filters, sort, page and the saved flag out. */
+/** Drop the panel's own params, keeping filters, sort and page. */
 export function hrefWithoutPanel(href: string): string {
   const url = new URL(href, "http://panel.local");
   for (const key of PANEL_KEYS) url.searchParams.delete(key);
@@ -100,18 +106,31 @@ export function PanelProvider({
   }
   const href = override ?? initialHref;
 
-  const open = useCallback((next: string) => {
+  const navigate = useCallback((next: string) => {
     setOverride(next);
-    window.history.replaceState(null, "", next);
+    // Opening is a step forward the browser can undo; closing is not a new place.
+    if (isPanelOpen(next)) window.history.pushState(null, "", next);
+    else window.history.replaceState(null, "", next);
   }, []);
+
+  // Back and forward: adopt whatever the address bar says, so the panel follows the
+  // history entry instead of staying on the row that was open before.
+  useEffect(() => {
+    const sync = () => {
+      const current = `${window.location.pathname}${window.location.search}`;
+      setOverride(current === initialHref ? null : current);
+    };
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, [initialHref]);
 
   const value = useMemo<PanelContextValue>(() => {
     const current = parse(href);
     return {
       href,
       closeHref: hrefWithoutPanel(href),
-      open,
-      close: () => open(hrefWithoutPanel(href)),
+      navigate,
+      close: () => navigate(hrefWithoutPanel(href)),
       isActive: (candidate: string) => {
         const other = parse(candidate);
         return ID_KEYS.some((key) => {
@@ -120,7 +139,7 @@ export function PanelProvider({
         });
       },
     };
-  }, [href, open]);
+  }, [href, navigate]);
 
   return (
     <PanelContext.Provider value={value}>{children}</PanelContext.Provider>

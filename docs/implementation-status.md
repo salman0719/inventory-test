@@ -133,6 +133,25 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — Every list panel opens without a page render, and Back closes it.**
+  Inventory, suppliers and purchase orders joined products. Each screen has its own
+  endpoint (`/api/inventory/panel`, `/api/suppliers/panel`,
+  `/api/purchase-orders/panel`) that resolves the business from the session, validates
+  the request with Zod and answers `private, no-store`; each page no longer fetches
+  the panel's data (inventory drops `getInventoryDetail`, suppliers `getSupplier` and
+  `listSuppliedProducts`, purchase orders `getPurchaseOrder`, `getOrderFormOptions`
+  and the draft defaults). The order endpoint owns what the page used to compute: the
+  draft editor's options and defaults, and a fresh receipt idempotency key per
+  request. The shared panel request schema lives in `lib/panel.ts`; orders extend the
+  idea with their own because `saved` there is a word (`ordered`, `cancelled`, …), not
+  a boolean. History: opening a panel now pushes an entry and closing replaces it, so
+  Back closes an open panel instead of leaving the screen, and a `popstate` listener
+  puts the panel back in step with the address bar. Verified: `npm run check` 0 errors
+  (2 pre-existing `_role`/`_action` warnings), `npm run test` 101/101 across 19 files
+  (2 new: closing replaces rather than stacking an entry, and a popstate closes the
+  panel), `npm run build` clean with the three new dynamic routes, `secrets:check ok`.
+  Not verified in a browser: no panel has been opened, edited, ordered, received or
+  archived signed in, and Back/Forward were only simulated in jsdom.
 - **2026-11-22 — The product panel no longer re-renders the page.** A row click used
   to change `?product=` and re-render the route, which fetched the list, the
   categories and the suppliers again to open one panel. `PanelProvider` holds the

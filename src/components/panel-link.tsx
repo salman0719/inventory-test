@@ -38,7 +38,7 @@ export function PanelLink({
       return;
     }
     event.preventDefault();
-    panels.open(href);
+    panels.navigate(href);
     onNavigate?.();
   }
 
