@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { formatMoney, formatQuantity, stockStatus } from "@/lib/product-input";
 import type { InventoryItem } from "@/lib/stock";
 import { StatusLabel } from "@/components/products/status-label";
+import { PanelLink } from "../panel-link";
 
 const TH =
   "px-2.5 py-1.5 text-left text-[10px] font-medium uppercase tracking-[0.07em] text-ink-muted";
@@ -14,13 +14,11 @@ const TD = "px-2.5 py-1.5 align-middle";
 export function InventoryTable({
   items,
   currency,
-  selectedId,
   rowHref,
   canViewValues = true,
 }: {
   items: InventoryItem[];
   currency: string;
-  selectedId: string;
   rowHref: (productId: string) => string;
   /** Viewers do not receive stock value. */
   canViewValues?: boolean;
@@ -58,29 +56,21 @@ export function InventoryTable({
         </thead>
         <tbody data-rows>
           {items.map((item) => {
-            const selected = item.id === selectedId;
             const status = stockStatus(item.onHand, item.reorderLevel);
             return (
               <tr
                 key={item.id}
-                className={`border-b border-line last:border-b-0 ${
-                  selected ? "bg-accent-soft" : "hover:bg-panel"
-                }`}
+                className="border-b border-line last:border-b-0 hover:bg-panel"
               >
-                <td
-                  className={`${TD} ${
-                    selected
-                      ? "border-l-2 border-accent"
-                      : "border-l-2 border-transparent"
-                  }`}
-                >
-                  <Link
+                <td className={`${TD} border-l-2 border-transparent`}>
+                  {/* The open row is marked by the link's own state, because the
+                      panel opens without a page render. */}
+                  <PanelLink
                     href={rowHref(item.id)}
-                    aria-current={selected ? "true" : undefined}
                     className="font-medium hover:text-accent"
                   >
                     {item.name}
-                  </Link>
+                  </PanelLink>
                   <span className="ml-2 font-mono text-[11px] text-ink-faint">
                     {item.sku}
                   </span>

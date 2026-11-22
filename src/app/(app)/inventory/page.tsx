@@ -1,21 +1,17 @@
 import Link from "next/link";
-import { DetailPanel } from "@/components/detail-panel";
 import { InventoryFilters } from "@/components/inventory/inventory-filters";
-import { InventoryPanel } from "@/components/inventory/inventory-panel";
+import { InventoryPanelColumn } from "@/components/inventory/inventory-panel-column";
 import { InventoryTable } from "@/components/inventory/inventory-table";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { Pagination } from "@/components/pagination";
+import { PanelGrid, PanelProvider } from "@/components/panel-host";
 import { ResultsBusy } from "@/components/results-busy";
 import { getActiveBusiness } from "@/lib/businesses";
 import { formatMoney } from "@/lib/product-input";
 import { listCategories } from "@/lib/products";
-import {
-  getInventoryDetail,
-  getStockSummary,
-  listInventory,
-} from "@/lib/stock";
-import { parseStockFilter, parseStockSort } from "@/lib/stock-input";
 import { getSessionUser } from "@/lib/session";
+import { getStockSummary, listInventory } from "@/lib/stock";
+import { parseStockFilter, parseStockSort } from "@/lib/stock-input";
 
 const PAGE_SIZE = 50;
 
@@ -30,8 +26,9 @@ function single(params: SearchParams, key: string): string {
  * Inventory: on-hand by product, the shortages first if you ask for them, and the
  * ledger behind any single product.
  *
- * As on the other lists, all state lives in the URL, so the page needs no client
- * data fetching and every view can be linked to.
+ * The list's state lives in the URL; the open product does too, but its panel is
+ * fetched by the panel itself (`/api/inventory/panel`), so opening a row leaves the
+ * list's queries untouched.
  */
 export default async function InventoryPage({
   searchParams,
@@ -57,7 +54,7 @@ export default async function InventoryPage({
   const selectedId = single(params, "product");
   const saved = single(params, "saved") === "true";
 
-  const [{ items, total }, summary, categories, selected] = await Promise.all([
+  const [{ items, total }, summary, categories] = await Promise.all([
     listInventory(user.id, active.id, {
       search: q,
       categoryId,
@@ -68,7 +65,6 @@ export default async function InventoryPage({
     }),
     getStockSummary(user.id, active.id),
     listCategories(user.id, active.id),
-    selectedId ? getInventoryDetail(user.id, active.id, selectedId) : null,
   ]);
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -93,117 +89,83 @@ export default async function InventoryPage({
     return query ? `/inventory?${query}` : "/inventory";
   }
 
-  const closeHref = hrefFor({ product: undefined, saved: undefined });
-  const showPanel = selectedId !== "";
-
   return (
-    <section className="flex flex-col gap-4">
-      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h1 className="text-[15px] font-semibold tracking-tight">Inventory</h1>
-        <p className="text-[12px] text-ink-muted">
-          {filtered
-            ? `${total} match these filters`
-            : `${summary.products} product${summary.products === 1 ? "" : "s"}`}{" "}
-          · {summary.outCount} out · {summary.lowCount} low
-          {canViewValues ? (
-            <>
-              {" "}
-              · {formatMoney(summary.stockValue, active.currencyCode)} at cost
-            </>
-          ) : null}{" "}
-          · {active.name}
-        </p>
-      </header>
+    <PanelProvider initialHref={hrefFor({})}>
+      <section className="flex flex-col gap-4">
+        <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h1 className="text-[15px] font-semibold tracking-tight">
+            Inventory
+          </h1>
+          <p className="text-[12px] text-ink-muted">
+            {filtered
+              ? `${total} match these filters`
+              : `${summary.products} product${summary.products === 1 ? "" : "s"}`}{" "}
+            · {summary.outCount} out · {summary.lowCount} low
+            {canViewValues ? (
+              <>
+                {" "}
+                · {formatMoney(summary.stockValue, active.currencyCode)} at cost
+              </>
+            ) : null}{" "}
+            · {active.name}
+          </p>
+        </header>
 
-      <InventoryFilters
-        q={q}
-        categoryId={categoryId}
-        categories={categories}
-        status={status}
-        sort={sort}
-      />
+        <InventoryFilters
+          q={q}
+          categoryId={categoryId}
+          categories={categories}
+          status={status}
+          sort={sort}
+        />
 
-      <div
-        className={`grid gap-3 ${
-          showPanel
-            ? "min-[900px]:grid-cols-[minmax(0,1fr)_360px] min-[900px]:items-start"
-            : ""
-        }`}
-      >
-        {showPanel ? (
-          <DetailPanel closeHref={closeHref} label="stock details">
-            {selected ? (
-              <InventoryPanel
-                item={selected.item}
-                movements={selected.movements}
+        <PanelGrid panel={<InventoryPanelColumn />}>
+          <ResultsBusy>
+            {items.length > 0 ? (
+              <InventoryTable
+                items={items}
                 currency={active.currencyCode}
-                saved={saved}
-                closeHref={closeHref}
+                rowHref={(productId) =>
+                  hrefFor({ product: productId, saved: undefined })
+                }
                 canViewValues={canViewValues}
               />
             ) : (
-              <div className="rounded border border-line bg-surface px-3 py-6 text-center">
+              <div className="rounded border border-dashed border-line bg-panel px-4 py-12 text-center">
                 <p className="text-[13px] font-medium">
-                  That product is not in this business
+                  {filtered
+                    ? "No products match those filters"
+                    : "No products yet"}
                 </p>
-                <p className="mt-1 text-[12px] text-ink-muted">
-                  Open a product from the list, or close this panel.
+                <p className="mx-auto mt-1 max-w-[46ch] text-[12px] text-ink-muted">
+                  {filtered
+                    ? "Clear the filters, or search for a different name or SKU."
+                    : "Add products in the catalogue first; their stock positions appear here."}
                 </p>
                 <Link
-                  href={closeHref}
-                  className="mt-3 inline-flex min-h-[36px] items-center rounded border border-line px-2.5 text-[12px] font-medium hover:border-accent hover:text-accent"
+                  href={filtered ? "/inventory" : "/products"}
+                  className="mt-4 inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
                 >
-                  Close panel
+                  {filtered ? "Clear filters" : "Open products"}
                 </Link>
               </div>
             )}
-          </DetailPanel>
-        ) : null}
 
-        <ResultsBusy>
-          {items.length > 0 ? (
-            <InventoryTable
-              items={items}
-              currency={active.currencyCode}
-              selectedId={selectedId}
-              rowHref={(productId) =>
-                hrefFor({ product: productId, saved: undefined })
+            <Pagination
+              page={page}
+              pageCount={pageCount}
+              previousHref={
+                page > 1 ? hrefFor({ page: String(page - 1) }) : undefined
               }
-              canViewValues={canViewValues}
+              nextHref={
+                page < pageCount
+                  ? hrefFor({ page: String(page + 1) })
+                  : undefined
+              }
             />
-          ) : (
-            <div className="rounded border border-dashed border-line bg-panel px-4 py-12 text-center">
-              <p className="text-[13px] font-medium">
-                {filtered
-                  ? "No products match those filters"
-                  : "No products yet"}
-              </p>
-              <p className="mx-auto mt-1 max-w-[46ch] text-[12px] text-ink-muted">
-                {filtered
-                  ? "Clear the filters, or search for a different name or SKU."
-                  : "Add products in the catalogue first; their stock positions appear here."}
-              </p>
-              <Link
-                href={filtered ? "/inventory" : "/products"}
-                className="mt-4 inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
-              >
-                {filtered ? "Clear filters" : "Open products"}
-              </Link>
-            </div>
-          )}
-
-          <Pagination
-            page={page}
-            pageCount={pageCount}
-            previousHref={
-              page > 1 ? hrefFor({ page: String(page - 1) }) : undefined
-            }
-            nextHref={
-              page < pageCount ? hrefFor({ page: String(page + 1) }) : undefined
-            }
-          />
-        </ResultsBusy>
-      </div>
-    </section>
+          </ResultsBusy>
+        </PanelGrid>
+      </section>
+    </PanelProvider>
   );
 }

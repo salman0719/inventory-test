@@ -1,4 +1,4 @@
-import { z } from "zod";
+import type { PanelRequest } from "./panel";
 import type {
   CategoryOption,
   ProductSummary,
@@ -15,20 +15,8 @@ import type {
  *
  * The business is never in the request: the endpoint resolves it from the session
  * and the active-business cookie, so a product id from another tenant simply does
- * not resolve.
+ * not resolve. The request shape itself is shared in `lib/panel.ts`.
  */
-export const panelRequestSchema = z.object({
-  mode: z.enum(["create", "edit", "detail"]),
-  product: z.string().trim().max(64).default(""),
-  // `z.coerce.boolean()` would read the string "false" as true.
-  saved: z
-    .union([z.literal("true"), z.literal("false")])
-    .default("false")
-    .transform((value) => value === "true"),
-});
-
-export type PanelRequest = z.infer<typeof panelRequestSchema>;
-
 export type ProductPanelPayload = {
   mode: PanelRequest["mode"];
   /** `null` when the product is not in this business, or was never found. */

@@ -1,8 +1,6 @@
 import { getActiveBusiness } from "@/lib/businesses";
-import {
-  panelRequestSchema,
-  type ProductPanelPayload,
-} from "@/lib/product-panel";
+import { panelRequestSchema } from "@/lib/panel";
+import type { ProductPanelPayload } from "@/lib/product-panel";
 import { getProduct, listCategories, listSuppliers } from "@/lib/products";
 import { getSessionUser } from "@/lib/session";
 
@@ -33,7 +31,7 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const parsed = panelRequestSchema.safeParse({
     mode: params.get("mode") ?? "detail",
-    product: params.get("product") ?? "",
+    id: params.get("product") ?? "",
     saved: params.get("saved") ?? "false",
   });
 
@@ -44,7 +42,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const { mode, product: productId, saved } = parsed.data;
+  const { mode, id: productId, saved } = parsed.data;
   const canViewValues = active.role !== "viewer";
 
   const [product, categories, suppliers] = await Promise.all([

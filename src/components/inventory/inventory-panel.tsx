@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { PanelLink } from "@/components/panel-link";
 import { formatMoney, formatQuantity, stockStatus } from "@/lib/product-input";
 import { StatusLabel } from "@/components/products/status-label";
 import {
@@ -54,13 +57,13 @@ export function InventoryPanel({
           <h2 className="truncate text-[13px] font-semibold">{item.name}</h2>
           <p className="font-mono text-[10.5px] text-ink-faint">{item.sku}</p>
         </div>
-        <Link
+        <PanelLink
           href={closeHref}
           aria-label="Close stock panel"
           className={`${BUTTON} ml-auto shrink-0`}
         >
           Close
-        </Link>
+        </PanelLink>
       </header>
 
       {saved ? (
