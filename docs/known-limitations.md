@@ -218,8 +218,13 @@ data path is `db:seed:hosted` (verified 2026-11-22: 2 businesses, 2 memberships,
 Local JWT verification is the open fix for the first row: replacing the proxy's
 `auth.getUser()` with `getClaims()` removes that round trip, but only if the
 Supabase project signs JWTs asymmetrically and publishes a JWKS — otherwise
-`getClaims()` falls back to the same network call. Unconfirmed, so not attempted;
-the reasoning is repeated as a comment in `src/proxy.ts`.
+`getClaims()` falls back to the same network call.
+
+Confirmed 2026-11-22: it does. `/auth/v1/.well-known/jwks.json` answers 200 with a
+single `EC` key, `alg: ES256`, kid `00efa8a1…`, and a decoded session access-token
+header carries the same `alg` and kid, so the tokens on this project are
+asymmetric. `getClaims()` is therefore worth attempting; it is not implemented
+yet, and the proxy still calls `getUser()` on every matched request.
 
 Measured 2026-11-22 (`NAV_TIMING=1`, 40 signed-in navigations, dev server on
 Windows against Docker Postgres): each of the two auth checks is 89–93 ms at p50

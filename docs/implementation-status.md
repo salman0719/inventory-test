@@ -133,6 +133,31 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — Panel endpoints on one transaction; `getClaims` prerequisite confirmed (`66d8979`).**
+  The product, supplier and order panel endpoints loaded several things per open and
+  each read took its own transaction. Each now calls one function that reads inside a
+  single transaction (`getProductPanel`, `getSupplierPanel`, `getOrderPanel`), with the
+  per-function wrappers taking an optional client; the inventory panel already read
+  its item and its movements in one function, so it was left as it was. The order
+  panel's "is this still a draft" decision moved into `getOrderPanel`, because it sits
+  between the two reads it depends on. Re-measured with `NAV_TIMING=1` against 20 panel
+  opens (five per endpoint, warm server, one real row each): `proxy.auth` p50 45.2 /
+  p95 60.4, `session.auth` p50 47.2 / p95 62.7, `tenant.setup` p50 0.9 / p95 1.5,
+  `tenant.work` p50 1.5 / p95 4.5, `tenant.commit` p50 0.6 / p95 0.8, and **2 tenant
+  transactions per panel, every time** (the membership read the shell shares, then the
+  panel's own). Client wall clock: p50 125.1 ms, p95 146.4 ms, all 200. Before this
+  change the same opens took 3 (suppliers, orders) or 4 (products) transactions by
+  inspection of the code, not by measurement.
+  `getClaims` prerequisite, checked rather than assumed: the project publishes
+  `/auth/v1/.well-known/jwks.json` (HTTP 200, `application/json`, one `EC` key,
+  `alg: ES256`, kid starting `00efa8a1`), and the session's access token header is
+  `alg: ES256` with the same kid — so tokens are genuinely asymmetric and
+  `getClaims()` can verify locally instead of calling Supabase. Only the token header
+  was decoded to establish that; the token itself was not read out or logged. The
+  probe lives in `local/perf/check-jwks.ts` (untracked). Verified: `npm run check` 0
+  errors (2 pre-existing warnings), unit 103/103, `test:db` 44/44, build clean with
+  the three panel routes still dynamic, `secrets:check ok`. Not checked by hand in a
+  browser; the measurement drove fetches from the signed-in tab.
 - **2026-11-22 — Stage 3 item 4: one transaction per page, opened in one round trip (`b8bff2a`).**
   The products, inventory and purchase-orders pages each took a connection per
   read. Each page now calls one function that reads everything inside a single
