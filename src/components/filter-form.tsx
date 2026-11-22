@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition, type ReactNode } from "react";
-import { TransitionBusy } from "./results-busy";
+import { TransitionBusy, useResultsRegion } from "./results-busy";
 
 /**
  * The URL is still the filter state; the browser no longer navigates to set it.
@@ -26,6 +26,8 @@ export function FilterForm({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  // A results region announces the change once, for the table and the pager both.
+  const inResultsRegion = useResultsRegion();
 
   return (
     <form
@@ -64,9 +66,11 @@ export function FilterForm({
           Clear
         </Link>
       ) : null}
-      <span role="status" className="sr-only">
-        {pending ? "Updating results" : ""}
-      </span>
+      {inResultsRegion ? null : (
+        <span role="status" className="sr-only">
+          {pending ? "Updating results" : ""}
+        </span>
+      )}
     </form>
   );
 }

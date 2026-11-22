@@ -31,6 +31,7 @@ vi.mock("next/link", () => ({
 
 const { ProductFilters } =
   await import("@/components/products/product-filters");
+const { ResultsBusy } = await import("@/components/results-busy");
 const { PurchaseOrderFilters } =
   await import("@/components/purchase-orders/purchase-order-filters");
 
@@ -52,16 +53,19 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-async function renderProducts(overrides: { q?: string } = {}) {
+async function renderProducts(
+  overrides: { q?: string; region?: boolean } = {},
+) {
+  const filters = createElement(ProductFilters, {
+    q: overrides.q ?? "",
+    categoryId: "",
+    categories: [{ id: "c1", name: "Produce", productCount: 2 }],
+    sort: "name",
+    archived: false,
+  });
   await act(async () => {
     root.render(
-      createElement(ProductFilters, {
-        q: overrides.q ?? "",
-        categoryId: "",
-        categories: [{ id: "c1", name: "Produce", productCount: 2 }],
-        sort: "name",
-        archived: false,
-      }),
+      overrides.region ? createElement(ResultsBusy, null, filters) : filters,
     );
   });
   const form = container.querySelector("form");
@@ -120,6 +124,17 @@ describe("the list filter bar", () => {
       "/products?q=apples&sort=name&archived=true",
       { scroll: false },
     );
+  });
+
+  it("announces for itself when no results region wraps it", async () => {
+    await renderProducts();
+    expect(container.querySelectorAll('form [role="status"]')).toHaveLength(1);
+  });
+
+  it("leaves the announcement to the results region when there is one", async () => {
+    await renderProducts({ region: true });
+    expect(container.querySelectorAll('form [role="status"]')).toHaveLength(0);
+    expect(container.querySelectorAll('[role="status"]')).toHaveLength(1);
   });
 
   it("offers Clear against the bare list only while filtered", async () => {

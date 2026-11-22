@@ -58,6 +58,14 @@ export function ResultsBusy({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * True inside a results region, which is the only thing that should announce a
+ * table change: the filter bar's own live region would otherwise repeat it.
+ */
+export function useResultsRegion(): boolean {
+  return useContext(BusyContext) !== null;
+}
+
 function useReportBusy(id: string, pending: boolean) {
   const report = useContext(BusyContext);
 

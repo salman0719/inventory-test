@@ -138,7 +138,10 @@ Add date, task, verification method, and result.
   `ResultsBusy` (`src/components/results-busy.tsx`) wraps the list region with
   `aria-busy` and `data-busy`, and is driven by reporters rather than by guesswork:
   `LinkBusy` inside each pager control (`useLinkStatus`) and `TransitionBusy` in
-  `FilterForm`. While busy, `globals.css` hides `tbody[data-rows]` and reveals the
+  `FilterForm`. `FilterForm` asks whether a region encloses it (`useResultsRegion`)
+  and drops its own sr-only "Updating results" when one does, so a filter apply is
+  announced once on products and inventory; the suppliers and purchase-order bars
+  have no region and keep announcing for themselves. While busy, `globals.css` hides `tbody[data-rows]` and reveals the
   `tbody[data-skeleton]` each table always renders, so the header, columns, filter
   bar and pager never move — the rows are replaced in place. `ProductTable` and
   `InventoryTable` render eight skeleton rows sized to their own columns (five for a
