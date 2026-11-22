@@ -1,4 +1,5 @@
 import { Pool, type PoolClient } from "pg";
+import { timed } from "./nav-timing";
 
 /**
  * Application database access.
@@ -46,15 +47,17 @@ export async function withTenant<T>(
 ): Promise<T> {
   if (!userId) throw new Error("withTenant requires a user id.");
 
-  const client = await getPool().connect();
+  const client = await timed("tenant.connect", () => getPool().connect());
   try {
-    await client.query("begin");
-    await client.query("set local role authenticated");
-    await client.query("select set_config('request.jwt.claims', $1, true)", [
-      JSON.stringify({ sub: userId, role: "authenticated" }),
-    ]);
-    const result = await fn(client);
-    await client.query("commit");
+    await timed("tenant.setup", async () => {
+      await client.query("begin");
+      await client.query("set local role authenticated");
+      await client.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: userId, role: "authenticated" }),
+      ]);
+    });
+    const result = await timed("tenant.work", () => fn(client));
+    await timed("tenant.commit", () => client.query("commit"));
     return result;
   } catch (error) {
     await client.query("rollback").catch(() => undefined);

@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { timed } from "./lib/nav-timing";
 
 /**
  * Session refresh and route protection.
@@ -41,9 +42,11 @@ export async function proxy(request: NextRequest) {
   // Supabase project to sign JWTs asymmetrically and publish a JWKS (or it falls
   // back to the same network call); unconfirmed, so not attempted. Recorded in
   // docs/known-limitations.md under "Navigation latency".
+  // Measured with `NAV_TIMING=1`; see src/lib/nav-timing.ts. The comment below is
+  // the reason the measurement exists, not a change of behaviour.
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await timed("proxy.auth", () => supabase.auth.getUser());
 
   const { pathname, search } = request.nextUrl;
   const isSignIn = pathname === "/sign-in";

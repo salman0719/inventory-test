@@ -1,5 +1,6 @@
 import { cache } from "react";
 import type { User } from "@supabase/supabase-js";
+import { timed } from "./nav-timing";
 import { createSupabaseServerClient } from "./supabase/server";
 
 /**
@@ -11,7 +12,9 @@ import { createSupabaseServerClient } from "./supabase/server";
  */
 export const getSessionUser = cache(async (): Promise<User | null> => {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.getUser();
+  const { data, error } = await timed("session.auth", () =>
+    supabase.auth.getUser(),
+  );
   if (error) return null;
   return data.user;
 });

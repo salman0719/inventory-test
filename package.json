@@ -22,6 +22,7 @@
     "test:e2e": "playwright test",
     "smoke": "tsx scripts/smoke.ts",
     "perf:budget": "tsx scripts/perf-budget.ts",
+    "perf:nav": "tsx scripts/nav-timing-report.ts",
     "secrets:check": "node scripts/check-client-secrets.mjs",
     "db:up": "docker compose --env-file .env.local up -d db",
     "db:generate": "drizzle-kit generate",
