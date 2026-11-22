@@ -105,10 +105,11 @@ Keep this file current. Do not report a task as complete until it has been verif
   "Stock in" after a rejected adjustment) is fixed in `b368be9`; D3 (a stale
   "saved" notice during archive/restore) is fixed in `1219908`. Tenant isolation
   was walked on 2026-11-22 with no defect found. Empty, loading and error states
-  were walked on 2026-11-22, which found D4 (unknown routes show Next's default
-  unstyled 404, outside the shell) and D5 (a database outage fails in the layout
-  query, above `error.tsx`, so the app's error panel is replaced by Next's generic
-  error page). Deployment verification and the demo walkthrough remain. Business
+  were walked on 2026-11-22, which found D4 (unknown routes showed Next's default
+  unstyled 404, outside the shell; fixed with `src/app/not-found.tsx`) and D5 (a
+  database outage fails in the layout query, above `error.tsx`, so the app's error
+  panel is replaced by Next's generic error page; open). Deployment verification
+  and the demo walkthrough remain. Business
   switching is demoable without SQL: `db:link-user` now links the account to both
   demo businesses by default.
 - Verification note, not a page defect: when the automated preview tab is
@@ -147,7 +148,9 @@ Add date, task, verification method, and result.
   error panel (`local/phase-6/error-db-down.png`); the container was restarted and
   the page recovered after a reload. Unknown routes (`/dashboard` — the dashboard
   lives at `/`) show Next's unstyled default 404 with no shell
-  (`local/phase-6/error-unknown-route-404.png`). Both are logged as D4 (default 404) and D5 (layout failures bypass `error.tsx`) and left unfixed. Not verified:
+  (`local/phase-6/error-unknown-route-404.png`). D4 (default 404) is fixed with a
+  styled `src/app/not-found.tsx` that offers the dashboard and products; D5
+  (layout failures bypass `error.tsx`) remains open. Not verified:
   whether Try again recovers without a reload, because the automated tab reports
   `document.visibilityState: hidden` and pauses the streamed reveal; the reload
   that flushed the queue returned 62 products. No data changed: the revoked grant
