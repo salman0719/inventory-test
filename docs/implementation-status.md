@@ -84,7 +84,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 ### Phase 6: Validation
 
 - [x] Core journeys tested (2026-11-22: product, supplier, stock movement and
-      purchase order; D1–D3 found, D1 and D2 fixed)
+      purchase order; D1–D3 found, all fixed)
 - [x] Partial receiving tested (2026-11-22: two deliveries on PO-0003)
 - [x] Duplicate receiving prevented (2026-11-22: repeat submit and a stale
       second-tab form both refused)
@@ -92,7 +92,7 @@ Keep this file current. Do not report a task as complete until it has been verif
       foreign product, supplier and order ids refused)
 - [x] Responsive layouts checked (390 / 768 / 1280, 2026-11-22)
 - [x] Empty/loading/error states checked (2026-11-22: list and report empty
-      states, the route skeleton and both error paths; D4 and D5 open)
+      states, the route skeleton and both error paths; D4 and D5 fixed)
 - [ ] Deployment verified
 - [ ] Demo walkthrough ready
 
