@@ -108,8 +108,8 @@ Keep this file current. Do not report a task as complete until it has been verif
   were walked on 2026-11-22, which found D4 (unknown routes showed Next's default
   unstyled 404, outside the shell; fixed with `src/app/not-found.tsx`) and D5 (a
   database outage fails in the layout query, above `error.tsx`, so the app's error
-  panel is replaced by Next's generic error page; open). Deployment verification
-  and the demo walkthrough remain. Business
+  panel is replaced by Next's generic error page; fixed with `src/app/error.tsx`).
+  Deployment verification and the demo walkthrough remain. Business
   switching is demoable without SQL: `db:link-user` now links the account to both
   demo businesses by default.
 - Verification note, not a page defect: when the automated preview tab is
@@ -150,7 +150,12 @@ Add date, task, verification method, and result.
   lives at `/`) show Next's unstyled default 404 with no shell
   (`local/phase-6/error-unknown-route-404.png`). D4 (default 404) is fixed with a
   styled `src/app/not-found.tsx` that offers the dashboard and products; D5
-  (layout failures bypass `error.tsx`) remains open. Not verified:
+  (layout failures bypass `error.tsx`) is fixed with a root boundary
+  `src/app/error.tsx` above the shell layout, verified by stopping Postgres:
+  `/products` showed the shared panel with Try again instead of Next's page
+  (`local/phase-6/error-root-panel.png`), and a reload once Postgres was back
+  returned 62 products. That retry itself failed after the restart and only a
+  reload recovered, which is logged as an open limitation. Not verified:
   whether Try again recovers without a reload, because the automated tab reports
   `document.visibilityState: hidden` and pauses the streamed reveal; the reload
   that flushed the queue returned 62 products. No data changed: the revoked grant
