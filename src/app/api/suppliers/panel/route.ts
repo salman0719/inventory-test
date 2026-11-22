@@ -1,11 +1,7 @@
 import { getActiveBusiness } from "@/lib/businesses";
 import { panelRequestSchema } from "@/lib/panel";
 import { getSessionUser } from "@/lib/session";
-import {
-  getSupplier,
-  listSuppliedProducts,
-  type SuppliedProduct,
-} from "@/lib/suppliers";
+import { getSupplierPanel } from "@/lib/suppliers";
 import type { SupplierPanelPayload } from "@/lib/supplier-panel";
 
 /**
@@ -44,15 +40,10 @@ export async function GET(request: Request) {
   }
 
   const { mode, id: supplierId, saved } = parsed.data;
-  const supplier =
-    mode === "create" || supplierId === ""
-      ? null
-      : await getSupplier(user.id, active.id, supplierId);
-
-  let products: SuppliedProduct[] = [];
-  if (supplier !== null && mode === "detail") {
-    products = await listSuppliedProducts(user.id, active.id, supplier.id);
-  }
+  const { supplier, products } = await getSupplierPanel(user.id, active.id, {
+    mode,
+    supplierId,
+  });
 
   const payload: SupplierPanelPayload = {
     mode: mode === "create" ? "create" : supplier === null ? "detail" : mode,

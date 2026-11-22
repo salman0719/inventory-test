@@ -5,7 +5,7 @@ import {
   type OrderPanelPayload,
 } from "@/lib/order-panel";
 import { quantityField } from "@/lib/purchase-order-input";
-import { getOrderFormOptions, getPurchaseOrder } from "@/lib/purchase-orders";
+import { getOrderPanel } from "@/lib/purchase-orders";
 import { getSessionUser } from "@/lib/session";
 
 /**
@@ -46,19 +46,12 @@ export async function GET(request: Request) {
   }
 
   const { mode, id: orderId, saved } = parsed.data;
-  const detail =
-    mode === "create" || orderId === ""
-      ? null
-      : await getPurchaseOrder(user.id, active.id, orderId);
-
-  const editingDraft =
-    detail !== null && detail.order.status === "draft" && mode === "edit";
-  const resolvedMode =
-    mode === "create" ? "create" : editingDraft ? "edit" : "detail";
-  const options =
-    resolvedMode === "detail"
-      ? null
-      : await getOrderFormOptions(user.id, active.id);
+  const {
+    mode: resolvedMode,
+    detail,
+    options,
+  } = await getOrderPanel(user.id, active.id, { mode, orderId });
+  const editingDraft = resolvedMode === "edit";
 
   const defaults =
     options === null

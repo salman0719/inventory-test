@@ -1,4 +1,5 @@
-import { withTenant } from "./db";
+import type { PoolClient } from "pg";
+import { runInTenant, withTenant } from "./db";
 import type { SupplierInput } from "./supplier-input";
 
 /**
@@ -91,14 +92,37 @@ export async function listSuppliers(
   });
 }
 
+/**
+ * Everything the supplier panel reads, on one connection: the supplier and, for a
+ * detail view, the products they supply.
+ */
+export async function getSupplierPanel(
+  userId: string,
+  businessId: string,
+  request: { mode: "create" | "edit" | "detail"; supplierId: string },
+): Promise<{ supplier: SupplierSummary | null; products: SuppliedProduct[] }> {
+  return withTenant(userId, async (client) => {
+    const supplier =
+      request.mode === "create" || request.supplierId === ""
+        ? null
+        : await getSupplier(userId, businessId, request.supplierId, client);
+    const products =
+      supplier !== null && request.mode === "detail"
+        ? await listSuppliedProducts(userId, businessId, supplier.id, client)
+        : [];
+    return { supplier, products };
+  });
+}
+
 export async function getSupplier(
   userId: string,
   businessId: string,
   supplierId: string,
+  client?: PoolClient,
 ): Promise<SupplierSummary | null> {
   if (!UUID_PATTERN.test(supplierId)) return null;
 
-  return withTenant(userId, async (client) => {
+  return runInTenant(userId, client, async (client) => {
     const result = await client.query<Row>(
       `${SELECT_SUPPLIER}
         where s.business_id = $1 and s.id = $2
@@ -114,10 +138,11 @@ export async function listSuppliedProducts(
   userId: string,
   businessId: string,
   supplierId: string,
+  client?: PoolClient,
 ): Promise<SuppliedProduct[]> {
   if (!UUID_PATTERN.test(supplierId)) return [];
 
-  return withTenant(userId, async (client) => {
+  return runInTenant(userId, client, async (client) => {
     const result = await client.query<{
       id: string;
       name: string;

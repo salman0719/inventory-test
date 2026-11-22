@@ -159,10 +159,11 @@ export async function getProduct(
   userId: string,
   businessId: string,
   productId: string,
+  client?: PoolClient,
 ): Promise<ProductSummary | null> {
   if (!UUID_PATTERN.test(productId)) return null;
 
-  return withTenant(userId, async (client) => {
+  return runInTenant(userId, client, async (client) => {
     const result = await client.query<Row>(
       `${SELECT_PRODUCT} where p.business_id = $1 and p.id = $2`,
       [businessId, productId],
@@ -202,6 +203,37 @@ export async function listCategories(
 }
 
 /**
+ * Everything the product panel reads, on one connection.
+ *
+ * The panel used to take a transaction per read — the product, its categories and
+ * the supplier options. They join here, so opening a row costs one transaction.
+ */
+export async function getProductPanel(
+  userId: string,
+  businessId: string,
+  request: { mode: "create" | "edit" | "detail"; productId: string },
+): Promise<{
+  product: ProductSummary | null;
+  categories: CategoryOption[];
+  suppliers: SupplierOption[];
+}> {
+  return withTenant(userId, async (client) => {
+    const [product, categories, suppliers] = await Promise.all([
+      request.mode === "create"
+        ? null
+        : getProduct(userId, businessId, request.productId, client),
+      request.mode === "detail"
+        ? []
+        : listCategories(userId, businessId, client),
+      request.mode === "detail"
+        ? []
+        : listSuppliers(userId, businessId, client),
+    ]);
+    return { product, categories, suppliers };
+  });
+}
+
+/**
  * Everything the products page reads, on one connection.
  *
  * The list and the category options used to take a transaction each, so a render
@@ -229,8 +261,9 @@ export async function getProductsPage(
 export async function listSuppliers(
   userId: string,
   businessId: string,
+  client?: PoolClient,
 ): Promise<SupplierOption[]> {
-  return withTenant(userId, async (client) => {
+  return runInTenant(userId, client, async (client) => {
     const result = await client.query<{ id: string; name: string }>(
       `select id, name from suppliers
         where business_id = $1 and is_archived = false

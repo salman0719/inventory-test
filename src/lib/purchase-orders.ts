@@ -222,14 +222,50 @@ export async function getPurchaseOrdersPage(
   });
 }
 
+/**
+ * Everything the order panel reads, on one connection.
+ *
+ * `edit` only stays `edit` while the order is still a draft; the endpoint used to
+ * decide that between two transactions, so the decision lives here with the reads
+ * it depends on.
+ */
+export async function getOrderPanel(
+  userId: string,
+  businessId: string,
+  request: { mode: "create" | "edit" | "detail"; orderId: string },
+): Promise<{
+  mode: "create" | "edit" | "detail";
+  detail: PurchaseOrderDetail | null;
+  options: OrderFormOptions | null;
+}> {
+  return withTenant(userId, async (client) => {
+    const detail =
+      request.mode === "create" || request.orderId === ""
+        ? null
+        : await getPurchaseOrder(userId, businessId, request.orderId, client);
+    const editingDraft =
+      detail !== null &&
+      detail.order.status === "draft" &&
+      request.mode === "edit";
+    const mode =
+      request.mode === "create" ? "create" : editingDraft ? "edit" : "detail";
+    const options =
+      mode === "detail"
+        ? null
+        : await getOrderFormOptions(userId, businessId, client);
+    return { mode, detail, options };
+  });
+}
+
 export async function getPurchaseOrder(
   userId: string,
   businessId: string,
   orderId: string,
+  client?: PoolClient,
 ): Promise<PurchaseOrderDetail | null> {
   if (!UUID_PATTERN.test(orderId)) return null;
 
-  return withTenant(userId, async (client) => {
+  return runInTenant(userId, client, async (client) => {
     const orderResult = await client.query<SummaryRow>(
       `${SELECT_SUMMARY}
         where po.business_id = $1 and po.id = $2
@@ -307,8 +343,9 @@ export async function getPurchaseOrder(
 export async function getOrderFormOptions(
   userId: string,
   businessId: string,
+  client?: PoolClient,
 ): Promise<OrderFormOptions> {
-  return withTenant(userId, async (client) => {
+  return runInTenant(userId, client, async (client) => {
     const suppliers = await client.query<{ id: string; name: string }>(
       `select id, name from suppliers
         where business_id = $1 and is_archived = false

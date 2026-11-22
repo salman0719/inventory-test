@@ -1,7 +1,7 @@
 import { getActiveBusiness } from "@/lib/businesses";
 import { panelRequestSchema } from "@/lib/panel";
 import type { ProductPanelPayload } from "@/lib/product-panel";
-import { getProduct, listCategories, listSuppliers } from "@/lib/products";
+import { getProductPanel } from "@/lib/products";
 import { getSessionUser } from "@/lib/session";
 
 /**
@@ -45,11 +45,11 @@ export async function GET(request: Request) {
   const { mode, id: productId, saved } = parsed.data;
   const canViewValues = active.role !== "viewer";
 
-  const [product, categories, suppliers] = await Promise.all([
-    mode === "create" ? null : getProduct(user.id, active.id, productId),
-    mode === "detail" ? [] : listCategories(user.id, active.id),
-    mode === "detail" ? [] : listSuppliers(user.id, active.id),
-  ]);
+  const { product, categories, suppliers } = await getProductPanel(
+    user.id,
+    active.id,
+    { mode, productId },
+  );
 
   const payload: ProductPanelPayload = {
     mode,

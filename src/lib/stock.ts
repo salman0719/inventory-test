@@ -244,10 +244,11 @@ export async function getInventoryDetail(
   businessId: string,
   productId: string,
   movementLimit = 12,
+  client?: PoolClient,
 ): Promise<{ item: InventoryItem; movements: StockMovement[] } | null> {
   if (!UUID_PATTERN.test(productId)) return null;
 
-  return withTenant(userId, async (client) => {
+  return runInTenant(userId, client, async (client) => {
     const itemResult = await client.query<ItemRow>(
       `${SELECT_ITEM} where p.business_id = $1 and p.id = $2`,
       [businessId, productId],
