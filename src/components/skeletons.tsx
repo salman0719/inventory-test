@@ -1,7 +1,9 @@
+import type { ReactNode } from "react";
+
 /**
- * Loading placeholders for the shell. They reserve the same space as the real
- * content so the layout does not jump when the business query resolves, and they
- * are hidden from assistive tech: the wrapper announces "Loading" instead.
+ * Loading placeholders for the shell and the list screens. They reserve the same
+ * space as the real content so the layout does not jump when a query resolves, and
+ * they are hidden from assistive tech: the wrapper announces what is loading.
  */
 
 export function BusinessSwitcherSkeleton() {
@@ -51,6 +53,128 @@ export function ContentSkeleton() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The frame every route-level loading file shares: the announcement, the content
+ * column the page uses, and one pulse for the whole placeholder rather than one per
+ * bar.
+ */
+export function PageSkeleton({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      aria-busy="true"
+      className="flex animate-pulse flex-col gap-4 motion-reduce:animate-none"
+    >
+      <LoadingAnnouncement label={label} />
+      {children}
+    </section>
+  );
+}
+
+/** The list header: title, the count line beside it, and the primary action. */
+export function ListHeaderSkeleton({
+  titleWidth = "w-24",
+}: {
+  titleWidth?: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2" aria-hidden>
+      <span className={`h-4 rounded bg-line ${titleWidth}`} />
+      <span className="h-3 w-56 rounded bg-line/70" />
+      <span className="ml-auto h-9 w-[112px] rounded bg-line/60" />
+    </div>
+  );
+}
+
+/**
+ * The filter bar, one block per field. `fields` matches the real form so the bar is
+ * the same height and the table does not shift down when it arrives.
+ */
+export function FilterBarSkeleton({ fields = 1 }: { fields?: number }) {
+  return (
+    <div
+      className="flex flex-wrap items-end gap-2 rounded border border-line bg-panel px-2.5 py-2"
+      aria-hidden
+    >
+      {Array.from({ length: fields }, (_, index) => (
+        <div key={index} className="flex flex-col gap-1">
+          <span className="h-2 w-12 rounded bg-line/70" />
+          <span className="h-9 w-[150px] rounded border border-line bg-surface" />
+        </div>
+      ))}
+      <span className="h-9 w-[68px] rounded bg-line/60" />
+    </div>
+  );
+}
+
+/**
+ * A list table: the header row, then `rows` body rows with the name-and-SKU pair in
+ * the first column. `minWidth` matches the real table so narrow screens behave the
+ * same while it loads.
+ */
+export function TableSkeleton({
+  columns,
+  rows = 8,
+  minWidth = "680px",
+}: {
+  columns: number;
+  rows?: number;
+  minWidth?: string;
+}) {
+  return (
+    <div
+      className="overflow-x-auto rounded border border-line bg-surface"
+      aria-hidden
+    >
+      <table
+        className="w-full border-collapse text-[13px]"
+        style={{ minWidth }}
+      >
+        <thead className="border-b border-line bg-panel">
+          <tr>
+            {Array.from({ length: columns }, (_, column) => (
+              <th key={column} scope="col" className="px-2.5 py-1.5">
+                <span
+                  className={`block h-2 rounded bg-line ${
+                    column === 0 ? "w-20" : "w-10"
+                  }`}
+                />
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: rows }, (_, row) => (
+            <tr key={row} className="border-b border-line last:border-b-0">
+              {Array.from({ length: columns }, (_, column) => (
+                <td key={column} className="px-2.5 py-1.5">
+                  {column === 0 ? (
+                    <span className="flex items-center gap-2">
+                      <span className="h-3 w-28 rounded bg-line" />
+                      <span className="h-2.5 w-12 rounded bg-line/60" />
+                    </span>
+                  ) : (
+                    <span
+                      className={`block h-3 rounded bg-line/70 ${
+                        column === columns - 1 ? "w-16" : "w-10"
+                      }`}
+                    />
+                  )}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
