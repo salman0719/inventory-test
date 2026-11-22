@@ -8,9 +8,8 @@ import { PanelGrid, PanelProvider } from "@/components/panel-host";
 import { ResultsBusy } from "@/components/results-busy";
 import { getActiveBusiness } from "@/lib/businesses";
 import { formatMoney } from "@/lib/product-input";
-import { listCategories } from "@/lib/products";
 import { getSessionUser } from "@/lib/session";
-import { getStockSummary, listInventory } from "@/lib/stock";
+import { getInventoryPage } from "@/lib/stock";
 import { parseStockFilter, parseStockSort } from "@/lib/stock-input";
 
 const PAGE_SIZE = 50;
@@ -54,18 +53,19 @@ export default async function InventoryPage({
   const selectedId = single(params, "product");
   const saved = single(params, "saved") === "true";
 
-  const [{ items, total }, summary, categories] = await Promise.all([
-    listInventory(user.id, active.id, {
+  // One transaction for the page of items, the summary and the filter options.
+  const { items, total, summary, categories } = await getInventoryPage(
+    user.id,
+    active.id,
+    {
       search: q,
       categoryId,
       status,
       sort,
       page,
       pageSize: PAGE_SIZE,
-    }),
-    getStockSummary(user.id, active.id),
-    listCategories(user.id, active.id),
-  ]);
+    },
+  );
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const filtered = q !== "" || categoryId !== "" || status !== "all";

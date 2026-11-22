@@ -8,7 +8,7 @@ import { PurchaseOrderTable } from "@/components/purchase-orders/purchase-order-
 import { getActiveBusiness } from "@/lib/businesses";
 import { formatMoney } from "@/lib/product-input";
 import { parseOrderFilter } from "@/lib/purchase-order-input";
-import { getOrderSummary, listPurchaseOrders } from "@/lib/purchase-orders";
+import { getPurchaseOrdersPage } from "@/lib/purchase-orders";
 import { getSessionUser } from "@/lib/session";
 
 const BUTTON =
@@ -51,13 +51,11 @@ export default async function PurchaseOrdersPage({
   const saved = single(params, "saved");
   const canViewValues = active.role !== "viewer";
 
-  const [orders, summary] = await Promise.all([
-    listPurchaseOrders(user.id, active.id, {
-      search: q,
-      status: filter === "all" ? "" : filter,
-    }),
-    getOrderSummary(user.id, active.id),
-  ]);
+  // One transaction for the filtered list and the counts above it.
+  const { orders, summary } = await getPurchaseOrdersPage(user.id, active.id, {
+    search: q,
+    status: filter === "all" ? "" : filter,
+  });
 
   const filtered = q !== "" || filter !== "all";
 

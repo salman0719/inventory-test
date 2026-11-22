@@ -9,7 +9,7 @@ import { ProductTable } from "@/components/products/product-table";
 import { ResultsBusy } from "@/components/results-busy";
 import { getActiveBusiness } from "@/lib/businesses";
 import { parseProductSort } from "@/lib/product-input";
-import { listCategories, listProducts } from "@/lib/products";
+import { getProductsPage } from "@/lib/products";
 import { getSessionUser } from "@/lib/session";
 
 const PAGE_SIZE = 50;
@@ -56,17 +56,19 @@ export default async function ProductsPage({
   const editing = single(params, "edit") === "true";
   const saved = single(params, "saved") === "true";
 
-  const [{ products, total }, categories] = await Promise.all([
-    listProducts(user.id, active.id, {
+  // One transaction for the list and its filter options.
+  const { products, total, categories } = await getProductsPage(
+    user.id,
+    active.id,
+    {
       search: q,
       categoryId,
       includeArchived: archived,
       sort,
       page,
       pageSize: PAGE_SIZE,
-    }),
-    listCategories(user.id, active.id),
-  ]);
+    },
+  );
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const filtered = q !== "" || categoryId !== "" || archived;

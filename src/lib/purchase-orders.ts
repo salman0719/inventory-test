@@ -1,5 +1,5 @@
 import type { PoolClient } from "pg";
-import { withTenant } from "./db";
+import { runInTenant, withTenant } from "./db";
 import type {
   OrderStatus,
   PurchaseOrderInput,
@@ -140,11 +140,12 @@ export async function listPurchaseOrders(
   userId: string,
   businessId: string,
   options: { search?: string; status?: string } = {},
+  client?: PoolClient,
 ): Promise<PurchaseOrderSummary[]> {
   const search = options.search?.trim().slice(0, 80) ?? "";
   const status = options.status?.trim() ?? "";
 
-  return withTenant(userId, async (client) => {
+  return runInTenant(userId, client, async (client) => {
     const filters = `
       where po.business_id = $1
         and ($2::text is null or po.order_number ilike $2 or s.name ilike $2)
@@ -166,8 +167,9 @@ export async function listPurchaseOrders(
 export async function getOrderSummary(
   userId: string,
   businessId: string,
+  client?: PoolClient,
 ): Promise<OrderSummary> {
-  return withTenant(userId, async (client) => {
+  return runInTenant(userId, client, async (client) => {
     const result = await client.query<{
       total: number;
       awaiting: number;
@@ -199,6 +201,24 @@ export async function getOrderSummary(
       drafts: row?.drafts ?? 0,
       onOrderValue: row?.on_order_value ?? "0",
     };
+  });
+}
+
+/**
+ * Everything the purchase orders page reads, on one connection: the filtered list
+ * and the counts above it.
+ */
+export async function getPurchaseOrdersPage(
+  userId: string,
+  businessId: string,
+  options: { search?: string; status?: string },
+): Promise<{ orders: PurchaseOrderSummary[]; summary: OrderSummary }> {
+  return withTenant(userId, async (client) => {
+    const [orders, summary] = await Promise.all([
+      listPurchaseOrders(userId, businessId, options, client),
+      getOrderSummary(userId, businessId, client),
+    ]);
+    return { orders, summary };
   });
 }
 

@@ -1,4 +1,6 @@
-import { withTenant } from "./db";
+import type { PoolClient } from "pg";
+import { runInTenant, withTenant } from "./db";
+import { listCategories, type CategoryOption } from "./products";
 import {
   parseStockFilter,
   parseStockSort,
@@ -111,17 +113,20 @@ function likePattern(search: string): string {
   return `%${search.replace(/[\\%_]/g, "\\$&")}%`;
 }
 
+export type InventoryListOptions = {
+  search?: string;
+  categoryId?: string;
+  status?: string;
+  sort?: string;
+  page?: number;
+  pageSize?: number;
+};
+
 export async function listInventory(
   userId: string,
   businessId: string,
-  options: {
-    search?: string;
-    categoryId?: string;
-    status?: string;
-    sort?: string;
-    page?: number;
-    pageSize?: number;
-  } = {},
+  options: InventoryListOptions = {},
+  client?: PoolClient,
 ): Promise<{ items: InventoryItem[]; total: number }> {
   const search = options.search?.trim().slice(0, 80) ?? "";
   const categoryId =
@@ -134,7 +139,7 @@ export async function listInventory(
   const page = Math.max(options.page ?? 1, 1);
   const offset = (page - 1) * pageSize;
 
-  return withTenant(userId, async (client) => {
+  return runInTenant(userId, client, async (client) => {
     const filters = `
       where p.business_id = $1
         and p.is_archived = false
@@ -177,8 +182,9 @@ export async function listInventory(
 export async function getStockSummary(
   userId: string,
   businessId: string,
+  client?: PoolClient,
 ): Promise<StockSummary> {
-  return withTenant(userId, async (client) => {
+  return runInTenant(userId, client, async (client) => {
     const result = await client.query<{
       products: number;
       low_count: number;
@@ -203,6 +209,33 @@ export async function getStockSummary(
       outCount: row?.out_count ?? 0,
       stockValue: row?.stock_value ?? "0",
     };
+  });
+}
+
+/**
+ * Everything the inventory page reads, on one connection: the page of items, the
+ * shortages summary and the category options.
+ *
+ * Those were three transactions per render; joining them removes two checkouts and
+ * two `begin`/`commit` pairs, and sets the tenant's role once for all three reads.
+ */
+export async function getInventoryPage(
+  userId: string,
+  businessId: string,
+  options: InventoryListOptions,
+): Promise<{
+  items: InventoryItem[];
+  total: number;
+  summary: StockSummary;
+  categories: CategoryOption[];
+}> {
+  return withTenant(userId, async (client) => {
+    const [page, summary, categories] = await Promise.all([
+      listInventory(userId, businessId, options, client),
+      getStockSummary(userId, businessId, client),
+      listCategories(userId, businessId, client),
+    ]);
+    return { ...page, summary, categories };
   });
 }
 

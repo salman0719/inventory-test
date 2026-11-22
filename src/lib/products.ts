@@ -1,4 +1,5 @@
-import { withTenant } from "./db";
+import type { PoolClient } from "pg";
+import { runInTenant, withTenant } from "./db";
 import { parseProductSort, type ProductInput } from "./product-input";
 
 /**
@@ -97,17 +98,20 @@ function likePattern(search: string): string {
   return `%${search.replace(/[\\%_]/g, "\\$&")}%`;
 }
 
+export type ProductListOptions = {
+  search?: string;
+  categoryId?: string;
+  includeArchived?: boolean;
+  sort?: string;
+  page?: number;
+  pageSize?: number;
+};
+
 export async function listProducts(
   userId: string,
   businessId: string,
-  options: {
-    search?: string;
-    categoryId?: string;
-    includeArchived?: boolean;
-    sort?: string;
-    page?: number;
-    pageSize?: number;
-  } = {},
+  options: ProductListOptions = {},
+  client?: PoolClient,
 ): Promise<{ products: ProductSummary[]; total: number }> {
   const search = options.search?.trim().slice(0, 80) ?? "";
   const categoryId =
@@ -120,7 +124,7 @@ export async function listProducts(
   const page = Math.max(options.page ?? 1, 1);
   const offset = (page - 1) * pageSize;
 
-  return withTenant(userId, async (client) => {
+  return runInTenant(userId, client, async (client) => {
     const filters = `
       where p.business_id = $1
         and ($2::text is null or p.name ilike $2 or p.sku ilike $2)
@@ -171,8 +175,9 @@ export async function getProduct(
 export async function listCategories(
   userId: string,
   businessId: string,
+  client?: PoolClient,
 ): Promise<CategoryOption[]> {
-  return withTenant(userId, async (client) => {
+  return runInTenant(userId, client, async (client) => {
     const result = await client.query<{
       id: string;
       name: string;
@@ -193,6 +198,31 @@ export async function listCategories(
       name: row.name,
       productCount: row.product_count,
     }));
+  });
+}
+
+/**
+ * Everything the products page reads, on one connection.
+ *
+ * The list and the category options used to take a transaction each, so a render
+ * paid for two checkouts and two `begin`/`commit` pairs. They join here, which is
+ * also one place where the tenant's role is set for the whole read.
+ */
+export async function getProductsPage(
+  userId: string,
+  businessId: string,
+  options: ProductListOptions,
+): Promise<{
+  products: ProductSummary[];
+  total: number;
+  categories: CategoryOption[];
+}> {
+  return withTenant(userId, async (client) => {
+    const [page, categories] = await Promise.all([
+      listProducts(userId, businessId, options, client),
+      listCategories(userId, businessId, client),
+    ]);
+    return { ...page, categories };
   });
 }
 
