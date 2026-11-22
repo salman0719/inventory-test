@@ -48,12 +48,13 @@ describe("the nav pending indicator", () => {
     expect(container.innerHTML).toBe("");
   });
 
-  it("renders the dot once the link is pending", async () => {
+  it("renders the dot and the route bar once the link is pending", async () => {
     mocks.pending = true;
     await render();
 
     const dot = container.querySelector("span");
     expect(dot).not.toBeNull();
     expect(dot?.getAttribute("aria-hidden")).toBe("true");
+    expect(container.querySelector(".route-progress-bar")).not.toBeNull();
   });
 });

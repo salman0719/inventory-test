@@ -1,6 +1,7 @@
 "use client";
 
 import { useLinkStatus } from "next/link";
+import { RouteProgress } from "./route-progress";
 
 /**
  * A dot on the rail item being followed, for the gap between the click and the new
@@ -16,9 +17,12 @@ export function NavPending() {
   if (!pending) return null;
 
   return (
-    <span
-      aria-hidden
-      className="absolute right-1.5 top-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-accent motion-reduce:animate-none"
-    />
+    <>
+      <RouteProgress active />
+      <span
+        aria-hidden
+        className="absolute right-1.5 top-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-accent motion-reduce:animate-none"
+      />
+    </>
   );
 }
