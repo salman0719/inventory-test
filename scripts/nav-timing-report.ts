@@ -64,6 +64,7 @@ for (const sample of SAMPLES) {
 }
 
 const ORDER = [
+  "proxy.claims",
   "proxy.auth",
   "session.auth",
   "tenant.connect",

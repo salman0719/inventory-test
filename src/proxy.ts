@@ -5,9 +5,17 @@ import { timed } from "./lib/nav-timing";
 /**
  * Session refresh and route protection.
  *
- * `supabase.auth.getUser()` is the authority on whether a session is valid: it
- * calls Supabase, so a tampered cookie cannot pass. Refreshing here keeps the
- * access token current for Server Components, which cannot write cookies.
+ * `supabase.auth.getClaims()` verifies the access token's signature locally against
+ * the project's published JWKS (the project signs with ES256), so an ordinary
+ * navigation no longer waits on a Supabase Auth round trip before the app can
+ * answer. A tampered token fails the signature check; nothing is trusted from the
+ * cookie itself.
+ *
+ * `getUser()` is still the authority on the paths where local verification cannot
+ * decide: no session, an expired token, or a token this runtime cannot verify. That
+ * call is also what refreshes the session and writes the new cookies, which Server
+ * Components cannot do — so it stays, at the cost of a round trip on exactly the
+ * requests that need one.
  */
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -33,20 +41,19 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  // Cost of this line: a network round trip to Supabase on every matched request,
-  // prefetches included, before the app can send a byte — a large share of the
-  // perceived wait when navigating on a slow connection. `getSessionUser()` then
-  // repeats the same call inside the page.
-  //
-  // Open item: verify claims locally with `getClaims()` instead. That needs the
-  // Supabase project to sign JWTs asymmetrically and publish a JWKS (or it falls
-  // back to the same network call); unconfirmed, so not attempted. Recorded in
-  // docs/known-limitations.md under "Navigation latency".
-  // Measured with `NAV_TIMING=1`; see src/lib/nav-timing.ts. The comment below is
-  // the reason the measurement exists, not a change of behaviour.
-  const {
-    data: { user },
-  } = await timed("proxy.auth", () => supabase.auth.getUser());
+  // Local verification first. Measured with `NAV_TIMING=1` as `proxy.claims`; if it
+  // ever reports a network-sized number instead of a sub-millisecond one, the SDK
+  // has fallen back to `getUser()` internally and there is no saving to claim.
+  const claims = await timed("proxy.claims", () => supabase.auth.getClaims());
+  const subject = claims.data?.claims?.sub;
+
+  // Anything that is not a locally verified subject — no cookie, an expired token, a
+  // failed signature, a runtime without WebCrypto — is decided by Supabase itself.
+  // That call is also what refreshes the session and writes the new cookies.
+  const user =
+    typeof subject === "string" && subject !== ""
+      ? { id: subject }
+      : (await timed("proxy.auth", () => supabase.auth.getUser())).data.user;
 
   const { pathname, search } = request.nextUrl;
   const isSignIn = pathname === "/sign-in";
