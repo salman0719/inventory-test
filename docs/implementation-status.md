@@ -4,12 +4,12 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Overall status
 
-- Current phase: Phase 5. Slices 1, 3 and 4 are committed — shell/selector,
-  Supabase Auth with the authenticated `app_user` request path, and products and
-  categories. The Supabase account `owner@cafe.test` is linked to the local Demo
-  Cafe, so signing in with it now renders real catalogue data. Slice 5 (suppliers)
-  is implemented locally and uncommitted. Slice 2 (reset workflow) is still
-  outstanding
+- Current phase: Phase 5. Slices 1, 3, 4 and 5 are committed — shell/selector,
+  Supabase Auth with the authenticated `app_user` request path, products and
+  categories, and suppliers. The Supabase account `owner@cafe.test` is linked to
+  the local Demo Cafe, so signing in with it renders real catalogue data. Slice 6
+  (stock ledger and inventory) is implemented locally and uncommitted. Slice 2
+  (reset workflow) is still outstanding
 - Current deployment: Vercel stage at `https://inventory-stage.vercel.app`
   (public, no deployment protection; it serves the committed shell, not slices 1
   and 3)
@@ -65,9 +65,9 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [x] Business selector (local only; cookie-based, pre-authentication)
 - [x] Authentication (built and linked; one manual browser sign-in pending)
 - [x] Products and categories (committed `c765db0`; walked through in a browser)
-- [x] Suppliers (local, uncommitted; walked through in a browser)
-- [ ] Stock ledger
-- [ ] Inventory screens
+- [x] Suppliers (committed `cd8361d`; walked through in a browser)
+- [x] Stock ledger (local, uncommitted; `private.record_stock_movement`)
+- [x] Inventory screens (local, uncommitted; walked through in a browser)
 - [ ] Purchase orders
 - [ ] Partial receiving
 - [ ] Dashboard
@@ -89,10 +89,10 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Current blockers
 
-- The shell and auth slices are uncommitted by request, awaiting review.
-- A browser session rendering Demo Cafe for the linked account has not been
-  observed since the link. The account's password is not held here; one sign-in
-  at `http://localhost:25000` confirms it.
+- Slice 6 is implemented and uncommitted by request; slices 1, 3, 4 and 5 are
+  committed.
+- The hosted stage cannot show catalogue or stock data: `db:seed` refuses
+  non-loopback databases, so a hosted demo needs an approved data path first.
 - Auth redirect allowlist entries for `http://localhost:25000/**` and
   `https://inventory-stage.vercel.app/**` are still unconfirmed. Password sign-in
   does not use them; confirmation, recovery and invite emails do.
@@ -101,6 +101,34 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — Phase 5 slice 6 built locally, uncommitted.** Stock ledger and
+  inventory. Migration `0004` adds `private.record_stock_movement`, a
+  `SECURITY DEFINER` function and the ledger's only write path (`authenticated`
+  still holds no INSERT grant): it checks membership and owner/staff, locks the
+  product row, recomputes the sum and raises instead of allowing a negative
+  result, requires a reason for an adjustment, records the caller, and refuses
+  `opening` so the manual form cannot mint an opening balance. The inventory screen
+  reads on-hand from `product_stock` and offers search, category, stock status and
+  three sorts, a summary of counts and value at cost, and a panel with position,
+  unit, supplier, the last 12 ledger lines and a stock in / stock out / adjustment
+  form. Writes are a server action that resolves the business from the session,
+  validates with Zod (`stockMovementSchema`) and calls the function; the form
+  cannot submit a final quantity, only a delta. Verified: migration applied (1
+  file, 5 tracked); unit 32/32 (12 new); database 20/20 (11 new — role refusal,
+  no membership, reason required, an unsupported type, negative stock with no row
+  written, no existence oracle for another tenant's product, and two concurrent
+  movements where the second is rejected after the lock is released); check 0
+  errors; build 0 errors with `/inventory` as a dynamic route. In a browser as
+  `owner@cafe.test`: 60 products, 1 out, 1 low, $4,505.30 at cost; the out filter
+  returned Pork belly only; a 3 kg delivery showed 3 kg ok, $50.40 and a +3
+  history line; 999 out was refused with the below-zero message and wrote nothing;
+  an adjustment with no reason was refused; a 1 kg adjustment recorded -1, left
+  2 kg low and moved the summary to $4,538.90. The two test movements were deleted
+  afterwards, so on-hand is back to the seeded baseline. Form fields are
+  controlled, because React resets an uncontrolled form after every action and a
+  rejected quantity would otherwise vanish. Not verified: narrow widths and touch
+  targets; the viewer role through a screen (the database refuses it, but no
+  screen hides cost or stock value yet).
 - **2026-11-22 — Phase 5 slice 5 built locally, uncommitted.** Suppliers: a dense
   list with search over name, contact or email and an archived toggle; a detail
   panel showing contact details, address, notes and the products supplied with

@@ -29,6 +29,13 @@
       "when": 1795271757976,
       "tag": "0003_private_schema_usage",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795317667301,
+      "tag": "0004_stock_movement_function",
+      "breakpoints": true
     }
   ]
 }
