@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { NavPending } from "./nav-pending";
 
 type Item = { href: string; label: string; short: string; icon: ReactNode };
 
@@ -119,10 +120,11 @@ export function AppNav() {
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[76px] flex-col bg-rail min-[600px]:flex">
         <Link
           href="/"
-          className="flex h-[52px] shrink-0 items-center justify-center text-[15px] font-bold tracking-tight text-surface"
+          className="relative flex h-[52px] shrink-0 items-center justify-center text-[15px] font-bold tracking-tight text-surface"
           aria-label="Stk home"
         >
           Stk
+          <NavPending />
         </Link>
         <nav aria-label="Primary" className="flex flex-1 flex-col gap-0.5 py-2">
           {ITEMS.map((item) => {
@@ -132,7 +134,7 @@ export function AppNav() {
                 key={item.href}
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex min-h-[58px] flex-col items-center justify-center gap-1 text-rail-ink transition-colors hover:bg-rail-active hover:text-surface ${
+                className={`relative flex min-h-[58px] flex-col items-center justify-center gap-1 text-rail-ink transition-colors hover:bg-rail-active hover:text-surface ${
                   active ? "bg-rail-active text-surface" : ""
                 }`}
               >
@@ -146,6 +148,7 @@ export function AppNav() {
                 {/* The rail is too narrow for full labels, but a screen reader
                     must hear "Purchase orders", not "POs". */}
                 <span className="sr-only">{item.label}</span>
+                <NavPending />
               </Link>
             );
           })}
@@ -156,10 +159,11 @@ export function AppNav() {
         <div className="flex items-center gap-2 px-3 py-1.5">
           <Link
             href="/"
-            className="shrink-0 text-[14px] font-bold tracking-tight text-surface"
+            className="relative shrink-0 text-[14px] font-bold tracking-tight text-surface"
             aria-label="Stk home"
           >
             Stk
+            <NavPending />
           </Link>
           <nav
             aria-label="Primary"
@@ -172,7 +176,7 @@ export function AppNav() {
                   key={item.href}
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  className={`flex min-h-[44px] min-w-[56px] shrink-0 flex-col items-center justify-center gap-0.5 rounded px-2 text-[10px] uppercase tracking-[0.04em] ${
+                  className={`relative flex min-h-[44px] min-w-[56px] shrink-0 flex-col items-center justify-center gap-0.5 rounded px-2 text-[10px] uppercase tracking-[0.04em] ${
                     active
                       ? "bg-rail-active text-surface"
                       : "text-rail-ink hover:text-surface"
@@ -182,6 +186,7 @@ export function AppNav() {
                   <span className="whitespace-nowrap uppercase tracking-[0.04em]">
                     {item.label}
                   </span>
+                  <NavPending />
                 </Link>
               );
             })}
