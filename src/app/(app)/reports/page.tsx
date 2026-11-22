@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { NoBusinessNotice } from "@/components/no-business-notice";
+import { Pagination } from "@/components/pagination";
 import { ReportFilters } from "@/components/reports/report-filters";
 import { ReportTabs } from "@/components/reports/report-tabs";
 import {
@@ -265,32 +266,19 @@ function ReportPagination({
   page: number;
   pageCount: number;
 }) {
-  if (pageCount <= 1) return null;
   return (
-    <nav
-      aria-label="Pagination"
-      className="flex items-center gap-2 text-[12px] text-ink-muted"
-    >
-      {page > 1 ? (
-        <Link
-          href={reportHref(kind, { ...filters, page: page - 1 })}
-          className="inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-2.5 font-medium hover:border-accent hover:text-accent"
-        >
-          Previous
-        </Link>
-      ) : null}
-      <span>
-        Page {Math.min(page, pageCount)} of {pageCount}
-      </span>
-      {page < pageCount ? (
-        <Link
-          href={reportHref(kind, { ...filters, page: page + 1 })}
-          className="inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-2.5 font-medium hover:border-accent hover:text-accent"
-        >
-          Next
-        </Link>
-      ) : null}
-    </nav>
+    <Pagination
+      page={page}
+      pageCount={pageCount}
+      previousHref={
+        page > 1 ? reportHref(kind, { ...filters, page: page - 1 }) : undefined
+      }
+      nextHref={
+        page < pageCount
+          ? reportHref(kind, { ...filters, page: page + 1 })
+          : undefined
+      }
+    />
   );
 }
 

@@ -133,6 +133,23 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — Pending state on the list pagers.** `Pagination`
+  (`src/components/pagination.tsx`) replaces the three hand-written pagers on
+  products, inventory and reports. Every control is still a `<Link>` to a real URL,
+  so `/products?page=3` renders from the server on reload and nothing about the
+  current page lives in client state; the addition is that `useLinkStatus` inside
+  the anchor swaps the label to "Loading page 3…" and raises the same
+  `RouteProgress` bar. That is the only feedback available for a `searchParams`
+  change, because a resolved `loading.tsx` never re-fires. Verified: `npm run check`
+  0 errors (2 pre-existing `_role`/`_action` warnings), `npm run test` 92/92 across 17
+  files (4 new pagination tests: single page renders nothing, neighbour hrefs,
+  end-of-range controls omitted, pending label and bar), `npm run build` clean (10
+  routes, all dynamic), `secrets:check ok`. A first pass removed the `next/link`
+  import from the reports page and missed a second `<Link>` further down it; lint
+  caught it (`react/jsx-no-undef`) and the build repeated it (`TS2304`), the import
+  was restored and all four gates re-ran on the fixed tree. Not verified in a
+  browser (no account password): neither the pending label nor the bar has been
+  seen on a throttled connection.
 - **2026-11-22 — Loud pending state on `feat/navigation-loading-feedback`.** A route
   click now paints `RouteProgress` — a 3px indeterminate accent bar fixed to the top
   of the viewport — in the same frame as the click, because a destination's
