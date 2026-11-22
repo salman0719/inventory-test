@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { selectBusiness } from "@/app/actions";
+import { selectBusiness } from "@/app/(app)/actions";
 import type { BusinessOption } from "@/lib/active-business";
 
 /**

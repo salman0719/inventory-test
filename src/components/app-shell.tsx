@@ -1,18 +1,19 @@
 import { Suspense } from "react";
 import type { ReactNode } from "react";
+import { signOut } from "@/app/(app)/actions";
 import { getActiveBusiness } from "@/lib/businesses";
+import { getSessionUser } from "@/lib/session";
 import { AppNav } from "./app-nav";
 import { BusinessSwitcher } from "./business-switcher";
 import { BusinessSwitcherSkeleton, LoadingAnnouncement } from "./skeletons";
 
 /**
  * The application shell: Direction C rail, a compact top bar carrying the demo
- * business selector, and a content column. No authentication yet — the header
- * says so rather than implying a session exists.
+ * business selector and the signed-in user, and a content column.
  *
- * The shell itself is synchronous. The business query sits inside Suspense, so the
- * rail, top bar and page skeleton paint immediately instead of waiting on the
- * database; an async layout would block the whole page behind that one query.
+ * The shell stays synchronous so the rail and top bar paint immediately; both
+ * requests that need the network (session, then membership-filtered businesses)
+ * sit in their own Suspense boundaries.
  */
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -30,9 +31,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <BusinessSelectorSlot />
           </Suspense>
-          <span className="ml-auto hidden rounded border border-line bg-panel px-2 py-1 text-[11px] text-ink-muted min-[600px]:inline">
-            No sign-in yet
-          </span>
+          <div className="ml-auto">
+            <Suspense fallback={null}>
+              <UserMenu />
+            </Suspense>
+          </div>
         </header>
         <main className="mx-auto w-full max-w-[1180px] px-3 py-5 min-[600px]:px-5">
           {children}
@@ -43,6 +46,29 @@ export function AppShell({ children }: { children: ReactNode }) {
 }
 
 async function BusinessSelectorSlot() {
-  const { businesses, active } = await getActiveBusiness();
+  const user = await getSessionUser();
+  if (!user) return null;
+  const { businesses, active } = await getActiveBusiness(user.id);
   return <BusinessSwitcher businesses={businesses} active={active} />;
+}
+
+async function UserMenu() {
+  const user = await getSessionUser();
+  if (!user) return null;
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="hidden max-w-[220px] truncate text-[11px] text-ink-muted min-[600px]:inline">
+        {user.email}
+      </span>
+      <form action={signOut}>
+        <button
+          type="submit"
+          className="min-h-[36px] rounded border border-line bg-surface px-2.5 text-[12px] font-medium hover:border-accent hover:text-accent"
+        >
+          Sign out
+        </button>
+      </form>
+    </div>
+  );
 }

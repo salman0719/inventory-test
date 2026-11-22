@@ -29,10 +29,14 @@
     "db:migrate:ci": "tsx db/migrate.ts --require-migrations",
     "db:migrate:hosted": "tsx db/migrate.ts --hosted",
     "db:app-role": "tsx db/app-role.ts",
+    "db:app-role:local": "tsx db/app-role.ts --local",
+    "db:link-user": "tsx db/link-user.ts",
     "db:seed": "tsx db/seed.ts",
     "new:ports": "tsx scripts/new-ports.ts"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.119.2",
     "drizzle-orm": "^0.45.4",
     "next": "^16.4.6",
     "pg": "^8.23.1",

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { getActiveBusiness } from "@/lib/businesses";
+import { getSessionUser } from "@/lib/session";
 
 const STATS = [
   { label: "Products", slice: "slice 4" },
@@ -43,7 +44,10 @@ const SECTIONS = [
 ];
 
 export default async function DashboardPage() {
-  const { active } = await getActiveBusiness();
+  const user = await getSessionUser();
+  if (!user) return null;
+
+  const { active } = await getActiveBusiness(user.id);
   if (!active) return <NoBusinessNotice />;
 
   return (

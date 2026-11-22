@@ -1,0 +1,37 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { BUSINESS_COOKIE } from "@/lib/active-business";
+import { listBusinesses } from "@/lib/businesses";
+import { getSessionUser } from "@/lib/session";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+/**
+ * Switch the active business. The id is checked against the businesses this user
+ * can actually see, so a guessed id cannot select another tenant even if the
+ * cookie is edited by hand.
+ */
+export async function selectBusiness(businessId: string): Promise<void> {
+  const user = await getSessionUser();
+  if (!user) redirect("/sign-in");
+
+  const businesses = await listBusinesses(user.id);
+  if (!businesses.some((business) => business.id === businessId)) return;
+
+  const store = await cookies();
+  store.set(BUSINESS_COOKIE, businessId, {
+    path: "/",
+    sameSite: "lax",
+    httpOnly: true,
+    maxAge: 60 * 60 * 24 * 30,
+  });
+  revalidatePath("/", "layout");
+}
+
+export async function signOut(): Promise<void> {
+  const supabase = await createSupabaseServerClient();
+  await supabase.auth.signOut();
+  redirect("/sign-in");
+}

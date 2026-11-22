@@ -1,24 +1,24 @@
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
 
 /**
- * Server-only Postgres access.
+ * Application database access.
  *
- * Slice 1 runs before authentication, so it reads the local compose database
- * through `DATABASE_URL` (the owner connection). Once authentication and the
- * request path land, every query moves to `DATABASE_URL_APP` inside a transaction
- * that sets `role` to `authenticated` — see docs/decisions/0007-gate-c-approval.md.
+ * The app never connects as the owner role. It connects as `app_user`, and every
+ * unit of work runs inside a transaction that sets `role` to `authenticated` and
+ * puts the signed-in user's id in `request.jwt.claims`. `SET LOCAL` is required
+ * because the transaction pooler hands a server connection to another client
+ * afterwards; a session-level `SET ROLE` would leak identity between tenants.
  *
- * The hosted fallback keeps the stage deployment rendering: `DATABASE_URL` is
- * deliberately absent in Vercel, and `app_user` returns nothing without claims,
- * so the shell shows its empty state rather than failing.
+ * This mirrors what the isolation tests prove in CI, so the policies — not the
+ * application's `where` clauses — are what separate businesses.
  */
 let pool: Pool | undefined;
 
-function connectionString(): string {
-  const url = process.env.DATABASE_URL ?? process.env.DATABASE_URL_APP;
+function appDatabaseUrl(): string {
+  const url = process.env.DATABASE_URL_APP;
   if (!url) {
     throw new Error(
-      "Neither DATABASE_URL nor DATABASE_URL_APP is set. Run `npm run db:up` and `npm run db:seed`.",
+      "DATABASE_URL_APP is not set. Run `npm run db:app-role:local` for the local database.",
     );
   }
   return url;
@@ -31,10 +31,35 @@ function sslFor(url: string): { rejectUnauthorized: boolean } | undefined {
     : undefined;
 }
 
-export function getPool(): Pool {
+function getPool(): Pool {
   if (!pool) {
-    const url = connectionString();
+    const url = appDatabaseUrl();
     pool = new Pool({ connectionString: url, max: 4, ssl: sslFor(url) });
   }
   return pool;
+}
+
+/** Run `fn` as the authenticated user, inside one transaction. */
+export async function withTenant<T>(
+  userId: string,
+  fn: (client: PoolClient) => Promise<T>,
+): Promise<T> {
+  if (!userId) throw new Error("withTenant requires a user id.");
+
+  const client = await getPool().connect();
+  try {
+    await client.query("begin");
+    await client.query("set local role authenticated");
+    await client.query("select set_config('request.jwt.claims', $1, true)", [
+      JSON.stringify({ sub: userId, role: "authenticated" }),
+    ]);
+    const result = await fn(client);
+    await client.query("commit");
+    return result;
+  } catch (error) {
+    await client.query("rollback").catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
 }

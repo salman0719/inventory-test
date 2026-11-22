@@ -1,8 +1,12 @@
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { getActiveBusiness } from "@/lib/businesses";
+import { getSessionUser } from "@/lib/session";
 
 export default async function SettingsPage() {
-  const { active } = await getActiveBusiness();
+  const user = await getSessionUser();
+  if (!user) return null;
+
+  const { active } = await getActiveBusiness(user.id);
   if (!active) return <NoBusinessNotice />;
 
   return (

@@ -6,7 +6,7 @@ import {
   type BusinessOption,
   type BusinessType,
 } from "./active-business";
-import { getPool } from "./db";
+import { withTenant } from "./db";
 
 type BusinessRow = {
   id: string;
@@ -25,20 +25,33 @@ function toOption(row: BusinessRow): BusinessOption {
 }
 
 /**
- * Businesses visible to the current request. Pre-auth this is every seeded
- * business; after authentication it becomes an RLS-filtered membership query.
+ * Businesses this user belongs to. The policy on `businesses` filters by
+ * membership, so this query has no `where` clause of its own: a user who is not a
+ * member cannot receive the row even if the application forgot to filter.
  */
-export async function listBusinesses(): Promise<BusinessOption[]> {
-  const result = await getPool().query<BusinessRow>(
-    "select id, name, business_type, currency_code from businesses order by name",
-  );
-  return result.rows.map(toOption);
+export async function listBusinesses(
+  userId: string,
+): Promise<BusinessOption[]> {
+  const rows = await withTenant(userId, async (client) => {
+    const result = await client.query<BusinessRow>(
+      "select id, name, business_type, currency_code from businesses order by name",
+    );
+    return result.rows;
+  });
+  return rows.map(toOption);
 }
 
 /** Request-scoped: the shell and the page share one query. */
-export const getActiveBusiness = cache(async () => {
-  const businesses = await listBusinesses();
-  const store = await cookies();
-  const active = pickBusiness(businesses, store.get(BUSINESS_COOKIE)?.value);
-  return { businesses, active };
-});
+export const getActiveBusiness = cache(
+  async (
+    userId: string,
+  ): Promise<{
+    businesses: BusinessOption[];
+    active: BusinessOption | null;
+  }> => {
+    const businesses = await listBusinesses(userId);
+    const store = await cookies();
+    const active = pickBusiness(businesses, store.get(BUSINESS_COOKIE)?.value);
+    return { businesses, active };
+  },
+);
