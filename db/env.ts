@@ -33,10 +33,12 @@ export function databaseUrl(): string {
  * The hosted owner connection, used only for migrations.
  *
  * Supavisor exposes the same host on 5432 (session mode) and 6543 (transaction
- * mode). Migrations need session mode: Drizzle takes a session-level advisory
- * lock, which a transaction pooler can hand to a different backend on unlock.
- * The dashboard's default connection string is the transaction pooler, so a
- * 6543 URL is switched to 5432 here and the switch is logged.
+ * mode). Migrations run on session mode: the whole run uses one pooled client
+ * and one transaction per batch, and session mode keeps that client on a single
+ * backend, so session-level state (SET, temporary objects, or an advisory lock a
+ * future migration might take) behaves predictably. The dashboard's default
+ * connection string is the transaction pooler, so a 6543 URL is switched to
+ * 5432 here and the switch is logged.
  */
 export function hostedOwnerUrl(): string {
   loadEnv();
