@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { PanelLink } from "@/components/panel-link";
 import { setArchived } from "@/app/(app)/suppliers/actions";
 import { ArchiveForm } from "@/components/archive-form";
 import { EMPTY_SUPPLIER } from "@/lib/supplier-defaults";
@@ -35,13 +38,13 @@ export function SupplierPanel({
     >
       <header className="flex items-start gap-2 border-b border-line px-3 py-2">
         <h2 className="min-w-0 truncate text-[13px] font-semibold">{title}</h2>
-        <Link
+        <PanelLink
           href={closeHref}
           aria-label="Close supplier panel"
           className={`${BUTTON} ml-auto shrink-0`}
         >
           Close
-        </Link>
+        </PanelLink>
       </header>
 
       {mode === "create" || mode === "edit" ? (
@@ -158,9 +161,9 @@ function SupplierBody({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2 border-t border-line px-3 py-2">
-        <Link href={editHref} className={BUTTON}>
+        <PanelLink href={editHref} className={BUTTON}>
           Edit
-        </Link>
+        </PanelLink>
         <ArchiveForm action={setArchived}>
           <input type="hidden" name="id" value={supplier.id} />
           <input

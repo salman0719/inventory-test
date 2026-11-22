@@ -47,9 +47,9 @@ export function PanelLink({
       {...rest}
       href={href}
       onClick={handleClick}
-      data-panel-active={panels?.isActiveProduct(href) ? "true" : undefined}
+      data-panel-active={panels?.isActive(href) ? "true" : undefined}
       aria-current={
-        panels?.isActiveProduct(href) && isPanelOpen(href) ? "true" : undefined
+        panels?.isActive(href) && isPanelOpen(href) ? "true" : undefined
       }
     />
   );

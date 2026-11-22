@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { SupplierSummary } from "@/lib/suppliers";
+import { PanelLink } from "../panel-link";
 
 const TH =
   "px-2.5 py-1.5 text-left text-[10px] font-medium uppercase tracking-[0.07em] text-ink-muted";
@@ -8,11 +8,9 @@ const TD = "px-2.5 py-1.5 align-middle";
 /** Dense supplier table; selecting a row opens its panel through the URL. */
 export function SupplierTable({
   suppliers,
-  selectedId,
   hrefFor,
 }: {
   suppliers: SupplierSummary[];
-  selectedId: string;
   hrefFor: (supplierId: string) => string;
 }) {
   return (
@@ -39,28 +37,20 @@ export function SupplierTable({
         </thead>
         <tbody>
           {suppliers.map((supplier) => {
-            const selected = supplier.id === selectedId;
             return (
               <tr
                 key={supplier.id}
-                className={`border-b border-line last:border-b-0 ${
-                  selected ? "bg-accent-soft" : "hover:bg-panel"
-                }`}
+                className="border-b border-line last:border-b-0 hover:bg-panel"
               >
-                <td
-                  className={`${TD} ${
-                    selected
-                      ? "border-l-2 border-accent"
-                      : "border-l-2 border-transparent"
-                  }`}
-                >
-                  <Link
+                <td className={`${TD} border-l-2 border-transparent`}>
+                  {/* The open row is marked by the link's own state, because the
+                      panel opens without a page render. */}
+                  <PanelLink
                     href={hrefFor(supplier.id)}
-                    aria-current={selected ? "true" : undefined}
                     className="font-medium hover:text-accent"
                   >
                     {supplier.name}
-                  </Link>
+                  </PanelLink>
                   {supplier.isArchived ? (
                     <span className="ml-2 rounded border border-line px-1.5 py-0.5 text-[10px] uppercase tracking-[0.06em] text-ink-muted">
                       Archived

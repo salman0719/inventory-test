@@ -22,7 +22,10 @@ import {
  * arrive with the same query string, and `initialHref` puts the panel back.
  */
 
-const PANEL_KEYS = ["product", "new", "edit", "saved"] as const;
+/** The id each screen uses for the open row; a route only ever uses one of them. */
+const ID_KEYS = ["product", "supplier", "order"] as const;
+
+const PANEL_KEYS = [...ID_KEYS, "new", "edit", "saved"] as const;
 
 type PanelContextValue = {
   /** The current view, panel params included. */
@@ -30,8 +33,8 @@ type PanelContextValue = {
   closeHref: string;
   open: (href: string) => void;
   close: () => void;
-  /** True when the product in `href` is the one the panel is showing. */
-  isActiveProduct: (href: string) => boolean;
+  /** True when `href` points at the row the panel is showing. */
+  isActive: (href: string) => boolean;
 };
 
 export const PanelContext = createContext<PanelContextValue | null>(null);
@@ -64,7 +67,10 @@ export function hrefWithPanel(
 
 export function isPanelOpen(href: string): boolean {
   const params = parse(href);
-  return params.get("new") === "true" || params.get("product") !== null;
+  return (
+    params.get("new") === "true" ||
+    ID_KEYS.some((key) => params.get(key) !== null)
+  );
 }
 
 export function usePanels(): PanelContextValue {
@@ -100,15 +106,18 @@ export function PanelProvider({
   }, []);
 
   const value = useMemo<PanelContextValue>(() => {
-    const productId = parse(href).get("product");
+    const current = parse(href);
     return {
       href,
       closeHref: hrefWithoutPanel(href),
       open,
       close: () => open(hrefWithoutPanel(href)),
-      isActiveProduct: (candidate: string) => {
-        const candidateId = parse(candidate).get("product");
-        return productId !== null && candidateId === productId;
+      isActive: (candidate: string) => {
+        const other = parse(candidate);
+        return ID_KEYS.some((key) => {
+          const value = current.get(key);
+          return value !== null && other.get(key) === value;
+        });
       },
     };
   }, [href, open]);
