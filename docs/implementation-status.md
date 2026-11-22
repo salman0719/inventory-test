@@ -4,11 +4,12 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Overall status
 
-- Current phase: Phase 5. Slices 1 and 3 are committed — shell/selector, then
-  Supabase Auth with the authenticated `app_user` request path. The Supabase
-  account `owner@cafe.test` is linked to the local Demo Cafe, so sign-in resolves
-  to one tenant. Slice 4 (products and categories) is implemented locally and
-  uncommitted. Slice 2 (reset workflow) is still outstanding
+- Current phase: Phase 5. Slices 1, 3 and 4 are committed — shell/selector,
+  Supabase Auth with the authenticated `app_user` request path, and products and
+  categories. The Supabase account `owner@cafe.test` is linked to the local Demo
+  Cafe, so signing in with it now renders real catalogue data. Slice 5 (suppliers)
+  is implemented locally and uncommitted. Slice 2 (reset workflow) is still
+  outstanding
 - Current deployment: Vercel stage at `https://inventory-stage.vercel.app`
   (public, no deployment protection; it serves the committed shell, not slices 1
   and 3)
@@ -63,8 +64,8 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [x] App shell and navigation (local only, uncommitted pending review)
 - [x] Business selector (local only; cookie-based, pre-authentication)
 - [x] Authentication (built and linked; one manual browser sign-in pending)
-- [x] Products and categories (local, uncommitted; data layer verified)
-- [ ] Suppliers
+- [x] Products and categories (committed `c765db0`; walked through in a browser)
+- [x] Suppliers (local, uncommitted; walked through in a browser)
 - [ ] Stock ledger
 - [ ] Inventory screens
 - [ ] Purchase orders
@@ -100,6 +101,23 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — Phase 5 slice 5 built locally, uncommitted.** Suppliers: a dense
+  list with search over name, contact or email and an archived toggle; a detail
+  panel showing contact details, address, notes and the products supplied with
+  their on-hand; create, edit, archive and restore through server actions that
+  resolve the business from the session and validate with Zod. The seed now adds
+  15 fictional suppliers — nine for the cafe, six for the retail store — with
+  reserved `.invalid` addresses and 5550-range phone numbers, and links every one
+  of the 220 products to a supplier by category, so the product form's supplier
+  select is live and the product panel shows the name. Verified: seed run twice
+  keeps 9 and 6 suppliers and 220 products; no product is left without a supplier;
+  the list rendered 9 cafe suppliers with per-supplier counts, Fresh Fields
+  Produce listed its 12 produce lines, a probe supplier was created, archived and
+  deleted, and the product form offered all nine with the placeholder hint gone.
+  Gates: check 0 errors (2 pre-existing warnings), unit 20/20 (5 new), DB isolation
+  9/9, build 0 errors, `secrets:check` ok. Not verified: narrow widths and touch
+  targets, and the archived supplier's exclusion from the product form was read
+  from the query rather than exercised with an archived row present.
 - **2026-11-22 — Phase 5 slice 4 built locally, uncommitted.** Products and
   categories: a dense table with URL-held filters (name or SKU search, category,
   archived, five sort keys, 50-per-page pagination), a detail panel driven by
@@ -117,9 +135,12 @@ Add date, task, verification method, and result.
   hid the row from the default list while "Include archived" still showed it (the
   probe row was deleted afterwards). Gates: check 0 errors (2 pre-existing
   warnings), unit 15/15 (9 new), DB isolation 9/9, build 0 errors, `secrets:check`
-  ok. Not verified: the screens in a browser. Every route needs a session and the
-  account's password is not held here, so the table, panel, form, pagination and
-  empty states have not been seen rendered.
+  ok. Verified in a browser on 2026-11-22, signed in as `owner@cafe.test`: the list
+  rendered 60 products with category counts and two pages, the detail panel and
+  its edit form round-tripped a reorder change with a "Product saved" state,
+  create normalised a lowercase SKU and added the row, archive hid that row and
+  restore returned it, and Settings added a category. Probe rows were deleted
+  afterwards.
 - **2026-11-22 — Auth user linked; seed fixture collision fixed.** The Supabase
   account `owner@cafe.test` (id `7de96fda-b270-41b8-93d9-f9dd4ae50130`) was already
   confirmed, had a password, and recorded `last_sign_in_at` 2026-11-22 03:18:54, so

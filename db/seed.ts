@@ -6,19 +6,25 @@ import * as schema from "./schema";
 import {
   CAFE_CATEGORIES,
   CAFE_PRODUCTS,
+  CAFE_SUPPLIER_BY_CATEGORY,
+  CAFE_SUPPLIERS,
   RETAIL_CATEGORIES,
   RETAIL_PRODUCTS,
+  RETAIL_SUPPLIER_BY_CATEGORY,
+  RETAIL_SUPPLIERS,
   type SeedProduct,
+  type SeedSupplier,
 } from "./seed-catalogue";
 
 /**
- * Idempotent demo seed: two businesses, three demo users, their memberships, the
- * catalogue (60 cafe ingredients, 160 retail lines) and opening stock.
+ * Idempotent demo seed: two businesses, three demo users, their memberships,
+ * fictional suppliers, the catalogue (60 cafe ingredients, 160 retail lines) and
+ * opening stock.
  *
  * Products upsert on (business_id, sku), so re-running updates rather than
  * duplicates. Opening balances are written as `opening` stock movements, one per
  * product, guarded so a second run adds none: stock is always the ledger's sum.
- * Suppliers and purchase orders arrive with their slices.
+ * Purchase orders arrive with their slice.
  *
  * Development and CI only: it writes to auth.users, which Supabase owns. A hosted
  * database is rejected until Phase 5 adds a Supabase Auth seeding path.
@@ -65,6 +71,8 @@ const CATALOGUES: ReadonlyArray<{
   skuPrefix: string;
   categories: readonly string[];
   products: SeedProduct[];
+  suppliers: SeedSupplier[];
+  supplierByCategory: Record<string, string>;
   ownerId: string;
 }> = [
   {
@@ -72,6 +80,8 @@ const CATALOGUES: ReadonlyArray<{
     skuPrefix: "CAF",
     categories: CAFE_CATEGORIES,
     products: CAFE_PRODUCTS,
+    suppliers: CAFE_SUPPLIERS,
+    supplierByCategory: CAFE_SUPPLIER_BY_CATEGORY,
     ownerId: DEMO_USERS[0].id,
   },
   {
@@ -79,6 +89,8 @@ const CATALOGUES: ReadonlyArray<{
     skuPrefix: "RET",
     categories: RETAIL_CATEGORIES,
     products: RETAIL_PRODUCTS,
+    suppliers: RETAIL_SUPPLIERS,
+    supplierByCategory: RETAIL_SUPPLIER_BY_CATEGORY,
     ownerId: DEMO_USERS[1].id,
   },
 ];
@@ -122,6 +134,27 @@ async function seedCatalogue(
     );
   }
 
+  for (const supplier of catalogue.suppliers) {
+    await pool.query(
+      `insert into suppliers
+         (business_id, name, contact_name, email, phone, address, notes)
+       select $1, $2, $3, $4, $5, $6, $7
+        where not exists (
+          select 1 from suppliers
+           where business_id = $1 and lower(name) = lower($2)
+        )`,
+      [
+        catalogue.businessId,
+        supplier.name,
+        supplier.contactName,
+        supplier.email,
+        supplier.phone,
+        supplier.address,
+        supplier.notes,
+      ],
+    );
+  }
+
   const stored = await pool.query<{ id: string; name: string }>(
     "select id, name from categories where business_id = $1",
     [catalogue.businessId],
@@ -130,18 +163,28 @@ async function seedCatalogue(
     stored.rows.map((row) => [row.name.toLowerCase(), row.id]),
   );
 
+  const storedSuppliers = await pool.query<{ id: string; name: string }>(
+    "select id, name from suppliers where business_id = $1",
+    [catalogue.businessId],
+  );
+  const supplierIds = new Map(
+    storedSuppliers.rows.map((row) => [row.name.toLowerCase(), row.id]),
+  );
+
   for (const [index, product] of catalogue.products.entries()) {
     const [name, category, unit, cost, price, reorder, onHand] = product;
     const sku = `${catalogue.skuPrefix}-${String(index + 1).padStart(3, "0")}`;
 
+    const supplierName = catalogue.supplierByCategory[category];
     const saved = await pool.query<{ id: string }>(
       `insert into products
-         (business_id, name, sku, category_id, unit_of_measure, cost_price,
-          selling_price, reorder_level)
-       values ($1, $2, $3, $4, $5, $6, $7, $8)
+         (business_id, name, sku, category_id, supplier_id, unit_of_measure,
+          cost_price, selling_price, reorder_level)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        on conflict (business_id, sku) do update
          set name = excluded.name,
              category_id = excluded.category_id,
+             supplier_id = excluded.supplier_id,
              unit_of_measure = excluded.unit_of_measure,
              cost_price = excluded.cost_price,
              selling_price = excluded.selling_price,
@@ -153,6 +196,9 @@ async function seedCatalogue(
         name,
         sku,
         categoryIds.get(category.toLowerCase()) ?? null,
+        supplierName
+          ? (supplierIds.get(supplierName.toLowerCase()) ?? null)
+          : null,
         unit,
         cost.toFixed(2),
         price === null ? null : price.toFixed(2),

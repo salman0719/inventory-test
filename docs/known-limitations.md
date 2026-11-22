@@ -54,12 +54,22 @@ Record limitations honestly. Include severity, workaround, and whether the issue
 
 ## Slice 4 (products) — 2026-11-22
 
-| Limitation or risk                                                   | Severity | Workaround                                                                                               | Blocks demo?                   | Status                 |
-| -------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------- | ------------------------------ | ---------------------- |
-| The products screens have not been seen in a browser                 | medium   | Sign in at `http://localhost:25000` and open Products; the data layer, build and unit tests are verified | Yes until seen once            | Awaiting a manual look |
-| A product cannot be attached to a supplier yet                       | medium   | The form says "No suppliers yet" and the select enables itself in slice 5                                | No                             | Until slice 5          |
-| On-hand only changes through the seed's opening balances             | high     | The figures are real ledger sums, but nothing adjusts or receives stock until slice 6                    | No for a catalogue walkthrough | Until slice 6          |
-| No product images                                                    | low      | `image_path` exists in the schema; upload arrives in slice 10                                            | No                             | Deferred               |
-| Direction C keyboard shortcuts (`/` search, `Esc` close) are absent  | low      | Every control is a visible link, button or form                                                          | No                             | Deferred               |
-| Below 900 px the panel sits above the list rather than overlaying it | low      | The close control is visible; no scrim or focus trap to get wrong                                        | No                             | Simplification         |
-| The hosted stage has no catalogue                                    | high     | `db:seed` refuses non-loopback databases, so demos run locally                                           | Yes for a hosted demo          | Open decision          |
+| Limitation or risk                                                   | Severity | Workaround                                                                            | Blocks demo?                   | Status              |
+| -------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------- | ------------------------------ | ------------------- |
+| Product screens verified once, at desktop width only                 | low      | Walked through signed in as the cafe owner; narrow widths and touch targets unchecked | No                             | Verified 2026-11-22 |
+| Purchase order history on a supplier or product is absent            | low      | The panels say it arrives with the purchase orders slice                              | No                             | Until slice 7       |
+| On-hand only changes through the seed's opening balances             | high     | The figures are real ledger sums, but nothing adjusts or receives stock until slice 6 | No for a catalogue walkthrough | Until slice 6       |
+| No product images                                                    | low      | `image_path` exists in the schema; upload arrives in slice 10                         | No                             | Deferred            |
+| Direction C keyboard shortcuts (`/` search, `Esc` close) are absent  | low      | Every control is a visible link, button or form                                       | No                             | Deferred            |
+| Below 900 px the panel sits above the list rather than overlaying it | low      | The close control is visible; no scrim or focus trap to get wrong                     | No                             | Simplification      |
+| The hosted stage has no catalogue                                    | high     | `db:seed` refuses non-loopback databases, so demos run locally                        | Yes for a hosted demo          | Open decision       |
+
+## Slice 5 (suppliers) — 2026-11-22
+
+| Limitation or risk                                    | Severity | Workaround                                                                                                      | Blocks demo? | Status              |
+| ----------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------- | ------------ | ------------------- |
+| Supplier screens verified once, at desktop width only | low      | Walked through signed in as the cafe owner; narrow widths and touch targets unchecked                           | No           | Verified 2026-11-22 |
+| Suppliers can be archived but not deleted             | low      | Archive keeps every product and, later, order link intact; deleting a supplier that is owed money is not wanted | No           | By design           |
+| The supplier list has no pagination                   | low      | A cafe has nine suppliers and the retail demo six; revisit when a business holds hundreds                       | No           | Deferred            |
+| Contact fields are free text except email             | low      | Phone and address formats vary by business; only the email is validated because it is copied into a mail client | No           | By design           |
+| Products supplied shows the first 25 lines            | low      | The count sits in the header and a note appears when the list is capped                                         | No           | Intentional         |

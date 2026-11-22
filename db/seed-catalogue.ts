@@ -304,3 +304,168 @@ export const RETAIL_PRODUCTS: SeedProduct[] = [
   ["Baby bath 400mL", "Baby", "ea", 5.2, 9.0, 2, 3],
   ["Nappy cream 100g", "Baby", "ea", 4.8, 8.0, 2, 3],
 ];
+
+/**
+ * Suppliers are fictional businesses with reserved `.invalid` addresses and
+ * Australian 5550-range numbers, so no seed row can reach a real person (Gate A).
+ */
+export type SeedSupplier = {
+  name: string;
+  contactName: string;
+  email: string;
+  phone: string;
+  address: string;
+  notes: string;
+};
+
+export const CAFE_SUPPLIERS: SeedSupplier[] = [
+  {
+    name: "Fresh Fields Produce",
+    contactName: "Dana Whitfield",
+    email: "orders@freshfields.invalid",
+    phone: "02 5550 3142",
+    address: "12 Kembla Rd, Alexandria NSW 2015",
+    notes: "Delivers Mon, Wed and Fri before 7am.",
+  },
+  {
+    name: "Harbour Line Meats",
+    contactName: "Marco Bellini",
+    email: "sales@harbourline.invalid",
+    phone: "02 5550 8891",
+    address: "4 Wharf St, Rozelle NSW 2039",
+    notes: "Order cut-off 2pm the day before delivery.",
+  },
+  {
+    name: "Coldstream Dairy",
+    contactName: "Priya Raman",
+    email: "hello@coldstreamdairy.invalid",
+    phone: "02 5550 4470",
+    address: "88 Dairy Flat Rd, Camden NSW 2570",
+    notes: "Two deliveries a week; invoice monthly.",
+  },
+  {
+    name: "Basin Dry Goods",
+    contactName: "Trevor Nash",
+    email: "trade@basindry.invalid",
+    phone: "02 5550 6023",
+    address: "5 Foundry Pl, Marrickville NSW 2204",
+    notes: "Free delivery over $400.",
+  },
+  {
+    name: "Loft Bakers",
+    contactName: "Amelia Frost",
+    email: "orders@loftbakers.invalid",
+    phone: "02 5550 9917",
+    address: "31 Peel St, Newtown NSW 2042",
+    notes: "Bakes overnight; deliveries from 5am.",
+  },
+  {
+    name: "Southern Beverage Co",
+    contactName: "Hugo Lin",
+    email: "accounts@southernbeverage.invalid",
+    phone: "02 5550 7355",
+    address: "9 Enterprise Dr, Smithfield NSW 2164",
+    notes: "Crate deposit applies on returns.",
+  },
+  {
+    name: "Cleanline Supplies",
+    contactName: "Nadia Okafor",
+    email: "orders@cleanline.invalid",
+    phone: "02 5550 5180",
+    address: "2 Industrial Ave, Bankstown NSW 2200",
+    notes: "14-day account terms.",
+  },
+  {
+    name: "PackRight",
+    contactName: "Sam Ellery",
+    email: "sales@packright.invalid",
+    phone: "02 5550 2266",
+    address: "17 Duramba Ct, Blacktown NSW 2148",
+    notes: "Same-day dispatch before noon.",
+  },
+  {
+    name: "Polar Line Frozen",
+    contactName: "Ivy Chen",
+    email: "orders@polarline.invalid",
+    phone: "02 5550 8834",
+    address: "21 Trench Rd, Wetherill Park NSW 2164",
+    notes: "Frozen only; delivers Tuesday.",
+  },
+];
+
+/** Which supplier a product gets, by category. */
+export const CAFE_SUPPLIER_BY_CATEGORY: Record<string, string> = {
+  Produce: "Fresh Fields Produce",
+  "Meat & Seafood": "Harbour Line Meats",
+  "Dairy & Eggs": "Coldstream Dairy",
+  "Dry Goods": "Basin Dry Goods",
+  Bakery: "Loft Bakers",
+  Beverages: "Southern Beverage Co",
+  Frozen: "Polar Line Frozen",
+  Packaging: "PackRight",
+  Cleaning: "Cleanline Supplies",
+};
+
+export const RETAIL_SUPPLIERS: SeedSupplier[] = [
+  {
+    name: "Metro Wholesale",
+    contactName: "Erin Blake",
+    email: "orders@metrowholesale.invalid",
+    phone: "02 5550 3030",
+    address: "40 Gipps St, Chatswood NSW 2067",
+    notes: "Weekly order, Thursday cut-off.",
+  },
+  {
+    name: "Coastline Fresh",
+    contactName: "Jonah Reid",
+    email: "hello@coastlinefresh.invalid",
+    phone: "02 5550 7742",
+    address: "6 Beach Rd, Brookvale NSW 2100",
+    notes: "Fresh produce and dairy, daily before 6am.",
+  },
+  {
+    name: "Northern Grocers",
+    contactName: "Lena Krylov",
+    email: "trade@northerngrocers.invalid",
+    phone: "02 5550 6608",
+    address: "22 Chifley Dr, Penrith NSW 2750",
+    notes: "Pantry staples; free delivery over $500.",
+  },
+  {
+    name: "Home Basics Supply",
+    contactName: "Owen Hart",
+    email: "sales@homebasics.invalid",
+    phone: "02 5550 1184",
+    address: "8 Alan St, Auburn NSW 2144",
+    notes: "Household and personal care ranges.",
+  },
+  {
+    name: "Playtime & Pet",
+    contactName: "Rosa Nguyen",
+    email: "orders@playtimepet.invalid",
+    phone: "02 5550 4477",
+    address: "3 Nyrang St, Lidcombe NSW 2141",
+    notes: "Pet, baby and seasonal ranges.",
+  },
+  {
+    name: "Office Lane",
+    contactName: "Grace Fielding",
+    email: "hello@officelane.invalid",
+    phone: "02 5550 9512",
+    address: "15 Kent Rd, Mascot NSW 2020",
+    notes: "Stationery; next-day metro delivery.",
+  },
+];
+
+export const RETAIL_SUPPLIER_BY_CATEGORY: Record<string, string> = {
+  Beverages: "Metro Wholesale",
+  Pantry: "Northern Grocers",
+  Snacks: "Metro Wholesale",
+  Household: "Home Basics Supply",
+  "Personal Care": "Home Basics Supply",
+  Fresh: "Coastline Fresh",
+  Frozen: "Coastline Fresh",
+  Pet: "Playtime & Pet",
+  Stationery: "Office Lane",
+  Baby: "Playtime & Pet",
+};
