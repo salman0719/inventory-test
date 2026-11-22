@@ -4,12 +4,14 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Overall status
 
-- Current phase: Phase 5 slice 1 (shell, navigation, responsive layout, business
-  selector) implemented locally, uncommitted, awaiting layout review;
-  authentication is next and deliberately not started
+- Current phase: Phase 5 slices 1 and 3 are implemented locally and uncommitted —
+  shell/selector, then Supabase Auth with the authenticated `app_user` request
+  path. The Supabase account `owner@cafe.test` is linked to the local Demo Cafe,
+  so sign-in resolves to one tenant. Slice 2 (reset workflow) is still outstanding
 - Current deployment: Vercel stage at `https://inventory-stage.vercel.app`
-  (public, no deployment protection; it serves the committed shell, not slice 1)
-- Last updated: 2026-11-21
+  (public, no deployment protection; it serves the committed shell, not slices 1
+  and 3)
+- Last updated: 2026-11-22
 
 ## Phase checklist
 
@@ -49,7 +51,8 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [x] Migrations, seed and CI migration gate (local Postgres only)
 - [x] Database integration tests in CI (tenant isolation, ledger writes)
 - [x] Supabase project setup (Free, Sydney; four migrations applied; `app_user` created)
-- [ ] Auth configured
+- [x] Auth configured (Supabase Auth via `@supabase/ssr`; one account linked to
+      local demo data)
 - [ ] Storage configured (bucket created; tenant policy pending)
 - [x] Vercel configured (deployed at `https://inventory-stage.vercel.app`; env vars imported, not yet read by app code)
 - [x] Gate D approved
@@ -58,7 +61,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 - [x] App shell and navigation (local only, uncommitted pending review)
 - [x] Business selector (local only; cookie-based, pre-authentication)
-- [ ] Authentication
+- [x] Authentication (built and linked; one manual browser sign-in pending)
 - [ ] Products
 - [ ] Suppliers
 - [ ] Stock ledger
@@ -84,15 +87,52 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Current blockers
 
-- Slice 1 is uncommitted by request while the layout is reviewed.
-- Authentication is not started, so the shell reads the local owner connection
-  (`DATABASE_URL`). It must not hold real tenant data before the authenticated
-  request path replaces it.
+- The shell and auth slices are uncommitted by request, awaiting review.
+- A browser session rendering Demo Cafe for the linked account has not been
+  observed since the link. The account's password is not held here; one sign-in
+  at `http://localhost:25000` confirms it.
+- Auth redirect allowlist entries for `http://localhost:25000/**` and
+  `https://inventory-stage.vercel.app/**` are still unconfirmed. Password sign-in
+  does not use them; confirmation, recovery and invite emails do.
 
 ## Recently completed
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — Auth user linked; seed fixture collision fixed.** The Supabase
+  account `owner@cafe.test` (id `7de96fda-b270-41b8-93d9-f9dd4ae50130`) was already
+  confirmed, had a password, and recorded `last_sign_in_at` 2026-11-22 03:18:54, so
+  password sign-in has succeeded against Supabase at least once. The first
+  `db:link-user` run failed with `users_email_key`: the seed fixtures had claimed
+  `owner@cafe.test`, `owner@retail.test` and `staff@cafe.test`, and email is unique
+  in both the local shim and Supabase, so a developer who registered a seeded
+  address could never link it. Fixtures moved to reserved `.invalid` addresses,
+  re-seeded (2 businesses, 3 demo users, 3 memberships) and linked again.
+  Verified: `withTenant(7de96fda-…)` returns `["Demo Cafe"]` while the retail owner
+  sees `["Demo Retail"]` and a random id sees `[]`; a ledger insert as
+  `authenticated` still fails `42501`; `current_user` and `role` are both
+  `authenticated`. Gates: check 0 errors (2 pre-existing warnings), unit 6/6,
+  build 0 errors with 8 dynamic routes plus static `/_not-found`, `secrets:check`
+  ok. Not verified: a browser session rendering Demo Cafe after sign-in, because
+  the account's password is not held here. Still open: Supabase redirect allowlist
+  entries for `http://localhost:25000/**` and the stage origin.
+
+- **2026-11-21 — Auth slice built locally, uncommitted.** Supabase Auth via
+  `@supabase/ssr` (2 new dependencies), session cookies refreshed in `src/proxy.ts`
+  (Next 16 renamed `middleware.ts`; a root-level `middleware.ts` never ran),
+  protected routes redirecting to `/sign-in` with a validated `next` path, sign-in
+  and sign-out server actions, and every query now running through
+  `withTenant(userId)`: connect as `app_user`, `BEGIN`, `SET LOCAL ROLE
+authenticated`, `set_config('request.jwt.claims', {sub}, true)`. Verified: `/` and
+  `/settings` return 307 to `/sign-in` (`?next=%2Fsettings`), `/sign-in` 200, a
+  wrong-password submit reached Supabase and rendered "Email or password is not
+  correct.", `withTenant` returned only Demo Cafe for the cafe owner, only Demo
+  Retail for the retail owner and nothing for a stranger, ledger insert `42501`,
+  `current_user`/`role` both `authenticated`, `grep` finds no owner-URL reference in
+  `src/`, and the DB suite still passes 9/9. Gates: check 0 errors, build ok
+  (`ƒ Proxy (Middleware)`), unit 6/6, secrets ok. Not verified: a successful sign-in
+  and the shell rendering real data for a signed-in user, because no confirmed auth
+  user exists yet.
 - **2026-11-21 — Phase 5 slice 1 built locally, uncommitted.** Direction C shell:
   76 px dark rail with 10 px labels from 600 px up, horizontal labelled bar below,
   compact top bar with the demo business selector, `sr-only` full nav names, and

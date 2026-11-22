@@ -29,10 +29,25 @@ const DEMO_BUSINESSES = [
   },
 ] as const;
 
+/**
+ * Reserved `.invalid` addresses (RFC 2606), deliberately unusable as real
+ * accounts. `email` is unique in both this shim and Supabase Auth, so fixtures
+ * that borrowed a real-looking address made `db:link-user` fail for anyone who
+ * had registered that address in Supabase.
+ */
 const DEMO_USERS = [
-  { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", email: "owner@cafe.test" },
-  { id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", email: "owner@retail.test" },
-  { id: "cccccccc-cccc-cccc-cccc-cccccccccccc", email: "staff@cafe.test" },
+  {
+    id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    email: "owner@demo-cafe.invalid",
+  },
+  {
+    id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+    email: "owner@demo-retail.invalid",
+  },
+  {
+    id: "cccccccc-cccc-cccc-cccc-cccccccccccc",
+    email: "staff@demo-cafe.invalid",
+  },
 ] as const;
 
 const DEMO_MEMBERSHIPS = [
