@@ -133,6 +133,26 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — Navigation feedback (Stage 1) on `feat/navigation-loading-feedback`.**
+  Three commits, one per slice. Products, inventory, suppliers and purchase orders
+  now have their own `loading.tsx` built from `PageSkeleton`,
+  `ListHeaderSkeleton`, `FilterBarSkeleton` and `TableSkeleton`, so a route change
+  paints that screen's header, filter bar and table shape instead of the
+  dashboard-shaped group fallback. `NavPending` renders a dot inside each rail link
+  while `useLinkStatus` reports the navigation pending. The four filter bars now
+  submit through `FilterForm`, which pushes the same URL with
+  `router.push(url, { scroll: false })` inside a transition and keeps `method="get"`
+  and `action` as the pre-hydration fallback, so applying a filter no longer
+  reloads the document. Verified: `npm run check` 0 errors (the 2 pre-existing
+  `_role`/`_action` warnings), `npm run test` 86/86 (7 new: five filter-form, two
+  nav-pending), `npm run build` clean with all 8 app routes dynamic and
+  `/sign-in` static, `secrets:check ok`. Not verified: any of it in a browser —
+  the local and stage apps need the Supabase account password, which is not held
+  here — so the skeletons and the pending dot have had no visual review, and no
+  navigation timing was taken on the stage. Stage 2 (static chrome outside the
+  page's awaits, a panel boundary so a row click stops re-rendering the list) and
+  Stage 3 (measure the auth round trip, then `getClaims`, the count inside the list
+  query, one transaction per page) are not started.
 - **2026-11-22 — Migration `0007` applied to hosted Supabase under Gate D.** Pre-flight, read-only: 7 tracked with `0006` newest; `has_schema_privilege('authenticated','public','USAGE')` true and `CREATE` false; `public` owned by `pg_database_owner` with `authenticated=U` already in its ACL; 2 businesses, 220 products, 219 movements, 2 orders. `npm run db:migrate:hosted` printed `applied 1 migration(s), 8 tracked in total` (switched to session mode 5432, auth shim skipped). Post-checks: 8 tracked with newest `1795344385254` (`0007`), USAGE true, CREATE still false, ACL unchanged (the grant added nothing because Supabase already provides it), every count unchanged. Second run: `applied 0 migration(s), 8 tracked in total`. Stage UI sign-in and `test:db` against hosted deliberately not run: the migration only adds a privilege Supabase already had.
 - **2026-11-22 — Schema-wipe recovery is a committed migration (`0007`).** `0007_public_schema_usage.sql` grants `USAGE` on schema `public` to `authenticated` (journal entry 7), so a wiped local database no longer depends on a hand-run grant. Proved on a wiped schema: `public` recreated with an empty ACL left `has_schema_privilege('authenticated','public','USAGE')` false, `npm run db:migrate` applied 8 migrations and set `{app=UC/app,authenticated=U/app}`, `npm run test:db` passed 44/44 with no manual grant, and a second `db:migrate` applied 0. Demo data restored with `db:seed` (2 businesses, 220 products, 219 movements, 2 orders) and `db:link-user`; SQL re-checked 60/9 cafe, 160/6 retail, $4,505.30 at cost, 1 open order, $131.80 on order. Gates: lint 0 errors (2 pre-existing warnings), typecheck clean, `npm run test` 79/79, `npm run build` clean, `secrets:check ok`; `prettier --check .` fails only on the generated, untouched `next-env.d.ts` (CRLF in this working copy). Hosted Supabase is still at 7 tracked migrations until `db:migrate:hosted` runs.
 - **2026-11-22 — Deployment verified on the Vercel stage.** Supabase redirect allowlist confirmed for `http://localhost:25000/**` and `https://inventory-stage.vercel.app/**`; `main` (through `e50688a`) pushed and deployed successfully; a signed-in re-check on the stage returned the seeded baseline — 60 products, 9 suppliers, 1 out / 1 low, $4,505.30 at cost, 1 open order, $131.80 on order. Reported by the user; not re-observed from this machine. `npm run test:db` 44/44 after restoring the `public` schema grant (see known limitations); other gates `Not run` for this docs-only update.
