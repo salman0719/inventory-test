@@ -119,7 +119,7 @@ export default async function InventoryPage({
           sort={sort}
         />
 
-        <PanelGrid panel={<InventoryPanelColumn />}>
+        <PanelGrid panel={<InventoryPanelColumn />} label="Stock details">
           <ResultsBusy>
             {items.length > 0 ? (
               <InventoryTable

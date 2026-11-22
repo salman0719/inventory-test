@@ -94,7 +94,7 @@ export default async function SuppliersPage({
 
         <SupplierFilters q={q} archived={archived} />
 
-        <PanelGrid panel={<SupplierPanelColumn />}>
+        <PanelGrid panel={<SupplierPanelColumn />} label="Supplier details">
           {suppliers.length > 0 ? (
             <SupplierTable
               suppliers={suppliers}

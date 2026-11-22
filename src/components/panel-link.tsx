@@ -14,15 +14,7 @@ type LinkProps = Omit<ComponentProps<typeof Link>, "href" | "onClick">;
  * and only when a panel provider is above it — on a screen without one it behaves
  * exactly as before.
  */
-export function PanelLink({
-  href,
-  onNavigate,
-  ...rest
-}: LinkProps & {
-  href: string;
-  /** Runs after the URL has changed, e.g. to close a panel that has no content. */
-  onNavigate?: () => void;
-}) {
+export function PanelLink({ href, ...rest }: LinkProps & { href: string }) {
   const panels = useContext(PanelContext);
 
   function handleClick(event: MouseEvent<HTMLAnchorElement>) {
@@ -39,7 +31,6 @@ export function PanelLink({
     }
     event.preventDefault();
     panels.navigate(href);
-    onNavigate?.();
   }
 
   return (

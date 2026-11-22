@@ -133,6 +133,18 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — The panels share one fetch body, and an opened panel announces itself.**
+  `src/components/panel-loader.tsx` holds the loading/failed/ready body the four
+  columns had each grown (`PanelLoader`), the panel-shaped skeleton, and the shared
+  "not in this business" notice, so a column now only maps its payload to a panel.
+  Opening renders one live region in `PanelGrid` (`"<label> opened"`), which is the
+  whole announcement; the skeleton is `aria-busy` instead of a second live region, so
+  a screen reader hears one sentence and not two. The unused `onNavigate` prop on
+  `PanelLink` is gone. Covered by `tests/unit/panel-loader.test.ts` (2 cases: frame
+  then payload; a failed request's retry fetches again). Verified: `npm run check` 0
+  errors (2 pre-existing warnings), `npm run test` 103/103 across 20 files. Not
+  checked with a screen reader: the announcement's wording and timing are unverified
+  by ear, and no panel has been opened signed in.
 - **2026-11-22 — Every list panel opens without a page render, and Back closes it.**
   Inventory, suppliers and purchase orders joined products. Each screen has its own
   endpoint (`/api/inventory/panel`, `/api/suppliers/panel`,

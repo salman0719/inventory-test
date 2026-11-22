@@ -117,7 +117,7 @@ export default async function PurchaseOrdersPage({
 
         <PurchaseOrderFilters q={q} status={filter} />
 
-        <PanelGrid panel={<OrderPanelColumn />}>
+        <PanelGrid panel={<OrderPanelColumn />} label="Order details">
           <div className="flex min-w-0 flex-col gap-3">
             {orders.length > 0 ? (
               <PurchaseOrderTable

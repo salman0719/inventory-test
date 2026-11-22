@@ -124,7 +124,7 @@ export default async function ProductsPage({
           archived={archived}
         />
 
-        <PanelGrid panel={<ProductPanelColumn />}>
+        <PanelGrid panel={<ProductPanelColumn />} label="Product details">
           <ResultsBusy>
             {products.length > 0 ? (
               <ProductTable

@@ -149,9 +149,12 @@ export function PanelProvider({
 /** The two-column grid: the panel appears in the second column only while open. */
 export function PanelGrid({
   panel,
+  label,
   children,
 }: {
   panel: ReactNode;
+  /** Announced when a panel opens, e.g. "Product details". */
+  label?: string;
   children?: ReactNode;
 }) {
   const { href } = usePanels();
@@ -165,6 +168,14 @@ export function PanelGrid({
           : ""
       }`}
     >
+      {/* Opening a panel is a sighted event on a phone (it covers the list) and a
+          silent one everywhere else; this one sentence is the whole announcement,
+          which is why the panel's skeleton stays quiet. */}
+      {label ? (
+        <span role="status" className="sr-only">
+          {open ? `${label} opened` : ""}
+        </span>
+      ) : null}
       {open ? panel : null}
       {children}
     </div>
