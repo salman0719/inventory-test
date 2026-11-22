@@ -94,7 +94,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [x] Empty/loading/error states checked (2026-11-22: list and report empty
       states, the route skeleton and both error paths; D4 and D5 fixed)
 - [ ] Deployment verified
-- [ ] Demo walkthrough ready
+- [x] Demo walkthrough ready (approved 2026-11-22; demo will be hosted, not local-only)
 
 ## Current blockers
 
@@ -109,7 +109,7 @@ Keep this file current. Do not report a task as complete until it has been verif
   unstyled 404, outside the shell; fixed with `src/app/not-found.tsx`) and D5 (a
   database outage fails in the layout query, above `error.tsx`, so the app's error
   panel is replaced by Next's generic error page; fixed with `src/app/error.tsx`).
-  Deployment verification and the demo walkthrough remain. Business
+  The demo walkthrough is approved; deployment verification is now the remaining Phase 6 item (demo will be hosted, not local-only). Business
   switching is demoable without SQL: `db:link-user` now links the account to both
   demo businesses by default.
 - Verification note, not a page defect: when the automated preview tab is
@@ -128,6 +128,8 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — Demo walkthrough approved; demo will be hosted.** User approved `local/phase-6/demo-walkthrough.html` and chose the extend-seed/reset option for hosted data. Next is deployment verification: redirect allowlist, redeploy, stage auth re-checks.
+- **2026-11-22 — Hosted demo data path built and verified.** `db/seed-hosted.ts` (`db:seed:hosted`) loads the same Demo Cafe/Retail baseline onto Supabase without touching `auth.users` (ids passed as args, verified before writing; loopback refused; opening movements recorded as the linked owner). Applied the 3 pending hosted migrations (7 tracked), seeded with `owner@cafe.test` owning both businesses: 2 businesses, 2 memberships, 220 products, 219 opening movements, 2 purchase orders. Hosted figures equal the script baseline (60 products, $4,505.30, 1 out / 1 low, 1 open order, $131.80 on order; Pork belly then Cocoa; PO-0001 ordered, PO-0002 draft; retail 160/6/0). Gates: typecheck 0 errors, eslint clean on the new file, prettier clean, unit 79/79, production build clean, `secrets:check ok` (full `npm run check`/`test:db` not re-run; change is additive and hosted-only). Review deduped the shared catalogue/order/count SQL into `db/seed-shared.ts` (both seeds use it; stale "arrives with Phase 5" notes now point at `db:seed:hosted`); re-verified after the dedupe: typecheck 0 errors, eslint clean on all three seed files, prettier clean, unit 79/79, `db:seed` and `db:seed:hosted` both re-run idempotent with identical counts, production build clean, `secrets:check ok`.
 - **2026-11-22 — Demo walkthrough dry run on a freshly reset local database (uncommitted).** Wiped `public` + `drizzle` tracking, `db:migrate` applied 7, `db:seed` reported `2 businesses, 3 demo users, 3 memberships, 220 products, 219 opening movements, 2 purchase orders`, re-linked `owner@cafe.test` to both businesses. SQL as owner confirmed the script baseline (Demo Cafe 60 products, 9 suppliers, 1 out / 1 low, $4,505.30 at cost, 1 open order, $131.80 on order; Pork belly 0/2 first, Cocoa CAF-040 1 ea/1 low; Tomatoes CAF-001 18 kg; PO-0001 ordered 12/20/3 @ 4.20/2.60/9.80; Settings 60/9/9/2/59/0; retail 160/6/0). Dev-server routes `/`, `/products`, `/suppliers`, `/inventory`, `/purchase-orders`, `/settings` all 307 to sign-in (auth guard, correct). Fixed `local/phase-6/demo-walkthrough.html`: 59 movements exact, Low-or-out handoff to Stop 4, cocoa CAF-040 / $15.20 each with no product-panel ledger, supplier panel carries no order history (PO-0001 lives on `/purchase-orders`), UI status labels (Partly received / Received), full over-receipt quote, exact not-in-business quotes, reset text includes categories, troubleshooting 60-product baseline. Gates `Not run` (local-only HTML, no app code changed). Remains before the demo is ready: walkthrough review/approval, then deployment verification (hosted data path, redirect allowlist, redeploy, stage auth re-checks).
 - **2026-11-22 — Phase 6 empty, loading and error states; demo switching.**
   Empty states: a no-match search on products, suppliers, inventory and purchase

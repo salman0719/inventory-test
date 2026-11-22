@@ -168,12 +168,12 @@ Record limitations honestly. Include severity, workaround, and whether the issue
 
 ## Demo walkthrough dry run (fresh baseline) — 2026-11-22
 
-| Limitation or risk                                     | Severity | Workaround                                                                                                                                | Blocks demo? | Status                       |
-| ------------------------------------------------------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ---------------------------- |
-| Walkthrough is local-only HTML, verified without gates | low      | `local/` is prettier-ignored; present from a reset local database per Stop 0; no app code changed                                         | No           | Uncommitted, awaiting review |
-| Supplier panel shows no order history                  | low      | The panel reads “Purchase order history arrives with the purchase orders slice”; the walkthrough now points PO-0001 at `/purchase-orders` | No           | Walkthrough corrected        |
-| Product panel carries no ledger lines                  | low      | On-hand/reorder/cost/category/supplier only; the 12-line history is inventory-only                                                        | No           | Walkthrough corrected        |
+| Limitation or risk                                     | Severity | Workaround                                                                                                                                | Blocks demo? | Status                                 |
+| ------------------------------------------------------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------ | -------------------------------------- |
+| Walkthrough is local-only HTML, verified without gates | low      | `local/` is prettier-ignored; present from a reset local database per Stop 0; no app code changed                                         | No           | Approved 2026-11-22; demo to be hosted |
+| Supplier panel shows no order history                  | low      | The panel reads “Purchase order history arrives with the purchase orders slice”; the walkthrough now points PO-0001 at `/purchase-orders` | No           | Walkthrough corrected                  |
+| Product panel carries no ledger lines                  | low      | On-hand/reorder/cost/category/supplier only; the 12-line history is inventory-only                                                        | No           | Walkthrough corrected                  |
 
 Note: the 62-product reload above included leftover Journey rows; the fresh-baseline dry run re-confirmed a reload returns the 60-product baseline.
 
-Remains before the demo is ready: walkthrough review/approval, then deployment verification (hosted data path decision, Supabase redirect allowlist, redeploy, stage auth re-checks).
+Remains before the demo is ready: deployment verification (Supabase redirect allowlist, redeploy, stage auth re-checks). The hosted data path is decided and built (`db:seed:hosted`, verified 2026-11-22: 2 businesses, 2 memberships, 220 products, 219 movements, 2 orders with script-identical baseline figures).
