@@ -43,26 +43,26 @@ Record limitations honestly. Include severity, workaround, and whether the issue
 
 ## Auth slice (uncommitted) — 2026-11-21
 
-| Limitation or risk                                                                                | Severity | Workaround                                                                                                             | Blocks demo?                             | Status                      |
-| ------------------------------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | --------------------------- |
-| A browser session rendering Demo Cafe for the linked account is unobserved                        | medium   | Sign in once at `http://localhost:25000` as `owner@cafe.test`; `withTenant` for that id already returns Demo Cafe only | Yes, for a signed-in demo                | Awaiting one manual sign-in |
-| Only one Supabase account is linked to local data                                                 | low      | `npm run db:link-user -- <uuid> <email>` links it to both demo businesses; pass `cafe` or `retail` to limit it         | No                                       | By design for local dev     |
-| Seed fixture emails use reserved `.invalid` addresses                                             | low      | They exist only to satisfy identity foreign keys; no sign-in uses them                                                 | No                                       | Intentional (2026-11-22)    |
-| Local `auth.users` is a two-column shim, not Supabase Auth                                        | medium   | Identity comes from Supabase; `db:link-user` only links the id to local demo data and refuses non-loopback databases   | No                                       | By design for local dev     |
-| Auth redirect allowlist not confirmed                                                             | medium   | Add `http://localhost:25000/**` and the stage origin in Supabase                                                       | No for local; yes for hosted email links | Pending                     |
-| Vercel `DATABASE_URL_APP` points at hosted `app_user`, while `.env.local` points at the local one | medium   | Same name, per-environment value; never copy the local value into Vercel                                               | No                                       | Documented                  |
+| Limitation or risk                                                                                | Severity | Workaround                                                                                                             | Blocks demo?              | Status                      |
+| ------------------------------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------- | --------------------------- |
+| A browser session rendering Demo Cafe for the linked account is unobserved                        | medium   | Sign in once at `http://localhost:25000` as `owner@cafe.test`; `withTenant` for that id already returns Demo Cafe only | Yes, for a signed-in demo | Awaiting one manual sign-in |
+| Only one Supabase account is linked to local data                                                 | low      | `npm run db:link-user -- <uuid> <email>` links it to both demo businesses; pass `cafe` or `retail` to limit it         | No                        | By design for local dev     |
+| Seed fixture emails use reserved `.invalid` addresses                                             | low      | They exist only to satisfy identity foreign keys; no sign-in uses them                                                 | No                        | Intentional (2026-11-22)    |
+| Local `auth.users` is a two-column shim, not Supabase Auth                                        | medium   | Identity comes from Supabase; `db:link-user` only links the id to local demo data and refuses non-loopback databases   | No                        | By design for local dev     |
+| Auth redirect allowlist was unconfirmed                                                           | medium   | Confirmed 2026-11-22: `http://localhost:25000/**` and `https://inventory-stage.vercel.app/**` are in Supabase          | No                        | Confirmed 2026-11-22 (user) |
+| Vercel `DATABASE_URL_APP` points at hosted `app_user`, while `.env.local` points at the local one | medium   | Same name, per-environment value; never copy the local value into Vercel                                               | No                        | Documented                  |
 
 ## Slice 4 (products) — 2026-11-22
 
-| Limitation or risk                                                   | Severity | Workaround                                                                             | Blocks demo?          | Status              |
-| -------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------- | --------------------- | ------------------- |
-| Product screens verified once, at desktop width only                 | low      | Walked through signed in as the cafe owner; narrow widths and touch targets unchecked  | No                    | Verified 2026-11-22 |
-| Purchase order history on a supplier or product is absent            | low      | The panels say it arrives with the purchase orders slice                               | No                    | Until slice 7       |
-| On-hand only changes through the seed's opening balances             | high     | Resolved by slice 6: stock in, stock out and reasoned adjustments append to the ledger | No                    | Resolved 2026-11-22 |
-| No product images                                                    | low      | `image_path` exists in the schema; upload arrives in slice 10                          | No                    | Deferred            |
-| Direction C keyboard shortcuts (`/` search, `Esc` close) are absent  | low      | Every control is a visible link, button or form                                        | No                    | Deferred            |
-| Below 900 px the panel sits above the list rather than overlaying it | low      | The close control is visible; no scrim or focus trap to get wrong                      | No                    | Simplification      |
-| The hosted stage has no catalogue                                    | high     | `db:seed` refuses non-loopback databases, so demos run locally                         | Yes for a hosted demo | Open decision       |
+| Limitation or risk                                                   | Severity | Workaround                                                                             | Blocks demo? | Status              |
+| -------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------- | ------------ | ------------------- |
+| Product screens verified once, at desktop width only                 | low      | Walked through signed in as the cafe owner; narrow widths and touch targets unchecked  | No           | Verified 2026-11-22 |
+| Purchase order history on a supplier or product is absent            | low      | The panels say it arrives with the purchase orders slice                               | No           | Until slice 7       |
+| On-hand only changes through the seed's opening balances             | high     | Resolved by slice 6: stock in, stock out and reasoned adjustments append to the ledger | No           | Resolved 2026-11-22 |
+| No product images                                                    | low      | `image_path` exists in the schema; upload arrives in slice 10                          | No           | Deferred            |
+| Direction C keyboard shortcuts (`/` search, `Esc` close) are absent  | low      | Every control is a visible link, button or form                                        | No           | Deferred            |
+| Below 900 px the panel sits above the list rather than overlaying it | low      | The close control is visible; no scrim or focus trap to get wrong                      | No           | Simplification      |
+| The hosted stage had no catalogue                                    | high     | Resolved 2026-11-22 by `db:seed:hosted`; the stage carries the seeded baseline         | No           | Resolved 2026-11-22 |
 
 ## Slice 5 (suppliers) — 2026-11-22
 
@@ -176,4 +176,15 @@ Record limitations honestly. Include severity, workaround, and whether the issue
 
 Note: the 62-product reload above included leftover Journey rows; the fresh-baseline dry run re-confirmed a reload returns the 60-product baseline.
 
-Remains before the demo is ready: deployment verification (Supabase redirect allowlist, redeploy, stage auth re-checks). The hosted data path is decided and built (`db:seed:hosted`, verified 2026-11-22: 2 businesses, 2 memberships, 220 products, 219 movements, 2 orders with script-identical baseline figures).
+Deployment verification is complete, as reported by the user on 2026-11-22: the
+redirect allowlist entries are in Supabase, `main` was pushed and the stage
+deployed, and a signed-in stage re-check returned 60 products / 9 suppliers /
+1 out / 1 low / $4,505.30 at cost / 1 open order / $131.80 on order. The hosted
+data path is `db:seed:hosted` (verified 2026-11-22: 2 businesses, 2 memberships,
+220 products, 219 movements, 2 orders with script-identical baseline figures).
+
+## Local environment — 2026-11-22
+
+| Limitation or risk                                                                   | Severity | Workaround                                                                                                                                                                                                                                                                                                                                                                                                                                               | Blocks demo? | Status                    |
+| ------------------------------------------------------------------------------------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ------------------------- |
+| Recreating schema `public` strips its `USAGE` grant, so `test:db` fails with `42P01` | medium   | The fresh-baseline dry run dropped and recreated schema `public`, which in PostgreSQL 17 leaves it owned by `app` with no PUBLIC `USAGE`; tables and 7 migrations existed but `authenticated` saw none, so 31 of 44 database tests failed with `relation "products" does not exist`. Restored with `GRANT USAGE ON SCHEMA public TO PUBLIC;`, after which `test:db` passed 44/44. No committed migration grants it, so a future wipe repeats the failure | No           | Open; candidate migration |

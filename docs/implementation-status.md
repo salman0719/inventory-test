@@ -15,8 +15,8 @@ Keep this file current. Do not report a task as complete until it has been verif
   supplier, stock and purchase-order journeys were walked in the browser on
   2026-11-22: defects D1–D3 are fixed (`0ef1b41`, `b368be9`, `1219908`)
 - Current deployment: Vercel stage at `https://inventory-stage.vercel.app`
-  (public, no deployment protection; it serves the committed shell, not slices 1
-  and 3)
+  (public, no deployment protection; serves `main` through `e50688a`, with the
+  hosted Supabase database seeded through `db:seed:hosted`)
 - Last updated: 2026-11-22
 
 ## Phase checklist
@@ -93,7 +93,8 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [x] Responsive layouts checked (390 / 768 / 1280, 2026-11-22)
 - [x] Empty/loading/error states checked (2026-11-22: list and report empty
       states, the route skeleton and both error paths; D4 and D5 fixed)
-- [ ] Deployment verified
+- [x] Deployment verified (2026-11-22: redirect allowlist confirmed, `main`
+      deployed, stage sign-in returned the seeded baseline figures)
 - [x] Demo walkthrough ready (approved 2026-11-22; demo will be hosted, not local-only)
 
 ## Current blockers
@@ -109,7 +110,8 @@ Keep this file current. Do not report a task as complete until it has been verif
   unstyled 404, outside the shell; fixed with `src/app/not-found.tsx`) and D5 (a
   database outage fails in the layout query, above `error.tsx`, so the app's error
   panel is replaced by Next's generic error page; fixed with `src/app/error.tsx`).
-  The demo walkthrough is approved; deployment verification is now the remaining Phase 6 item (demo will be hosted, not local-only). Business
+  The demo walkthrough is approved and deployment was verified on 2026-11-22
+  (demo is hosted, not local-only). Business
   switching is demoable without SQL: `db:link-user` now links the account to both
   demo businesses by default.
 - Verification note, not a page defect: when the automated preview tab is
@@ -118,15 +120,18 @@ Keep this file current. Do not report a task as complete until it has been verif
   response, the HTML and the data are complete (they were re-fetched and
   compared); focusing the tab and reloading, or flushing the queued reveal,
   shows the page. Both `next dev` and `next start` behaved the same way.
-- The hosted stage cannot show catalogue or stock data: `db:seed` refuses
-  non-loopback databases, so a hosted demo needs an approved data path first.
-- Auth redirect allowlist entries for `http://localhost:25000/**` and
-  `https://inventory-stage.vercel.app/**` are still unconfirmed. Password sign-in
-  does not use them; confirmation, recovery and invite emails do.
+- No Phase 6 blocker remains: deployment is verified (2026-11-22) and the hosted
+  data path is `db:seed:hosted`.
+- Local environment note: wiping and recreating schema `public` strips its
+  `USAGE` grant for `authenticated`, so `test:db` fails `42P01` until
+  `GRANT USAGE ON SCHEMA public TO PUBLIC;` is restored. No migration grants it;
+  a committed grant is the obvious fix (see `docs/known-limitations.md`).
 
 ## Recently completed
 
 Add date, task, verification method, and result.
+
+- **2026-11-22 — Deployment verified on the Vercel stage.** Supabase redirect allowlist confirmed for `http://localhost:25000/**` and `https://inventory-stage.vercel.app/**`; `main` (through `e50688a`) pushed and deployed successfully; a signed-in re-check on the stage returned the seeded baseline — 60 products, 9 suppliers, 1 out / 1 low, $4,505.30 at cost, 1 open order, $131.80 on order. Reported by the user; not re-observed from this machine. `npm run test:db` 44/44 after restoring the `public` schema grant (see known limitations); other gates `Not run` for this docs-only update.
 
 - **2026-11-22 — Demo walkthrough approved; demo will be hosted.** User approved `local/phase-6/demo-walkthrough.html` and chose the extend-seed/reset option for hosted data. Next is deployment verification: redirect allowlist, redeploy, stage auth re-checks.
 - **2026-11-22 — Hosted demo data path built and verified.** `db/seed-hosted.ts` (`db:seed:hosted`) loads the same Demo Cafe/Retail baseline onto Supabase without touching `auth.users` (ids passed as args, verified before writing; loopback refused; opening movements recorded as the linked owner). Applied the 3 pending hosted migrations (7 tracked), seeded with `owner@cafe.test` owning both businesses: 2 businesses, 2 memberships, 220 products, 219 opening movements, 2 purchase orders. Hosted figures equal the script baseline (60 products, $4,505.30, 1 out / 1 low, 1 open order, $131.80 on order; Pork belly then Cocoa; PO-0001 ordered, PO-0002 draft; retail 160/6/0). Gates: typecheck 0 errors, eslint clean on the new file, prettier clean, unit 79/79, production build clean, `secrets:check ok` (full `npm run check`/`test:db` not re-run; change is additive and hosted-only). Review deduped the shared catalogue/order/count SQL into `db/seed-shared.ts` (both seeds use it; stale "arrives with Phase 5" notes now point at `db:seed:hosted`); re-verified after the dedupe: typecheck 0 errors, eslint clean on all three seed files, prettier clean, unit 79/79, `db:seed` and `db:seed:hosted` both re-run idempotent with identical counts, production build clean, `secrets:check ok`.
