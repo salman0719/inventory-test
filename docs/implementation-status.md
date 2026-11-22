@@ -13,7 +13,7 @@ Keep this file current. Do not report a task as complete until it has been verif
   committed as `906a7c2`; every Phase 5 slice is now built apart from product
   images and CSV import. Phase 6a is committed as `a392ca2`, and the product,
   supplier, stock and purchase-order journeys were walked in the browser on
-  2026-11-22: defects D1 and D2 are fixed (`0ef1b41`, `b368be9`) and D3 is open
+  2026-11-22: defects D1–D3 are fixed (`0ef1b41`, `b368be9`, `1219908`)
 - Current deployment: Vercel stage at `https://inventory-stage.vercel.app`
   (public, no deployment protection; it serves the committed shell, not slices 1
   and 3)
@@ -101,7 +101,7 @@ Keep this file current. Do not report a task as complete until it has been verif
   three defects. D1 (product and supplier forms lost what was typed when the
   server rejected a save) is fixed in `0ef1b41`; D2 (the movement select showed
   "Stock in" after a rejected adjustment) is fixed in `b368be9`; D3 (a stale
-  "saved" notice during archive/restore) is still open. Tenant isolation,
+  "saved" notice during archive/restore) is fixed in `1219908`. Tenant isolation,
   empty/loading/error states, deployment verification and the demo walkthrough
   remain.
 - Verification note, not a page defect: when the automated preview tab is
@@ -139,16 +139,27 @@ Add date, task, verification method, and result.
   (`local/phase-6/journey-product-form-reset.png`); D2, the movement select read
   "Stock in" beside an adjustment's direction field
   (`local/phase-6/journey-adjustment-reset.png`); D3, a stale "saved" notice
-  stayed on screen through archive and restore, which is still open. D1 and D2
+  stayed on screen through archive and restore. All three are now fixed: D1 and
+  D2
   are fixed in `0ef1b41` (product and supplier fields held in state) and
   `b368be9` (held select values re-applied after React's post-action reset),
   each with a jsdom test that failed on the old code first — `expected '' to be
 'Journey Apples'`, and `expected 'stock_in' to be 'adjustment'`. Both fixes
   were re-checked in the browser on the same screenshots
   (`local/phase-6/supplier-form-retained.png`,
-  `local/phase-6/movement-form-retained.png`). Gates after the fixes: `check` 0
-  errors (2 pre-existing `_role`/`_action` warnings), unit 75/75 across 12 files,
-  DB 44/44, build clean, `secrets:check ok`. The journey rows were left in the
+  `local/phase-6/movement-form-retained.png`). D3 is fixed in `1219908`: archive
+  and restore submit through `src/components/archive-form.tsx`, which clears the
+  one-shot `saved` flag from the URL after the action, so the notice no longer
+  sits over the new state while filters, page and the open panel stay put. Four
+  jsdom tests in `tests/unit/archive-notice.test.ts` cover archiving and
+  restoring a product, archiving a supplier, and the no-op when no notice is
+  present; three of them fail against the old panels (`expected "vi.fn()" to be
+called with arguments: ['/products?product=p1']`). Walked in the browser on
+  Journey Apples and Journey Produce Co: the banner showed before the action and
+  the URL lost `saved=true` afterwards, with the archived or restored state in
+  its place; both rows were left unarchived. Gates after all three fixes: `check`
+  0 errors (2 pre-existing `_role`/`_action` warnings), unit 79/79 across 13
+  files, DB 44/44, build clean, `secrets:check ok`. The journey rows were left in the
   local database for inspection; the Settings reset restores the seeded baseline.
   Not verified: tenant isolation and empty/error states in the browser, real-mouse
   interaction on a few buttons (the automated tab reports
