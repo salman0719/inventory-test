@@ -133,6 +133,30 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — Stage 3 item 2: the proxy verifies locally (`bb6dcea`).**
+  `src/proxy.ts` now calls `supabase.auth.getClaims()`, which checks the access
+  token's signature against the project's published ES256 JWKS, and only falls back
+  to `getUser()` when local verification cannot decide — no cookie, an expired token,
+  a failed signature. That fallback is also what refreshes the session and writes new
+  cookies, so token refresh still happens; it just no longer runs on every request.
+  Re-measured with the same protocol (fresh marker, 40 signed-in navigations in two
+  batches of 20): `proxy.claims` p50 **3.1 ms**, p95 **11.2 ms**, max 53.8, and
+  **zero `proxy.auth` samples** in the window — the round trip is not happening, and
+  if the SDK had fallen back internally the number would have looked like the old
+  89 ms, not 3 ms. Against the recorded baseline that is 89.3 → 3.1 ms p50 and
+  623.0 → 11.2 ms p95 for the proxy layer. `session.auth` (the page's own
+  `getSessionUser()`) was unchanged in code and measured 159.9 ms p50 / 593.7 p95 in
+  this window, so it is now the only Auth round trip in a navigation and dominates
+  it. Client wall clock: p50 219.3 / 224.4, p95 684.3 / 794.9 — inside the spread of
+  earlier runs, so no end-to-end change is claimed even though the proxy layer
+  improved by ~85 ms at p50; the page-side call happens to have been slower in this
+  window. Tenant numbers were noisier this run (`tenant.setup` 7.9 p50 / 99.7 p95 vs
+  4.8 / 11.6 last time) with the same code and 2 transactions per page, which is
+  why only per-layer deltas are claimed. Trade-off recorded in
+  `docs/known-limitations.md`: a session revoked server-side stays usable until its
+  access token expires, because local verification cannot see revocation. Verified:
+  `npm run check` 0 errors (2 pre-existing warnings), unit 103/103, `test:db` 44/44
+  (the proxy change does not alter RLS), build clean, `secrets:check ok`.
 - **2026-11-22 — Panel endpoints on one transaction; `getClaims` prerequisite confirmed (`66d8979`).**
   The product, supplier and order panel endpoints loaded several things per open and
   each read took its own transaction. Each now calls one function that reads inside a

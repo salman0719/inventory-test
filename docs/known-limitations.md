@@ -210,10 +210,11 @@ data path is `db:seed:hosted` (verified 2026-11-22: 2 businesses, 2 memberships,
 
 ## Navigation latency — 2026-11-22
 
-| Limitation or risk                                                                                                                                                 | Severity | Workaround                                                                                                                      | Blocks demo? | Status                         |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------ | ------------------------------ |
-| Every navigation waits on `supabase.auth.getUser()` in `src/proxy.ts` before the app can send a byte, and `getSessionUser()` repeats the same call inside the page | medium   | None while session verification is a network call; the route progress bar now shows the click was received                      | No           | Open — see below               |
-| `next dev` disables viewport prefetching, so a click in development is always a cold round trip                                                                    | low      | Hover the link first (intent prefetch is not dev-gated) or judge timing from a production build; dev timings overstate the wait | No           | By design (Next 16 `links.js`) |
+| Limitation or risk                                                                                                                      | Severity | Workaround                                                                                                                                                          | Blocks demo? | Status                         |
+| --------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ------------------------------ |
+| The page's `getSessionUser()` still calls `supabase.auth.getUser()` once per render; it is now the only Auth round trip in a navigation | medium   | The proxy verifies locally (2026-11-22); this one remains, and removing it needs the session passed down instead of re-verified                                     | No           | Open — see below               |
+| A session revoked server-side stays usable until its access token expires                                                               | medium   | Local JWT verification cannot see revocation. Bounded by the token lifetime (1h by default), sign-out clears the cookies, and the refresh path calls Supabase again | No           | Accepted for the prototype     |
+| `next dev` disables viewport prefetching, so a click in development is always a cold round trip                                         | low      | Hover the link first (intent prefetch is not dev-gated) or judge timing from a production build; dev timings overstate the wait                                     | No           | By design (Next 16 `links.js`) |
 
 Local JWT verification is the open fix for the first row: replacing the proxy's
 `auth.getUser()` with `getClaims()` removes that round trip, but only if the
@@ -223,8 +224,14 @@ Supabase project signs JWTs asymmetrically and publishes a JWKS — otherwise
 Confirmed 2026-11-22: it does. `/auth/v1/.well-known/jwks.json` answers 200 with a
 single `EC` key, `alg: ES256`, kid `00efa8a1…`, and a decoded session access-token
 header carries the same `alg` and kid, so the tokens on this project are
-asymmetric. `getClaims()` is therefore worth attempting; it is not implemented
-yet, and the proxy still calls `getUser()` on every matched request.
+asymmetric.
+
+Implemented 2026-11-22: the proxy calls `getClaims()` and measures 3.1 ms p50 /
+11.2 ms p95 across 40 signed-in navigations, with no `getUser()` calls in the
+window, down from 89.3 / 623.0 ms. `getUser()` remains the fallback for requests
+local verification cannot decide, and is still what refreshes cookies. What is left
+of this item is the page's own `getSessionUser()`, which is now the whole of a
+navigation's auth cost.
 
 Measured 2026-11-22 (`NAV_TIMING=1`, 40 signed-in navigations, dev server on
 Windows against Docker Postgres): each of the two auth checks is 89–93 ms at p50
