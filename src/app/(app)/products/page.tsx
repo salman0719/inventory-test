@@ -1,19 +1,15 @@
 import Link from "next/link";
-import { DetailPanel } from "@/components/detail-panel";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { Pagination } from "@/components/pagination";
+import { PanelGrid, PanelProvider } from "@/components/panel-host";
+import { PanelLink } from "@/components/panel-link";
 import { ProductFilters } from "@/components/products/product-filters";
-import { ProductPanel } from "@/components/products/product-panel";
+import { ProductPanelColumn } from "@/components/products/product-panel-column";
 import { ProductTable } from "@/components/products/product-table";
 import { ResultsBusy } from "@/components/results-busy";
 import { getActiveBusiness } from "@/lib/businesses";
 import { parseProductSort } from "@/lib/product-input";
-import {
-  getProduct,
-  listCategories,
-  listProducts,
-  listSuppliers,
-} from "@/lib/products";
+import { listCategories, listProducts } from "@/lib/products";
 import { getSessionUser } from "@/lib/session";
 
 const PAGE_SIZE = 50;
@@ -28,9 +24,11 @@ function single(params: SearchParams, key: string): string {
 /**
  * Products: the list, its filters and the detail panel.
  *
- * All state lives in the URL - search, category, sort, page, which product is open
- * and whether the form is open - so every view is linkable and the page needs no
- * client-side data fetching.
+ * The list's state lives in the URL - search, category, sort, page - so every view
+ * is linkable. The panel's state is in the URL too, but it is not fetched here: a
+ * row click replaces the query string and asks `/api/products/panel` for the panel's
+ * data, so one click costs one small request instead of a page render that re-runs
+ * this list. A reload or a shared link still opens the panel, from `initialHref`.
  */
 export default async function ProductsPage({
   searchParams,
@@ -58,20 +56,17 @@ export default async function ProductsPage({
   const editing = single(params, "edit") === "true";
   const saved = single(params, "saved") === "true";
 
-  const [{ products, total }, categories, suppliers, selected] =
-    await Promise.all([
-      listProducts(user.id, active.id, {
-        search: q,
-        categoryId,
-        includeArchived: archived,
-        sort,
-        page,
-        pageSize: PAGE_SIZE,
-      }),
-      listCategories(user.id, active.id),
-      listSuppliers(user.id, active.id),
-      selectedId ? getProduct(user.id, active.id, selectedId) : null,
-    ]);
+  const [{ products, total }, categories] = await Promise.all([
+    listProducts(user.id, active.id, {
+      search: q,
+      categoryId,
+      includeArchived: archived,
+      sort,
+      page,
+      pageSize: PAGE_SIZE,
+    }),
+    listCategories(user.id, active.id),
+  ]);
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const filtered = q !== "" || categoryId !== "" || archived;
@@ -98,132 +93,91 @@ export default async function ProductsPage({
     return query ? `/products?${query}` : "/products";
   }
 
-  const closeHref = hrefFor({
-    product: undefined,
-    new: undefined,
-    edit: undefined,
-    saved: undefined,
-  });
-  const showPanel = creating || selectedId !== "";
-
   return (
-    <section className="flex flex-col gap-4">
-      <header className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <h1 className="text-[15px] font-semibold tracking-tight">Products</h1>
-        <p className="text-[12px] text-ink-muted">
-          {total} product{total === 1 ? "" : "s"}
-          {filtered ? " match these filters" : ""} · {active.name}
-        </p>
-        {creating ? null : (
-          <Link
-            href={hrefFor({ new: "true", product: undefined, edit: undefined })}
-            className="ml-auto inline-flex min-h-[36px] items-center rounded bg-accent px-3 text-[12px] font-semibold text-on-accent"
-          >
-            New product
-          </Link>
-        )}
-      </header>
+    <PanelProvider initialHref={hrefFor({})}>
+      <section className="flex flex-col gap-4">
+        <header className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <h1 className="text-[15px] font-semibold tracking-tight">Products</h1>
+          <p className="text-[12px] text-ink-muted">
+            {total} product{total === 1 ? "" : "s"}
+            {filtered ? " match these filters" : ""} · {active.name}
+          </p>
+          {creating ? null : (
+            <PanelLink
+              href={hrefFor({
+                new: "true",
+                product: undefined,
+                edit: undefined,
+              })}
+              className="ml-auto inline-flex min-h-[36px] items-center rounded bg-accent px-3 text-[12px] font-semibold text-on-accent"
+            >
+              New product
+            </PanelLink>
+          )}
+        </header>
 
-      <ProductFilters
-        q={q}
-        categoryId={categoryId}
-        categories={categories}
-        sort={sort}
-        archived={archived}
-      />
+        <ProductFilters
+          q={q}
+          categoryId={categoryId}
+          categories={categories}
+          sort={sort}
+          archived={archived}
+        />
 
-      <div
-        className={`grid gap-3 ${
-          showPanel
-            ? "min-[900px]:grid-cols-[minmax(0,1fr)_360px] min-[900px]:items-start"
-            : ""
-        }`}
-      >
-        {showPanel ? (
-          <DetailPanel closeHref={closeHref} label="product details">
-            {creating ? (
-              <ProductPanel
-                mode="create"
-                product={null}
-                categories={categories}
-                suppliers={suppliers}
+        <PanelGrid panel={<ProductPanelColumn />}>
+          <ResultsBusy>
+            {products.length > 0 ? (
+              <ProductTable
+                products={products}
                 currency={active.currencyCode}
-                saved={false}
-                closeHref={closeHref}
-                canViewValues={canViewValues}
-              />
-            ) : selected ? (
-              <ProductPanel
-                mode={editing ? "edit" : "detail"}
-                product={selected}
-                categories={categories}
-                suppliers={suppliers}
-                currency={active.currencyCode}
-                saved={saved && !editing}
-                closeHref={closeHref}
-                editHref={hrefFor({ product: selected.id, edit: "true" })}
+                rowHref={(productId) => hrefFor({ product: productId })}
                 canViewValues={canViewValues}
               />
             ) : (
-              <div className="rounded border border-line bg-surface px-3 py-6 text-center">
+              <div className="rounded border border-dashed border-line bg-panel px-4 py-12 text-center">
                 <p className="text-[13px] font-medium">
-                  That product is not in this business
+                  {filtered
+                    ? "No products match those filters"
+                    : "No products yet"}
                 </p>
-                <p className="mt-1 text-[12px] text-ink-muted">
-                  Open a product from the list, or close this panel.
+                <p className="mx-auto mt-1 max-w-[46ch] text-[12px] text-ink-muted">
+                  {filtered
+                    ? "Clear the filters, or search for a different name or SKU."
+                    : "Add the first product to start the catalogue, or seed the demo data with npm run db:seed."}
                 </p>
-                <Link
-                  href={closeHref}
-                  className="mt-3 inline-flex min-h-[36px] items-center rounded border border-line px-2.5 text-[12px] font-medium hover:border-accent hover:text-accent"
-                >
-                  Close panel
-                </Link>
+                {filtered ? (
+                  <Link
+                    href="/products"
+                    className="mt-4 inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
+                  >
+                    Clear filters
+                  </Link>
+                ) : (
+                  <PanelLink
+                    href={hrefFor({ new: "true" })}
+                    className="mt-4 inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
+                  >
+                    New product
+                  </PanelLink>
+                )}
               </div>
             )}
-          </DetailPanel>
-        ) : null}
 
-        <ResultsBusy>
-          {products.length > 0 ? (
-            <ProductTable
-              products={products}
-              currency={active.currencyCode}
-              selectedId={selectedId}
-              canViewValues={canViewValues}
+            <Pagination
+              page={page}
+              pageCount={pageCount}
+              previousHref={
+                page > 1 ? hrefFor({ page: String(page - 1) }) : undefined
+              }
+              nextHref={
+                page < pageCount
+                  ? hrefFor({ page: String(page + 1) })
+                  : undefined
+              }
             />
-          ) : (
-            <div className="rounded border border-dashed border-line bg-panel px-4 py-12 text-center">
-              <p className="text-[13px] font-medium">
-                {filtered
-                  ? "No products match those filters"
-                  : "No products yet"}
-              </p>
-              <p className="mx-auto mt-1 max-w-[46ch] text-[12px] text-ink-muted">
-                {filtered
-                  ? "Clear the filters, or search for a different name or SKU."
-                  : "Add the first product to start the catalogue, or seed the demo data with npm run db:seed."}
-              </p>
-              <Link
-                href={filtered ? "/products" : hrefFor({ new: "true" })}
-                className="mt-4 inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
-              >
-                {filtered ? "Clear filters" : "New product"}
-              </Link>
-            </div>
-          )}
-
-          <Pagination
-            page={page}
-            pageCount={pageCount}
-            previousHref={
-              page > 1 ? hrefFor({ page: String(page - 1) }) : undefined
-            }
-            nextHref={
-              page < pageCount ? hrefFor({ page: String(page + 1) }) : undefined
-            }
-          />
-        </ResultsBusy>
-      </div>
-    </section>
+          </ResultsBusy>
+        </PanelGrid>
+      </section>
+    </PanelProvider>
   );
 }

@@ -189,6 +189,15 @@ data path is `db:seed:hosted` (verified 2026-11-22: 2 businesses, 2 memberships,
 | ------------------------------------------------------------------------------------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ---------------- |
 | Recreating schema `public` strips its `USAGE` grant, so `test:db` fails with `42P01` | medium   | Wiping schema `public` in PostgreSQL 17 leaves it owned by `app` with an owner-only ACL, so `authenticated` had no `USAGE`: 31 of 44 database tests failed with `relation "products" does not exist`, and the app would have failed the same way. `0007_public_schema_usage.sql` now grants it in a committed migration. Proved on a wiped schema: after dropping `public` and `drizzle`, `db:migrate` applied 8 migrations and set the ACL to `{app=UC/app,authenticated=U/app}`, `test:db` passed 44/44 with no manual grant, and a second `db:migrate` applied 0. Hosted Supabase recorded `0007` on 2026-11-22 (`applied 1`, 8 tracked); its `public` ACL already granted `authenticated` USAGE, so the hosted run changed only the migration record | No           | Fixed 2026-11-22 |
 
+## Panel loading — 2026-11-22
+
+| Limitation or risk                                                                                                                      | Severity | Workaround                                                                                                                                       | Blocks demo?                                   | Status     |
+| --------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- | ---------- |
+| Only the product panel was moved off the page render; inventory, suppliers and purchase orders still re-render the route on a row click | medium   | The same pattern applies: provider, panel link, one endpoint per resource. Deliberately one screen at a time so each can be checked              | No for products; unchanged behaviour elsewhere | Partial    |
+| The panel's data now loads on the client, so a reload or a shared link shows its frame first                                            | low      | The frame is the panel's real shape, and the skeleton announces "Loading product details"; the alternative was the page render this removed      | No                                             | By design  |
+| The row click path has not been walked through in a browser                                                                             | medium   | Sign in, open a product, edit it, archive it, then reload the URL — the panel, the marker and the list must all agree                            | Yes for demo confidence                        | Unverified |
+| The panel's URL is written with `history.replaceState`                                                                                  | low      | Next folds it into the router, so back/forward, reload and copy-link keep working; it is not a push, so a row click does not add a history entry | No                                             | By design  |
+
 ## Table-change loading — 2026-11-22
 
 | Limitation or risk                                                                                          | Severity | Workaround                                                                                                                                                     | Blocks demo?            | Status                                |
@@ -209,7 +218,12 @@ Local JWT verification is the open fix for the first row: replacing the proxy's
 `auth.getUser()` with `getClaims()` removes that round trip, but only if the
 Supabase project signs JWTs asymmetrically and publishes a JWKS — otherwise
 `getClaims()` falls back to the same network call. Unconfirmed, so not attempted;
-the reasoning is repeated as a comment in `src/proxy.ts`. The page-level duplicate
-is independent of that decision: `getSessionUser()` runs in `products/page.tsx`
-and twice in `AppShell` (`BusinessSelectorSlot`, `UserMenu`), and could be cut by
-resolving the session once per request.
+the reasoning is repeated as a comment in `src/proxy.ts`.
+
+Correction (2026-11-22): the page-level duplicate is smaller than previously
+recorded here. `getSessionUser()` and `getActiveBusiness()` are both wrapped in
+React `cache()`, so the calls in `products/page.tsx` and in `AppShell`
+(`BusinessSelectorSlot`, `UserMenu`) collapse into one per render. A navigation
+costs two Supabase auth round trips — one in `proxy.ts`, one in the render — not
+four. Only two things remain open: `getClaims` in the proxy, and whether the two
+reads can be cut to one by passing the session down instead of verifying again.

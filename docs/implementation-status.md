@@ -133,6 +133,27 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — The product panel no longer re-renders the page.** A row click used
+  to change `?product=` and re-render the route, which fetched the list, the
+  categories and the suppliers again to open one panel. `PanelProvider` holds the
+  panel's URL state and writes it with `history.replaceState`, which Next folds into
+  the router without a server render; `PanelLink` takes over only an ordinary left
+  click, so middle click, a new tab, no-JS and any screen without a provider stay
+  ordinary links. The panel reads `/api/products/panel`, which resolves the business
+  from the session and the active-business cookie — never the query string —
+  validates the request with Zod and answers `private, no-store`. `products/page.tsx`
+  no longer calls `getProduct` or `listSuppliers`, so a row click leaves the list
+  query untouched. The open row is marked from the link's own state
+  (`data-panel-active` plus a `:has` rule) because no server render moves it. Cost,
+  accepted: on a reload or a shared link the panel now arrives in two steps, frame
+  then data, instead of being in the first HTML. Verified: `npm run check` 0 errors
+  (2 pre-existing `_role`/`_action` warnings), `npm run test` 99/99 across 19 files
+  (3 new panel tests: a click opens without navigating and records the URL, a deep
+  link starts open, closing returns to the list's own URL), `npm run build` clean
+  with `/api/products/panel` among the dynamic routes, `secrets:check ok`. Not
+  verified in a browser (no account password): no row click, deep link, edit, archive
+  or save has been walked through, and inventory, suppliers and purchase orders still
+  render their panels the old way.
 - **2026-11-22 — Table-change loading on products and inventory.** A table change no
   longer raises the viewport bar; the table carries its own loading state.
   `ResultsBusy` (`src/components/results-busy.tsx`) wraps the list region with

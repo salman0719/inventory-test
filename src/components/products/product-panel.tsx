@@ -1,4 +1,5 @@
-import Link from "next/link";
+"use client";
+
 import type { ReactNode } from "react";
 import { setArchived } from "@/app/(app)/products/actions";
 import { ArchiveForm } from "@/components/archive-form";
@@ -9,6 +10,7 @@ import type {
   ProductSummary,
   SupplierOption,
 } from "@/lib/products";
+import { PanelLink } from "../panel-link";
 import { ProductForm } from "./product-form";
 import { StatusLabel } from "./status-label";
 
@@ -59,13 +61,13 @@ export function ProductPanel({
             </p>
           ) : null}
         </div>
-        <Link
+        <PanelLink
           href={closeHref}
           aria-label="Close product panel"
           className={`${BUTTON} ml-auto shrink-0`}
         >
           Close
-        </Link>
+        </PanelLink>
       </header>
 
       {mode === "create" || mode === "edit" ? (
@@ -163,9 +165,9 @@ function ProductBody({
 
       {canViewValues ? (
         <div className="flex flex-wrap items-center gap-2 border-t border-line px-3 py-2">
-          <Link href={editHref} className={BUTTON}>
+          <PanelLink href={editHref} className={BUTTON}>
             Edit
-          </Link>
+          </PanelLink>
           <ArchiveForm action={setArchived}>
             <input type="hidden" name="id" value={product.id} />
             <input

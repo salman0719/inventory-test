@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
+import { PanelLink } from "./panel-link";
 
 /**
  * The contextual panel that opens beside a list.
@@ -20,7 +20,9 @@ export function DetailPanel({
 }) {
   return (
     <>
-      <Link
+      {/* A panel link, so closing does not re-render the page. Without a panel
+          provider above it, it is an ordinary link. */}
+      <PanelLink
         href={closeHref}
         aria-label={`Close ${label}`}
         tabIndex={-1}

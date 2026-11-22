@@ -68,6 +68,24 @@
 }
 
 /*
+ * The row whose product is open. The panel changes through `history.replaceState`
+ * rather than a page render, so the marker has to come from the row link's own
+ * state (`data-panel-active`) instead of a server prop; `:has` keeps the row
+ * styling where it belongs.
+ */
+tr:has(a[data-panel-active="true"]) {
+  background: var(--accent-soft);
+}
+
+tr:has(a[data-panel-active="true"]):hover {
+  background: var(--accent-soft);
+}
+
+tr:has(a[data-panel-active="true"]) > td:first-child {
+  border-left-color: var(--accent);
+}
+
+/*
  * Table-change loading. While a results region reports itself busy, the table's
  * real rows step aside and its skeleton rows take their place, so the header,
  * the columns and the filter bar stay exactly where they are. Plain CSS rather

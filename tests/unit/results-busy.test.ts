@@ -108,7 +108,7 @@ describe("the results region", () => {
         createElement(ProductTable, {
           products: [tomato()],
           currency: "AUD",
-          selectedId: "",
+          rowHref: (id: string) => `/products?product=${id}`,
         }),
       );
     });
