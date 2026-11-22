@@ -112,3 +112,16 @@ Record limitations honestly. Include severity, workaround, and whether the issue
 | Stock value uses cost price, never retail price             | low      | Valuing at a selling price belongs to the reports slice                                                         | No           | Deferred            |
 | Only the cafe account's dashboard was walked through        | low      | Every query filters by the active business id and isolation is covered by database tests; retail figures unseen | No           | Verified 2026-11-22 |
 | Recent movements show the last eight lines for the business | low      | The inventory panel shows the last twelve per product; there is no full ledger page                             | No           | Intentional         |
+
+## Slice 9 (reports and CSV export) — 2026-11-22
+
+| Limitation or risk                                                     | Severity | Workaround                                                                                                | Blocks demo? | Status              |
+| ---------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------- | ------------ | ------------------- |
+| Report screens verified once, at desktop width only                    | low      | Walked through signed in as the cafe owner; narrow widths and touch targets unchecked                     | No           | Verified 2026-11-22 |
+| An export builds the whole result set in memory before responding      | low      | 220 products and 219 movements are trivial; a far larger business would need streaming or chunked exports | No           | By design           |
+| Movement date filters compare against the server's timezone            | low      | Local development and the demo share one machine; a per-business timezone is not modelled                 | No           | Deferred            |
+| Valuation uses cost price, not selling price                           | low      | A retail valuation needs a decision about which price to use; the cost report is unambiguous              | No           | Deferred            |
+| CSV import is not built                                                | low      | Product requirements list import as P2; no decision has been taken to build it                            | No           | Out of scope        |
+| CSV text cells starting `=`, `+`, `-` or `@` gain a leading apostrophe | low      | Keeps a spreadsheet from running a product name as a formula; quantities and money stay numeric           | No           | By design           |
+| A movement's reference names the type, not the receipt                 | low      | There is no receipt page to link to; the order panel lists each delivery with its date and line count     | No           | Intentional         |
+| Only the cafe account's reports were walked through                    | low      | Every query filters by the active business, and tenant isolation is covered by the database tests         | No           | Verified 2026-11-22 |

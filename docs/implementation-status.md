@@ -4,13 +4,13 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Overall status
 
-- Current phase: Phase 5. Slices 1, 3, 4, 5, 6 and 7 are committed —
-  shell/selector, Supabase Auth with the authenticated `app_user` request path,
-  products and categories, suppliers, the stock ledger with inventory screens, and
-  purchase orders with transactional receiving. The Supabase account
+- Current phase: Phase 5. Slices 1 and 3–8 are committed — shell/selector,
+  Supabase Auth with the authenticated `app_user` request path, products and
+  categories, suppliers, the stock ledger with inventory screens, purchase orders
+  with transactional receiving, and the dashboard. The Supabase account
   `owner@cafe.test` is linked to the local Demo Cafe, so signing in with it renders
-  real catalogue data. Slice 8 (dashboard) is implemented locally and uncommitted,
-  awaiting review. Slice 2 (reset workflow) is still outstanding
+  real catalogue data. Slice 9 (reports and CSV export) is implemented locally and
+  uncommitted, awaiting review. Slice 2 (reset workflow) is still outstanding
 - Current deployment: Vercel stage at `https://inventory-stage.vercel.app`
   (public, no deployment protection; it serves the committed shell, not slices 1
   and 3)
@@ -71,9 +71,10 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [x] Inventory screens (committed `872555d`; walked through in a browser)
 - [x] Purchase orders (committed `5691948`; drafts, ordering, cancelling)
 - [x] Partial receiving (committed `5691948`; `private.receive_purchase_order`)
-- [x] Dashboard (local, uncommitted; live figures, needs attention, movements)
-- [ ] Reports
-- [ ] CSV workflows
+- [x] Dashboard (committed `0291bad`; live figures, needs attention, movements)
+- [x] Reports (local, uncommitted; stock, low stock, movements, order status, valuation)
+- [x] CSV export (local, uncommitted; every report, filters respected)
+- [ ] CSV import (P2: not started, no decision to build it)
 - [ ] Image upload
 - [ ] Seed and reset (catalogue seeded; reset workflow outstanding)
 
@@ -90,7 +91,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Current blockers
 
-- Slice 8 is implemented and uncommitted, awaiting review; slices 1 and 3–7 are
+- Slice 9 is implemented and uncommitted, awaiting review; slices 1 and 3–8 are
   committed.
 - Verification note, not a page defect: when the automated preview tab is
   hidden (`document.visibilityState` is `hidden`), React defers the streamed
@@ -108,7 +109,37 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
-- **2026-11-22 — Phase 5 slice 8 built locally, uncommitted.** Dashboard. The
+- **2026-11-22 — Phase 5 slice 9 built locally, uncommitted.** Reports and CSV
+  export. The placeholder is replaced by five reports over the same rows the
+  operational screens use: stock on hand (search, stock status), low stock (the
+  same query pinned to shortages, out of stock first), the movement ledger with a
+  product search, movement type and a date range, order status with received lines
+  and outstanding value, and valuation at cost grouped by category with each
+  category's share. Stock on order counts `ordered` and `partially_received` only,
+  and a draft's outstanding value is zero rather than its full value. Every list is
+  paginated at 50 and lives in the URL, so a filtered view can be bookmarked.
+  `GET /reports/export` runs the identical query with the page limit removed and
+  returns RFC 4180 CSV with CRLF line endings, a `content-disposition` filename
+  (`demo-cafe-stock-2026-11-22.csv`) and `private, no-store`; the business comes
+  from the session, never the URL, and text cells a spreadsheet would treat as a
+  formula are prefixed with an apostrophe while numbers stay numeric. Verified:
+  check 0 errors (2 pre-existing warnings); unit 66/66 (21 new: CSV escaping and
+  injection guard, filename, URL parsing, per-report CSV rows); database 38/38;
+  production build 0 errors with `/reports` and `/reports/export` present;
+  `secrets:check` ok. In a browser as `owner@cafe.test`, each report matched
+  Postgres directly: stock 60 products in two pages (50 + 10) with $4,505.30 of
+  value, low stock 2 products with Pork belly (0 of 2) above Cocoa powder (1 of 1),
+  movements 59 lines with an opening-balance label and a reference column, order
+  status 2 orders with PO-0001 owing $131.80 and the draft owing nothing, and
+  valuation 9 categories totalling $4,505.30 at 100%. Search plus the shortage
+  filter returned 1 product and the export link carried both parameters; choosing
+  a received-only filter produced the empty state and a header-only CSV; a
+  same-day date range returned 59 on screen and in the file; an impossible date
+  was ignored; and stock page 2 exported all 60 rows. The unauthenticated export
+  request is redirected to sign-in, so no CSV is served without a session. Not
+  verified: the retail business's reports in a browser (only the cafe account is
+  linked); narrow widths and touch targets; a CSV opened in Excel or Sheets.
+- **2026-11-22 — Phase 5 slice 8 committed as `0291bad`.** Dashboard. The
   placeholder is replaced by figures read from the tables on every request: a
   five-stat strip (products, stock value at cost, low or out, open orders with the
   value on order, suppliers), a needs-attention table (out of stock first, then
