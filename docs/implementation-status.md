@@ -4,14 +4,16 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Overall status
 
-- Current phase: Phase 5. Slices 1 and 3–9 are committed — shell/selector,
+- Current phase: Phase 6 (validation). Slices 1 and 3–9 are committed — shell/selector,
   Supabase Auth with the authenticated `app_user` request path, products and
   categories, suppliers, the stock ledger with inventory screens, purchase orders
   with transactional receiving, the dashboard, and reports with CSV export. The
   Supabase account `owner@cafe.test` is linked to the local Demo Cafe, so signing in
   with it renders real catalogue data. Slice 2 (the demo reset workflow) is
   committed as `906a7c2`; every Phase 5 slice is now built apart from product
-  images and CSV import
+  images and CSV import. Phase 6a is committed as `a392ca2`, and the product,
+  supplier, stock and purchase-order journeys were walked in the browser on
+  2026-11-22: defects D1 and D2 are fixed (`0ef1b41`, `b368be9`) and D3 is open
 - Current deployment: Vercel stage at `https://inventory-stage.vercel.app`
   (public, no deployment protection; it serves the committed shell, not slices 1
   and 3)
@@ -81,9 +83,11 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ### Phase 6: Validation
 
-- [ ] Core journeys tested
-- [ ] Partial receiving tested
-- [ ] Duplicate receiving prevented
+- [x] Core journeys tested (2026-11-22: product, supplier, stock movement and
+      purchase order; D1–D3 found, D1 and D2 fixed)
+- [x] Partial receiving tested (2026-11-22: two deliveries on PO-0003)
+- [x] Duplicate receiving prevented (2026-11-22: repeat submit and a stale
+      second-tab form both refused)
 - [ ] Tenant isolation verified
 - [x] Responsive layouts checked (390 / 768 / 1280, 2026-11-22)
 - [ ] Empty/loading/error states checked
@@ -92,10 +96,14 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Current blockers
 
-- Phase 5 is complete apart from product image upload (slice 10) and CSV import
-  (P2, not started); slices 1–9 are committed. Phase 6a (responsive pass and
-  viewer visibility) is committed as `a392ca2`; the rest of Phase 6 (journeys,
-  empty/error states, deployment, walkthrough) has not started.
+- Phase 6 continues. The four core journeys were walked in the browser on
+  2026-11-22, including partial receiving and a duplicate receive, which found
+  three defects. D1 (product and supplier forms lost what was typed when the
+  server rejected a save) is fixed in `0ef1b41`; D2 (the movement select showed
+  "Stock in" after a rejected adjustment) is fixed in `b368be9`; D3 (a stale
+  "saved" notice during archive/restore) is still open. Tenant isolation,
+  empty/loading/error states, deployment verification and the demo walkthrough
+  remain.
 - Verification note, not a page defect: when the automated preview tab is
   hidden (`document.visibilityState` is `hidden`), React defers the streamed
   Suspense reveal to `requestAnimationFrame`, which a hidden tab pauses. The
@@ -112,6 +120,40 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — Phase 6 journey pass, with D1 and D2 fixed.** Walked the four
+  core journeys in the preview as `owner@cafe.test`, checking Postgres after each
+  step. Products: created JRN-001 with cost, sell and reorder level, edited name
+  and cost, archived (61→60 with a notice), restored (60→61); a duplicate SKU was
+  refused and a 120-character limit was enforced. Suppliers: created Journey
+  Produce Co (9→10), edited contact and phone, archived (10→9, hidden from the
+  list), restored (9→10), and its product filter in the order editor listed only
+  its own product. Stock: +5 in, −2 out, an adjustment without a reason refused,
+  then +1 adjustment; the ledger read 5/−2/+1 summing 4, with value at cost
+  moving 19.00 → 11.40 → 15.20. Purchasing: PO-0003 drafted at 38.00, marked
+  ordered, an over-receipt of 12 refused ("Only 10 kg … is outstanding"), a
+  partial 6 posted one receipt and left it partly received, a duplicate submit
+  from a stale second tab was refused, and the final 4 closed it at 10/10 with
+  two delivery lines and no double count (ledger sum 14, two receipt lines).
+  Three defects were logged with screenshots and field read-backs rather than
+  fixed mid-pass: D1, both forms blanked after a rejected save
+  (`local/phase-6/journey-product-form-reset.png`); D2, the movement select read
+  "Stock in" beside an adjustment's direction field
+  (`local/phase-6/journey-adjustment-reset.png`); D3, a stale "saved" notice
+  stayed on screen through archive and restore, which is still open. D1 and D2
+  are fixed in `0ef1b41` (product and supplier fields held in state) and
+  `b368be9` (held select values re-applied after React's post-action reset),
+  each with a jsdom test that failed on the old code first — `expected '' to be
+'Journey Apples'`, and `expected 'stock_in' to be 'adjustment'`. Both fixes
+  were re-checked in the browser on the same screenshots
+  (`local/phase-6/supplier-form-retained.png`,
+  `local/phase-6/movement-form-retained.png`). Gates after the fixes: `check` 0
+  errors (2 pre-existing `_role`/`_action` warnings), unit 75/75 across 12 files,
+  DB 44/44, build clean, `secrets:check ok`. The journey rows were left in the
+  local database for inspection; the Settings reset restores the seeded baseline.
+  Not verified: tenant isolation and empty/error states in the browser, real-mouse
+  interaction on a few buttons (the automated tab reports
+  `document.visibilityState: hidden`), and the retail business (only the cafe
+  account is linked).
 - **2026-11-22 — Phase 6a: responsive pass and viewer visibility (committed `a392ca2`).**
   The four list screens now share `src/components/detail-panel.tsx`: the sticky
   360px column from 900px, and below that a fixed overlay under the header with
