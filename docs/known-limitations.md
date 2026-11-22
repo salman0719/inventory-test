@@ -221,6 +221,13 @@ Supabase project signs JWTs asymmetrically and publishes a JWKS — otherwise
 `getClaims()` falls back to the same network call. Unconfirmed, so not attempted;
 the reasoning is repeated as a comment in `src/proxy.ts`.
 
+Measured 2026-11-22 (`NAV_TIMING=1`, 40 signed-in navigations, dev server on
+Windows against Docker Postgres): each of the two auth checks is 89–93 ms at p50
+and 510–623 ms at p95, so together they are the larger half of a navigation's
+server time; the three transactions a products page opens cost about 75 ms p50, of
+which `tenant.setup` (begin, role, claims) is the largest single component at
+112 ms p95. Numbers are per layer, not wall clock.
+
 Correction (2026-11-22): the page-level duplicate is smaller than previously
 recorded here. `getSessionUser()` and `getActiveBusiness()` are both wrapped in
 React `cache()`, so the calls in `products/page.tsx` and in `AppShell`

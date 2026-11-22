@@ -133,6 +133,43 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — Stage 3 baseline measured; instrumentation committed (`2b21ef8`).**
+  `src/lib/nav-timing.ts` times three layers behind `NAV_TIMING=1` — the proxy's
+  `auth.getUser()`, the page's `getSessionUser()`, and each `withTenant` split into
+  connect / setup (begin + role + claims) / work / commit — and logs one line per
+  sample. `npm run perf:nav -- <log> [--since=<epoch ms>]` turns those lines into
+  p50/p95. With the flag unset the helper returns the callback untouched, so the
+  committed path is unchanged. Method: restarted `next dev` on :51852 with
+  `NAV_TIMING=1`, drove 40 authenticated navigations from the signed-in tab
+  (`/`, `/products`, `/inventory`, `/suppliers`, `/purchase-orders`, 8 rounds of 5)
+  with `fetch(..., { cache: "no-store" })` after a warm-up round, then read the log
+  from a timestamp marker. Results (ms):
+
+  | layer            | n   | p50  | p95   | max   |
+  | ---------------- | --- | ---- | ----- | ----- |
+  | `proxy.auth`     | 42  | 89.3 | 623.0 | 692.7 |
+  | `session.auth`   | 41  | 92.9 | 510.4 | 544.3 |
+  | `tenant.connect` | 114 | 2.5  | 21.8  | 118.7 |
+  | `tenant.setup`   | 114 | 15.2 | 111.8 | 430.0 |
+  | `tenant.work`    | 114 | 5.6  | 100.3 | 194.5 |
+  | `tenant.commit`  | 114 | 1.3  | 76.3  | 182.1 |
+
+  Client wall clock for the same navigations, measured in the page: p50 333.9 and
+  213.2 in the two 20-navigation batches, p95 884.5 and 910.7. Median tenant
+  transactions per render: 3. Reading: the two auth checks cost about 180 ms p50
+  together and are bimodal — p95 near 0.5–0.6 s for a single check, which is the
+  shape of a Supabase round trip (possibly a token refresh), not of local work. The
+  database side is about 25 ms p50 per transaction and about 75 ms for a typical
+  page, but `tenant.setup` alone reaches 112 ms p95 / 430 ms max, so the three
+  statements that open a transaction are the DB component worth attacking first.
+  Caveats: this is `next dev` on Windows against the Docker Postgres, so it is a
+  development baseline, not the stage; the report's per-navigation total sums
+  samples from layout and page renders that overlap, reads higher than the client's
+  wall clock and is not used as the headline; unauthenticated requests log
+  `proxy.auth` at ~0.3 ms (no cookie, no network), so only the signed-in path was
+  measured. Next: item 3 and item 4 against this baseline, then `getClaims` only if
+  the JWKS prerequisite holds.
+
 - **2026-11-22 — The panels share one fetch body, and an opened panel announces itself.**
   `src/components/panel-loader.tsx` holds the loading/failed/ready body the four
   columns had each grown (`PanelLoader`), the panel-shaped skeleton, and the shared
