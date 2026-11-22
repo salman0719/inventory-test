@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { setArchived } from "@/app/(app)/suppliers/actions";
+import { ArchiveForm } from "@/components/archive-form";
 import { EMPTY_SUPPLIER } from "@/lib/supplier-defaults";
 import { formatQuantity } from "@/lib/product-input";
 import type { SuppliedProduct, SupplierSummary } from "@/lib/suppliers";
@@ -160,7 +161,7 @@ function SupplierBody({
         <Link href={editHref} className={BUTTON}>
           Edit
         </Link>
-        <form action={setArchived}>
+        <ArchiveForm action={setArchived}>
           <input type="hidden" name="id" value={supplier.id} />
           <input
             type="hidden"
@@ -170,7 +171,7 @@ function SupplierBody({
           <button type="submit" className={BUTTON}>
             {supplier.isArchived ? "Restore" : "Archive"}
           </button>
-        </form>
+        </ArchiveForm>
       </div>
     </>
   );

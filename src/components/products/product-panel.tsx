@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { setArchived } from "@/app/(app)/products/actions";
+import { ArchiveForm } from "@/components/archive-form";
 import { EMPTY_PRODUCT } from "@/lib/product-defaults";
 import { formatMoney, formatQuantity, stockStatus } from "@/lib/product-input";
 import type {
@@ -165,7 +166,7 @@ function ProductBody({
           <Link href={editHref} className={BUTTON}>
             Edit
           </Link>
-          <form action={setArchived}>
+          <ArchiveForm action={setArchived}>
             <input type="hidden" name="id" value={product.id} />
             <input
               type="hidden"
@@ -175,7 +176,7 @@ function ProductBody({
             <button type="submit" className={BUTTON}>
               {product.isArchived ? "Restore" : "Archive"}
             </button>
-          </form>
+          </ArchiveForm>
         </div>
       ) : null}
     </>
