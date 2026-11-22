@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import {
   recordMovement,
   type MovementFormState,
@@ -38,9 +38,23 @@ export function MovementForm({
   const [quantity, setQuantity] = useState("");
   const [direction, setDirection] = useState<MovementDirection>("in");
   const [reason, setReason] = useState("");
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // React resets the DOM form after every action. It restores text inputs from
+  // their props but not selects: their controlled value never changed, so a
+  // rejected adjustment was left showing "Stock in" beside the direction field.
+  // Put the held choice back once the action has returned.
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    const type = form.elements.namedItem("movementType");
+    const dir = form.elements.namedItem("direction");
+    if (type instanceof HTMLSelectElement) type.value = movementType;
+    if (dir instanceof HTMLSelectElement) dir.value = direction;
+  }, [state, movementType, direction]);
 
   return (
-    <form action={formAction} className="flex flex-col gap-2.5">
+    <form ref={formRef} action={formAction} className="flex flex-col gap-2.5">
       <input type="hidden" name="productId" value={productId} />
 
       <div className="grid grid-cols-[minmax(0,1fr)_110px] gap-2">
