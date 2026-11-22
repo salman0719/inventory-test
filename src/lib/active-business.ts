@@ -6,11 +6,15 @@ export const BUSINESS_COOKIE = "demo_business";
 
 export type BusinessType = "cafe" | "retail" | "other";
 
+/** The membership role on `business_members`; it decides what a user may see. */
+export type BusinessRole = "owner" | "staff" | "viewer";
+
 export type BusinessOption = {
   id: string;
   name: string;
   businessType: BusinessType;
   currencyCode: string;
+  role: BusinessRole;
 };
 
 /**

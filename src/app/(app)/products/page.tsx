@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DetailPanel } from "@/components/detail-panel";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { ProductFilters } from "@/components/products/product-filters";
 import { ProductPanel } from "@/components/products/product-panel";
@@ -42,6 +43,7 @@ export default async function ProductsPage({
   const { active } = await getActiveBusiness(user.id);
   if (!active) return <NoBusinessNotice />;
 
+  const canViewValues = active.role !== "viewer";
   const q = single(params, "q").slice(0, 80);
   const categoryId = single(params, "cat");
   const archived = single(params, "archived") === "true";
@@ -136,7 +138,7 @@ export default async function ProductsPage({
         }`}
       >
         {showPanel ? (
-          <div className="order-first min-[900px]:order-last min-[900px]:sticky min-[900px]:top-3">
+          <DetailPanel closeHref={closeHref} label="product details">
             {creating ? (
               <ProductPanel
                 mode="create"
@@ -146,6 +148,7 @@ export default async function ProductsPage({
                 currency={active.currencyCode}
                 saved={false}
                 closeHref={closeHref}
+                canViewValues={canViewValues}
               />
             ) : selected ? (
               <ProductPanel
@@ -157,6 +160,7 @@ export default async function ProductsPage({
                 saved={saved && !editing}
                 closeHref={closeHref}
                 editHref={hrefFor({ product: selected.id, edit: "true" })}
+                canViewValues={canViewValues}
               />
             ) : (
               <div className="rounded border border-line bg-surface px-3 py-6 text-center">
@@ -174,7 +178,7 @@ export default async function ProductsPage({
                 </Link>
               </div>
             )}
-          </div>
+          </DetailPanel>
         ) : null}
 
         <div className="flex min-w-0 flex-col gap-3">
@@ -183,6 +187,7 @@ export default async function ProductsPage({
               products={products}
               currency={active.currencyCode}
               selectedId={selectedId}
+              canViewValues={canViewValues}
             />
           ) : (
             <div className="rounded border border-dashed border-line bg-panel px-4 py-12 text-center">

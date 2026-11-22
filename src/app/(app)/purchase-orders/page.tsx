@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
+import { DetailPanel } from "@/components/detail-panel";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { PurchaseOrderFilters } from "@/components/purchase-orders/purchase-order-filters";
 import {
@@ -56,6 +57,7 @@ export default async function PurchaseOrdersPage({
   const creating = single(params, "new") === "true";
   const editing = single(params, "edit") === "true";
   const saved = single(params, "saved");
+  const canViewValues = active.role !== "viewer";
 
   const [orders, summary, selected] = await Promise.all([
     listPurchaseOrders(user.id, active.id, {
@@ -132,9 +134,15 @@ export default async function PurchaseOrdersPage({
           {filtered
             ? `${orders.length} match these filters`
             : `${summary.total} order${summary.total === 1 ? "" : "s"}`}{" "}
-          · {summary.awaiting} awaiting delivery ·{" "}
-          {formatMoney(summary.onOrderValue, active.currencyCode)} on order ·{" "}
-          {active.name}
+          · {summary.awaiting} awaiting delivery
+          {canViewValues ? (
+            <>
+              {" "}
+              · {formatMoney(summary.onOrderValue, active.currencyCode)} on
+              order
+            </>
+          ) : null}{" "}
+          · {active.name}
         </p>
         {showEditor ? null : (
           <Link
@@ -161,7 +169,7 @@ export default async function PurchaseOrdersPage({
         }`}
       >
         {showPanel ? (
-          <div className="order-first min-[900px]:order-last min-[900px]:sticky min-[900px]:top-3">
+          <DetailPanel closeHref={closeHref} label="order details">
             {showEditor && options ? (
               <div className="rounded border border-line bg-surface">
                 <header className="flex items-center gap-2 border-b border-line px-3 py-2">
@@ -200,6 +208,7 @@ export default async function PurchaseOrdersPage({
                   saved: undefined,
                 })}
                 idempotencyKey={randomUUID()}
+                canViewValues={canViewValues}
               />
             ) : (
               <div className="rounded border border-line bg-surface px-3 py-6 text-center">
@@ -214,7 +223,7 @@ export default async function PurchaseOrdersPage({
                 </Link>
               </div>
             )}
-          </div>
+          </DetailPanel>
         ) : null}
 
         <div className="flex min-w-0 flex-col gap-3">
@@ -226,6 +235,7 @@ export default async function PurchaseOrdersPage({
               rowHref={(orderId) =>
                 hrefFor({ order: orderId, saved: undefined })
               }
+              canViewValues={canViewValues}
             />
           ) : (
             <div className="rounded border border-dashed border-line bg-panel px-4 py-12 text-center">

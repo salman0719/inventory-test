@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DetailPanel } from "@/components/detail-panel";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { SupplierFilters } from "@/components/suppliers/supplier-filters";
 import { SupplierPanel } from "@/components/suppliers/supplier-panel";
@@ -112,7 +113,7 @@ export default async function SuppliersPage({
         }`}
       >
         {showPanel ? (
-          <div className="order-first min-[900px]:order-last min-[900px]:sticky min-[900px]:top-3">
+          <DetailPanel closeHref={closeHref} label="supplier details">
             {creating ? (
               <SupplierPanel
                 mode="create"
@@ -146,7 +147,7 @@ export default async function SuppliersPage({
                 </Link>
               </div>
             )}
-          </div>
+          </DetailPanel>
         ) : null}
 
         <div className="flex min-w-0 flex-col gap-3">

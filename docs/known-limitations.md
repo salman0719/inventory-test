@@ -137,3 +137,14 @@ Record limitations honestly. Include severity, workaround, and whether the issue
 | Business name, type, currency and memberships are not part of a reset            | low      | They are fixed for the prototype; a rename is a profile edit, not demo data                                             | No           | Intentional         |
 | Only the cafe reset was walked through in a browser                              | low      | The retail payload is unit tested and the function's tests use their own fixtures                                       | No           | Verified 2026-11-22 |
 | Staff and viewers do not see the panel                                           | low      | The screen checks the membership role and the database refuses them anyway; neither can reach the action                | No           | By design           |
+
+## Phase 6a (responsive pass and viewer visibility) — 2026-11-22
+
+| Limitation or risk                                                           | Severity | Workaround                                                                                                               | Blocks demo? | Status              |
+| ---------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------ | ------------ | ------------------- |
+| The overlay panel has no focus trap, Escape or focus return below 900px      | low      | The scrim and the Close control are links that cancel the URL state; a trap would need the panel to be a client dialog   | No           | By design           |
+| At 390px an open panel covers the sticky header                              | low      | The top nav bar stays visible; closing the panel restores the header, which is a normal phone bottom-sheet trade-off     | No           | By design           |
+| The phone top nav scrolls horizontally                                       | low      | Seven destinations do not fit 390px; the last two need a sideways swipe, and labels no longer overlap                    | No           | By design           |
+| Viewer masking happens at render, not in the query layer                     | low      | The report and list queries still read cost/value and the components omit them; exports are refused server-side with 403 | No           | Acceptable for demo |
+| Viewer mode was checked by temporarily changing the owner's role in Postgres | low      | Only `owner@cafe.test` is linked; the role was restored to `owner` afterwards and both states were walked through        | No           | Verified 2026-11-22 |
+| Reports export controls are hidden for viewers, not disabled                 | low      | The route refuses viewers with 403 whether or not the control is on screen                                               | No           | By design           |

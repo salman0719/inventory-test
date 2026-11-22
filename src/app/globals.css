@@ -41,3 +41,32 @@
     outline-offset: 2px;
   }
 }
+
+/*
+ * Touch pass (Phase 6). Below 900px every control is at least 44px tall and table
+ * row links get enough padding to be tapped, which the component classes (36px
+ * controls, dense cells) do not provide. Desktop density is untouched.
+ */
+@media (max-width: 899px) {
+  button,
+  select,
+  textarea,
+  input:not([type="checkbox"]):not([type="radio"]) {
+    min-height: 44px;
+  }
+
+  label:has(> input[type="checkbox"]) {
+    min-height: 44px;
+  }
+
+  a[class*="min-h-[32px]"],
+  a[class*="min-h-[36px]"],
+  a[class*="min-h-[38px]"] {
+    min-height: 44px;
+  }
+
+  main table tbody td a {
+    display: inline-block;
+    padding-block: 13px;
+  }
+}

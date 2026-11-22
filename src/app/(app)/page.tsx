@@ -20,6 +20,8 @@ export default async function DashboardPage() {
   const { active } = await getActiveBusiness(user.id);
   if (!active) return <NoBusinessNotice />;
 
+  const canViewValues = active.role !== "viewer";
+
   const { summary, attention, movements } = await getDashboard(
     user.id,
     active.id,
@@ -41,7 +43,11 @@ export default async function DashboardPage() {
         </p>
       </header>
 
-      <DashboardStats summary={summary} currency={active.currencyCode} />
+      <DashboardStats
+        summary={summary}
+        currency={active.currencyCode}
+        canViewValues={canViewValues}
+      />
 
       {summary.products === 0 ? (
         <div className="rounded border border-dashed border-line bg-panel px-4 py-12 text-center">

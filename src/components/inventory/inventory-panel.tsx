@@ -32,12 +32,15 @@ export function InventoryPanel({
   currency,
   saved,
   closeHref,
+  canViewValues = true,
 }: {
   item: InventoryItem;
   movements: StockMovement[];
   currency: string;
   saved: boolean;
   closeHref: string;
+  /** Viewers see quantities, not stock value, and cannot record movements. */
+  canViewValues?: boolean;
 }) {
   const status = stockStatus(item.onHand, item.reorderLevel);
 
@@ -83,11 +86,13 @@ export function InventoryPanel({
         <Value label="Reorder at">
           <span className="font-mono">{formatQuantity(item.reorderLevel)}</span>
         </Value>
-        <Value label="Value at cost">
-          <span className="font-mono">
-            {formatMoney(item.stockValue, currency)}
-          </span>
-        </Value>
+        {canViewValues ? (
+          <Value label="Value at cost">
+            <span className="font-mono">
+              {formatMoney(item.stockValue, currency)}
+            </span>
+          </Value>
+        ) : null}
         <Value label="Category">{item.categoryName ?? "—"}</Value>
         <Value label="Supplier">{item.supplierName ?? "—"}</Value>
       </dl>
@@ -97,10 +102,14 @@ export function InventoryPanel({
           This product is archived, so it is hidden from the inventory list.
           Restore it on the product page to work with its stock again.
         </p>
-      ) : (
+      ) : canViewValues ? (
         <div className="border-t border-line px-3 py-3">
           <MovementForm productId={item.id} unit={item.unitOfMeasure} />
         </div>
+      ) : (
+        <p className="border-t border-line px-3 py-3 text-[12px] text-ink-muted">
+          Stock movements are recorded by owners and staff.
+        </p>
       )}
 
       <div className="border-t border-line px-3 py-2">

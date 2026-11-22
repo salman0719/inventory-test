@@ -172,7 +172,7 @@ export function AppNav() {
                   key={item.href}
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  className={`flex min-h-[44px] min-w-[56px] flex-col items-center justify-center gap-0.5 rounded px-2 text-[10px] uppercase tracking-[0.04em] ${
+                  className={`flex min-h-[44px] min-w-[56px] shrink-0 flex-col items-center justify-center gap-0.5 rounded px-2 text-[10px] uppercase tracking-[0.04em] ${
                     active
                       ? "bg-rail-active text-surface"
                       : "text-rail-ink hover:text-surface"

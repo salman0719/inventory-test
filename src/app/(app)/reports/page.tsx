@@ -58,6 +58,7 @@ export default async function ReportsPage({
   const { active } = await getActiveBusiness(user.id);
   if (!active) return <NoBusinessNotice />;
 
+  const canViewValues = active.role !== "viewer";
   const kind = parseReportKind(single(params, "report"));
   const q = single(params, "q").trim().slice(0, 80);
   const status = reportStatusFor(kind, single(params, "status"));
@@ -105,7 +106,11 @@ export default async function ReportsPage({
           }`;
     body =
       report.rows.length > 0 ? (
-        <StockReportTable rows={report.rows} currency={active.currencyCode} />
+        <StockReportTable
+          rows={report.rows}
+          currency={active.currencyCode}
+          canViewValues={canViewValues}
+        />
       ) : (
         <EmptyReport
           title={
@@ -157,7 +162,11 @@ export default async function ReportsPage({
     summaryText = `${total} order${total === 1 ? "" : "s"}`;
     body =
       report.rows.length > 0 ? (
-        <OrderReportTable rows={report.rows} currency={active.currencyCode} />
+        <OrderReportTable
+          rows={report.rows}
+          currency={active.currencyCode}
+          canViewValues={canViewValues}
+        />
       ) : (
         <EmptyReport
           title="No orders match those filters"
@@ -171,10 +180,18 @@ export default async function ReportsPage({
     total = report.rows.length;
     summaryText = `${report.totalProducts} product${
       report.totalProducts === 1 ? "" : "s"
-    } · ${formatMoney(report.totalValue, active.currencyCode)} at cost`;
+    }${
+      canViewValues
+        ? ` · ${formatMoney(report.totalValue, active.currencyCode)} at cost`
+        : ""
+    }`;
     body =
       report.rows.length > 0 ? (
-        <ValuationReportTable report={report} currency={active.currencyCode} />
+        <ValuationReportTable
+          report={report}
+          currency={active.currencyCode}
+          canViewValues={canViewValues}
+        />
       ) : (
         <EmptyReport
           title="Nothing to value yet"
@@ -206,12 +223,14 @@ export default async function ReportsPage({
             {REPORT_NOTES[kind]} · {active.name}
           </p>
         </div>
-        <a
-          href={reportExportHref(kind, { ...filters, page: 1 })}
-          className="ml-auto inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
-        >
-          Export CSV
-        </a>
+        {canViewValues ? (
+          <a
+            href={reportExportHref(kind, { ...filters, page: 1 })}
+            className="ml-auto inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
+          >
+            Export CSV
+          </a>
+        ) : null}
       </header>
 
       <ReportTabs kind={kind} />

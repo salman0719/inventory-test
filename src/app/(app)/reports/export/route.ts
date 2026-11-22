@@ -38,6 +38,12 @@ export async function GET(request: Request) {
     return new Response("No business is selected.", { status: 404 });
   }
 
+  // A viewer may read quantities on screen, but no report leaves the app with the
+  // business's costs in it.
+  if (active.role === "viewer") {
+    return new Response("Your role cannot export reports.", { status: 403 });
+  }
+
   const params = new URL(request.url).searchParams;
   const kind = parseReportKind(params.get("report"));
   const search = (params.get("q") ?? "").trim().slice(0, 80);

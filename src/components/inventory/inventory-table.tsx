@@ -16,11 +16,14 @@ export function InventoryTable({
   currency,
   selectedId,
   rowHref,
+  canViewValues = true,
 }: {
   items: InventoryItem[];
   currency: string;
   selectedId: string;
   rowHref: (productId: string) => string;
+  /** Viewers do not receive stock value. */
+  canViewValues?: boolean;
 }) {
   return (
     <div className="overflow-x-auto rounded border border-line bg-surface">
@@ -43,9 +46,11 @@ export function InventoryTable({
             <th scope="col" className={`${TH} text-right`}>
               Reorder
             </th>
-            <th scope="col" className={`${TH} text-right`}>
-              Value at cost
-            </th>
+            {canViewValues ? (
+              <th scope="col" className={`${TH} text-right`}>
+                Value at cost
+              </th>
+            ) : null}
             <th scope="col" className={TH}>
               Status
             </th>
@@ -92,9 +97,11 @@ export function InventoryTable({
                 <td className={`${TD} text-right font-mono text-ink-muted`}>
                   {formatQuantity(item.reorderLevel)}
                 </td>
-                <td className={`${TD} text-right font-mono`}>
-                  {formatMoney(item.stockValue, currency)}
-                </td>
+                {canViewValues ? (
+                  <td className={`${TD} text-right font-mono`}>
+                    {formatMoney(item.stockValue, currency)}
+                  </td>
+                ) : null}
                 <td className={`${TD} text-ink-muted`}>
                   <StatusLabel status={status} />
                 </td>

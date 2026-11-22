@@ -28,6 +28,7 @@ export function ProductPanel({
   saved,
   closeHref,
   editHref,
+  canViewValues = true,
 }: {
   mode: "create" | "edit" | "detail";
   product: ProductSummary | null;
@@ -37,6 +38,8 @@ export function ProductPanel({
   saved: boolean;
   closeHref: string;
   editHref?: string;
+  /** Viewers see the stock position, not the money, and get no write controls. */
+  canViewValues?: boolean;
 }) {
   const title =
     mode === "create" ? "New product" : (product?.name ?? "Product");
@@ -79,6 +82,7 @@ export function ProductPanel({
           currency={currency}
           saved={saved}
           editHref={editHref ?? closeHref}
+          canViewValues={canViewValues}
         />
       ) : null}
     </aside>
@@ -90,11 +94,13 @@ function ProductBody({
   currency,
   saved,
   editHref,
+  canViewValues,
 }: {
   product: ProductSummary;
   currency: string;
   saved: boolean;
   editHref: string;
+  canViewValues: boolean;
 }) {
   return (
     <>
@@ -123,16 +129,20 @@ function ProductBody({
             {formatQuantity(product.reorderLevel)}
           </span>
         </Value>
-        <Value label="Cost">
-          <span className="font-mono">
-            {formatMoney(product.costPrice, currency)}
-          </span>
-        </Value>
-        <Value label="Selling price">
-          <span className="font-mono">
-            {formatMoney(product.sellingPrice, currency)}
-          </span>
-        </Value>
+        {canViewValues ? (
+          <>
+            <Value label="Cost">
+              <span className="font-mono">
+                {formatMoney(product.costPrice, currency)}
+              </span>
+            </Value>
+            <Value label="Selling price">
+              <span className="font-mono">
+                {formatMoney(product.sellingPrice, currency)}
+              </span>
+            </Value>
+          </>
+        ) : null}
         <Value label="Category">{product.categoryName ?? "—"}</Value>
         <Value label="Supplier">{product.supplierName ?? "—"}</Value>
       </dl>
@@ -150,22 +160,24 @@ function ProductBody({
         </p>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-2 border-t border-line px-3 py-2">
-        <Link href={editHref} className={BUTTON}>
-          Edit
-        </Link>
-        <form action={setArchived}>
-          <input type="hidden" name="id" value={product.id} />
-          <input
-            type="hidden"
-            name="archived"
-            value={product.isArchived ? "false" : "true"}
-          />
-          <button type="submit" className={BUTTON}>
-            {product.isArchived ? "Restore" : "Archive"}
-          </button>
-        </form>
-      </div>
+      {canViewValues ? (
+        <div className="flex flex-wrap items-center gap-2 border-t border-line px-3 py-2">
+          <Link href={editHref} className={BUTTON}>
+            Edit
+          </Link>
+          <form action={setArchived}>
+            <input type="hidden" name="id" value={product.id} />
+            <input
+              type="hidden"
+              name="archived"
+              value={product.isArchived ? "false" : "true"}
+            />
+            <button type="submit" className={BUTTON}>
+              {product.isArchived ? "Restore" : "Archive"}
+            </button>
+          </form>
+        </div>
+      ) : null}
     </>
   );
 }

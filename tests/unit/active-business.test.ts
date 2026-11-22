@@ -9,6 +9,7 @@ const cafe: BusinessOption = {
   name: "Demo Cafe",
   businessType: "cafe",
   currencyCode: "AUD",
+  role: "owner",
 };
 
 const retail: BusinessOption = {
@@ -16,6 +17,7 @@ const retail: BusinessOption = {
   name: "Demo Retail",
   businessType: "retail",
   currencyCode: "AUD",
+  role: "staff",
 };
 
 describe("business selection", () => {

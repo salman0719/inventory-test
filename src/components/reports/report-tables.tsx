@@ -46,9 +46,12 @@ function referenceLabel(referenceType: string | null): string {
 export function StockReportTable({
   rows,
   currency,
+  canViewValues = true,
 }: {
   rows: StockReportRow[];
   currency: string;
+  /** Viewers do not receive unit cost or value at cost. */
+  canViewValues?: boolean;
 }) {
   return (
     <div className="overflow-x-auto rounded border border-line bg-surface">
@@ -77,12 +80,16 @@ export function StockReportTable({
             <th scope="col" className={`${TH} text-right`}>
               On order
             </th>
-            <th scope="col" className={`${TH} text-right`}>
-              Cost
-            </th>
-            <th scope="col" className={`${TH} text-right`}>
-              Value
-            </th>
+            {canViewValues ? (
+              <>
+                <th scope="col" className={`${TH} text-right`}>
+                  Cost
+                </th>
+                <th scope="col" className={`${TH} text-right`}>
+                  Value
+                </th>
+              </>
+            ) : null}
             <th scope="col" className={TH}>
               Status
             </th>
@@ -122,12 +129,16 @@ export function StockReportTable({
               >
                 {Number(row.onOrder) > 0 ? formatQuantity(row.onOrder) : "—"}
               </td>
-              <td className={`${TD} text-right font-mono text-ink-muted`}>
-                {formatMoney(row.unitCost, currency)}
-              </td>
-              <td className={`${TD} text-right font-mono`}>
-                {formatMoney(row.stockValue, currency)}
-              </td>
+              {canViewValues ? (
+                <>
+                  <td className={`${TD} text-right font-mono text-ink-muted`}>
+                    {formatMoney(row.unitCost, currency)}
+                  </td>
+                  <td className={`${TD} text-right font-mono`}>
+                    {formatMoney(row.stockValue, currency)}
+                  </td>
+                </>
+              ) : null}
               <td className={`${TD} text-ink-muted`}>
                 <StatusLabel
                   status={stockStatus(row.onHand, row.reorderLevel)}
@@ -218,9 +229,12 @@ export function MovementReportTable({ rows }: { rows: MovementReportRow[] }) {
 export function OrderReportTable({
   rows,
   currency,
+  canViewValues = true,
 }: {
   rows: OrderReportRow[];
   currency: string;
+  /** Viewers do not receive order or outstanding values. */
+  canViewValues?: boolean;
 }) {
   return (
     <div className="overflow-x-auto rounded border border-line bg-surface">
@@ -249,12 +263,16 @@ export function OrderReportTable({
             <th scope="col" className={`${TH} text-right`}>
               Lines
             </th>
-            <th scope="col" className={`${TH} text-right`}>
-              Value
-            </th>
-            <th scope="col" className={`${TH} text-right`}>
-              Outstanding
-            </th>
+            {canViewValues ? (
+              <>
+                <th scope="col" className={`${TH} text-right`}>
+                  Value
+                </th>
+                <th scope="col" className={`${TH} text-right`}>
+                  Outstanding
+                </th>
+              </>
+            ) : null}
           </tr>
         </thead>
         <tbody>
@@ -283,20 +301,24 @@ export function OrderReportTable({
               >
                 {row.receivedLines} of {row.lineCount}
               </td>
-              <td className={`${TD} text-right font-mono`}>
-                {formatMoney(row.totalValue, currency)}
-              </td>
-              <td
-                className={`${TD} text-right font-mono ${
-                  Number(row.outstandingValue) > 0
-                    ? "text-warning"
-                    : "text-ink-faint"
-                }`}
-              >
-                {Number(row.outstandingValue) > 0
-                  ? formatMoney(row.outstandingValue, currency)
-                  : "—"}
-              </td>
+              {canViewValues ? (
+                <>
+                  <td className={`${TD} text-right font-mono`}>
+                    {formatMoney(row.totalValue, currency)}
+                  </td>
+                  <td
+                    className={`${TD} text-right font-mono ${
+                      Number(row.outstandingValue) > 0
+                        ? "text-warning"
+                        : "text-ink-faint"
+                    }`}
+                  >
+                    {Number(row.outstandingValue) > 0
+                      ? formatMoney(row.outstandingValue, currency)
+                      : "—"}
+                  </td>
+                </>
+              ) : null}
             </tr>
           ))}
         </tbody>
@@ -308,11 +330,27 @@ export function OrderReportTable({
 export function ValuationReportTable({
   report,
   currency,
+  canViewValues = true,
 }: {
   report: ValuationReport;
   currency: string;
+  canViewValues?: boolean;
 }) {
   const totalCents = Math.round(Number(report.totalValue) * 100);
+
+  if (!canViewValues) {
+    return (
+      <div className="rounded border border-dashed border-line bg-panel px-4 py-12 text-center">
+        <p className="text-[13px] font-medium">
+          Stock value is hidden for your role
+        </p>
+        <p className="mx-auto mt-1 max-w-[46ch] text-[12px] text-ink-muted">
+          Valuation is visible to owners and staff. The stock and movements
+          reports still show quantities.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-x-auto rounded border border-line bg-surface">

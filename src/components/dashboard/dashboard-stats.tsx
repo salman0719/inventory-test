@@ -9,9 +9,12 @@ import type { DashboardSummary } from "@/lib/dashboard";
 export function DashboardStats({
   summary,
   currency,
+  canViewValues = true,
 }: {
   summary: DashboardSummary;
   currency: string;
+  /** Viewers see counts, never cost or value. */
+  canViewValues?: boolean;
 }) {
   const attention = summary.lowCount + summary.outCount;
 
@@ -26,12 +29,14 @@ export function DashboardStats({
         value={String(summary.products)}
         note={summary.products === 1 ? "active product" : "active products"}
       />
-      <Stat
-        href="/inventory"
-        label="Stock value"
-        value={formatMoney(summary.stockValue, currency)}
-        note="at cost, on hand"
-      />
+      {canViewValues ? (
+        <Stat
+          href="/inventory"
+          label="Stock value"
+          value={formatMoney(summary.stockValue, currency)}
+          note="at cost, on hand"
+        />
+      ) : null}
       <Stat
         href="/inventory?sort=low"
         label="Low or out"
@@ -43,7 +48,11 @@ export function DashboardStats({
         href="/purchase-orders?status=open"
         label="Open orders"
         value={String(summary.openOrders)}
-        note={`${formatMoney(summary.onOrderValue, currency)} on order`}
+        note={
+          canViewValues
+            ? `${formatMoney(summary.onOrderValue, currency)} on order`
+            : "awaiting delivery"
+        }
       />
       <Stat
         href="/suppliers"

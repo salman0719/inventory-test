@@ -85,7 +85,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [ ] Partial receiving tested
 - [ ] Duplicate receiving prevented
 - [ ] Tenant isolation verified
-- [ ] Responsive layouts checked
+- [x] Responsive layouts checked (390 / 768 / 1280, 2026-11-22)
 - [ ] Empty/loading/error states checked
 - [ ] Deployment verified
 - [ ] Demo walkthrough ready
@@ -93,7 +93,10 @@ Keep this file current. Do not report a task as complete until it has been verif
 ## Current blockers
 
 - Phase 5 is complete apart from product image upload (slice 10) and CSV import
-  (P2, not started); slices 1–9 are committed. Phase 6 validation has not started.
+  (P2, not started); slices 1–9 are committed. Phase 6a (responsive pass and
+  viewer visibility) is implemented and verified but deliberately uncommitted,
+  pending review; the rest of Phase 6 (journeys, empty/error states, deployment,
+  walkthrough) has not started.
 - Verification note, not a page defect: when the automated preview tab is
   hidden (`document.visibilityState` is `hidden`), React defers the streamed
   Suspense reveal to `requestAnimationFrame`, which a hidden tab pauses. The
@@ -110,6 +113,26 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — Phase 6a: responsive pass and viewer visibility (uncommitted).**
+  The four list screens now share `src/components/detail-panel.tsx`: the sticky
+  360px column from 900px, and below that a fixed overlay under the header with
+  a scrim that closes it, so opening a row no longer pushes the table away on a
+  phone. `globals.css` gains a `max-width: 899px` block that lifts every control
+  to 44px and gives table row links padding, instead of touching ~110 class
+  usages; the mobile nav links got `shrink-0` so labels stop colliding. Measured
+  in the preview at 390×844, 768×900 and 1280×900: no page-level horizontal
+  overflow on dashboard, products, inventory, purchase orders, suppliers,
+  reports or settings; panels are 350/668px overlays below 900px and a 360px
+  column beside the list at 1280. Viewer (role `viewer`) now receives no cost or
+  value anywhere: `listBusinesses` returns the membership role (failing closed to
+  `viewer`), dashboard stock-value card, product cost/selling, inventory value,
+  order value and unit costs, report cost/value columns and the valuation table
+  are all omitted, write controls inside those panels disappear, and
+  `/reports/export` answers 403. Verified by temporarily setting
+  `owner@cafe.test`'s cafe membership to `viewer`: every screen carried no `$`,
+  reset panel absent, all four exports 403; restoring `owner` brought the values
+  and the 200 export back. Gates: `check` 0 errors (2 pre-existing `_role` /
+  `_action` warnings), unit 72/72, DB 44/44, build clean, `secrets:check ok`.
 - **2026-11-22 — Phase 5 slice 2 committed as `906a7c2`.** Demo reset. Settings
   gains a Demo data panel showing what the business currently holds (products,
   categories, suppliers, orders, movements, receipts) and a typed-confirmation

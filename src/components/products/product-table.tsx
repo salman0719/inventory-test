@@ -16,10 +16,13 @@ export function ProductTable({
   products,
   currency,
   selectedId,
+  canViewValues = true,
 }: {
   products: ProductSummary[];
   currency: string;
   selectedId: string;
+  /** Viewers do not receive cost prices. */
+  canViewValues?: boolean;
 }) {
   return (
     <div className="overflow-x-auto rounded border border-line bg-surface">
@@ -42,9 +45,11 @@ export function ProductTable({
             <th scope="col" className={`${TH} text-right`}>
               Reorder
             </th>
-            <th scope="col" className={`${TH} text-right`}>
-              Cost
-            </th>
+            {canViewValues ? (
+              <th scope="col" className={`${TH} text-right`}>
+                Cost
+              </th>
+            ) : null}
             <th scope="col" className={TH}>
               Status
             </th>
@@ -93,9 +98,11 @@ export function ProductTable({
                 <td className={`${TD} text-right font-mono text-ink-muted`}>
                   {formatQuantity(product.reorderLevel)}
                 </td>
-                <td className={`${TD} text-right font-mono`}>
-                  {formatMoney(product.costPrice, currency)}
-                </td>
+                {canViewValues ? (
+                  <td className={`${TD} text-right font-mono`}>
+                    {formatMoney(product.costPrice, currency)}
+                  </td>
+                ) : null}
                 <td className={`${TD} text-ink-muted`}>
                   <StatusLabel status={status} />
                 </td>

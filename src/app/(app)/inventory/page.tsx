@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DetailPanel } from "@/components/detail-panel";
 import { InventoryFilters } from "@/components/inventory/inventory-filters";
 import { InventoryPanel } from "@/components/inventory/inventory-panel";
 import { InventoryTable } from "@/components/inventory/inventory-table";
@@ -43,6 +44,7 @@ export default async function InventoryPage({
   const { active } = await getActiveBusiness(user.id);
   if (!active) return <NoBusinessNotice />;
 
+  const canViewValues = active.role !== "viewer";
   const q = single(params, "q").slice(0, 80);
   const categoryId = single(params, "cat");
   const status = parseStockFilter(single(params, "status"));
@@ -100,9 +102,14 @@ export default async function InventoryPage({
           {filtered
             ? `${total} match these filters`
             : `${summary.products} product${summary.products === 1 ? "" : "s"}`}{" "}
-          · {summary.outCount} out · {summary.lowCount} low ·{" "}
-          {formatMoney(summary.stockValue, active.currencyCode)} at cost ·{" "}
-          {active.name}
+          · {summary.outCount} out · {summary.lowCount} low
+          {canViewValues ? (
+            <>
+              {" "}
+              · {formatMoney(summary.stockValue, active.currencyCode)} at cost
+            </>
+          ) : null}{" "}
+          · {active.name}
         </p>
       </header>
 
@@ -122,7 +129,7 @@ export default async function InventoryPage({
         }`}
       >
         {showPanel ? (
-          <div className="order-first min-[900px]:order-last min-[900px]:sticky min-[900px]:top-3">
+          <DetailPanel closeHref={closeHref} label="stock details">
             {selected ? (
               <InventoryPanel
                 item={selected.item}
@@ -130,6 +137,7 @@ export default async function InventoryPage({
                 currency={active.currencyCode}
                 saved={saved}
                 closeHref={closeHref}
+                canViewValues={canViewValues}
               />
             ) : (
               <div className="rounded border border-line bg-surface px-3 py-6 text-center">
@@ -147,7 +155,7 @@ export default async function InventoryPage({
                 </Link>
               </div>
             )}
-          </div>
+          </DetailPanel>
         ) : null}
 
         <div className="flex min-w-0 flex-col gap-3">
@@ -159,6 +167,7 @@ export default async function InventoryPage({
               rowHref={(productId) =>
                 hrefFor({ product: productId, saved: undefined })
               }
+              canViewValues={canViewValues}
             />
           ) : (
             <div className="rounded border border-dashed border-line bg-panel px-4 py-12 text-center">

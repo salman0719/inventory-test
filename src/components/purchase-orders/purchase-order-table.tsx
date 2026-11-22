@@ -27,11 +27,14 @@ export function PurchaseOrderTable({
   currency,
   selectedId,
   rowHref,
+  canViewValues = true,
 }: {
   orders: PurchaseOrderSummary[];
   currency: string;
   selectedId: string;
   rowHref: (orderId: string) => string;
+  /** Viewers do not receive order values. */
+  canViewValues?: boolean;
 }) {
   return (
     <div className="overflow-x-auto rounded border border-line bg-surface">
@@ -54,9 +57,11 @@ export function PurchaseOrderTable({
             <th scope="col" className={TH}>
               Lines
             </th>
-            <th scope="col" className={`${TH} text-right`}>
-              Value
-            </th>
+            {canViewValues ? (
+              <th scope="col" className={`${TH} text-right`}>
+                Value
+              </th>
+            ) : null}
             <th scope="col" className={TH}>
               Expected
             </th>
@@ -98,9 +103,11 @@ export function PurchaseOrderTable({
                 <td className={`${TD} font-mono text-[12px] text-ink-muted`}>
                   {progress}
                 </td>
-                <td className={`${TD} text-right font-mono`}>
-                  {formatMoney(order.totalValue, currency)}
-                </td>
+                {canViewValues ? (
+                  <td className={`${TD} text-right font-mono`}>
+                    {formatMoney(order.totalValue, currency)}
+                  </td>
+                ) : null}
                 <td className={`${TD} text-ink-muted`}>
                   {formatDay(order.expectedDeliveryAt)}
                 </td>

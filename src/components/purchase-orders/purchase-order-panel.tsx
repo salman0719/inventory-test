@@ -48,6 +48,7 @@ export function PurchaseOrderPanel({
   closeHref,
   editHref,
   idempotencyKey,
+  canViewValues = true,
 }: {
   detail: PurchaseOrderDetail;
   currency: string;
@@ -55,6 +56,8 @@ export function PurchaseOrderPanel({
   closeHref: string;
   editHref: string;
   idempotencyKey: string;
+  /** Viewers see what was ordered, not what it cost, and cannot receive. */
+  canViewValues?: boolean;
 }) {
   const { order, lines, receipts } = detail;
 
@@ -114,11 +117,13 @@ export function PurchaseOrderPanel({
         <Value label="Status">
           <OrderStatusLabel status={order.status} />
         </Value>
-        <Value label="Value">
-          <span className="font-mono">
-            {formatMoney(order.totalValue, currency)}
-          </span>
-        </Value>
+        {canViewValues ? (
+          <Value label="Value">
+            <span className="font-mono">
+              {formatMoney(order.totalValue, currency)}
+            </span>
+          </Value>
+        ) : null}
         <Value label="Ordered">
           {order.orderedAt ? formatMoment(order.orderedAt) : "Not yet sent"}
         </Value>
@@ -133,7 +138,7 @@ export function PurchaseOrderPanel({
         ) : null}
       </dl>
 
-      {order.status === "draft" ? (
+      {order.status === "draft" && canViewValues ? (
         <div className="flex items-center gap-2 border-t border-line px-3 py-2">
           <Link href={editHref} className={BUTTON}>
             Edit draft
@@ -144,7 +149,8 @@ export function PurchaseOrderPanel({
         </div>
       ) : null}
 
-      {order.status === "draft" || canReceive(order.status) ? (
+      {canViewValues &&
+      (order.status === "draft" || canReceive(order.status)) ? (
         <OrderActions orderId={order.id} status={order.status} />
       ) : null}
 
@@ -183,10 +189,12 @@ export function PurchaseOrderPanel({
                   >
                     <td className="min-w-0 py-1 pr-2">
                       <span className="block truncate">{line.productName}</span>
-                      <span className="block text-[10.5px] text-ink-faint">
-                        {formatMoney(line.unitCost, currency)} /{" "}
-                        {line.unitOfMeasure}
-                      </span>
+                      {canViewValues ? (
+                        <span className="block text-[10.5px] text-ink-faint">
+                          {formatMoney(line.unitCost, currency)} /{" "}
+                          {line.unitOfMeasure}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="py-1 pr-2 text-right font-mono">
                       {formatQuantity(line.quantityOrdered)}
@@ -209,7 +217,7 @@ export function PurchaseOrderPanel({
         </div>
       </div>
 
-      {receivable.length > 0 ? (
+      {canViewValues && receivable.length > 0 ? (
         <div className="border-t border-line px-3 py-3">
           <h3 className="mb-1.5 text-[10px] uppercase tracking-[0.07em] text-ink-muted">
             Receive a delivery

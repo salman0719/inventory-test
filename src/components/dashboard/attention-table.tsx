@@ -32,7 +32,7 @@ export function AttentionTable({
         </p>
         <Link
           href="/inventory"
-          className="ml-auto text-[11px] font-medium text-accent hover:underline"
+          className="ml-auto inline-flex min-h-[36px] items-center text-[11px] font-medium text-accent hover:underline"
         >
           Open inventory
         </Link>
