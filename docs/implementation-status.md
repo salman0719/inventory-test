@@ -94,9 +94,8 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 - Phase 5 is complete apart from product image upload (slice 10) and CSV import
   (P2, not started); slices 1–9 are committed. Phase 6a (responsive pass and
-  viewer visibility) is implemented and verified but deliberately uncommitted,
-  pending review; the rest of Phase 6 (journeys, empty/error states, deployment,
-  walkthrough) has not started.
+  viewer visibility) is committed as `a392ca2`; the rest of Phase 6 (journeys,
+  empty/error states, deployment, walkthrough) has not started.
 - Verification note, not a page defect: when the automated preview tab is
   hidden (`document.visibilityState` is `hidden`), React defers the streamed
   Suspense reveal to `requestAnimationFrame`, which a hidden tab pauses. The
@@ -113,7 +112,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
-- **2026-11-22 — Phase 6a: responsive pass and viewer visibility (uncommitted).**
+- **2026-11-22 — Phase 6a: responsive pass and viewer visibility (committed `a392ca2`).**
   The four list screens now share `src/components/detail-panel.tsx`: the sticky
   360px column from 900px, and below that a fixed overlay under the header with
   a scrim that closes it, so opening a row no longer pushes the table away on a
