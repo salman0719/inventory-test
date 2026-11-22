@@ -4,10 +4,11 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 ## Overall status
 
-- Current phase: Phase 5 slices 1 and 3 are implemented locally and uncommitted —
-  shell/selector, then Supabase Auth with the authenticated `app_user` request
-  path. The Supabase account `owner@cafe.test` is linked to the local Demo Cafe,
-  so sign-in resolves to one tenant. Slice 2 (reset workflow) is still outstanding
+- Current phase: Phase 5. Slices 1 and 3 are committed — shell/selector, then
+  Supabase Auth with the authenticated `app_user` request path. The Supabase
+  account `owner@cafe.test` is linked to the local Demo Cafe, so sign-in resolves
+  to one tenant. Slice 4 (products and categories) is implemented locally and
+  uncommitted. Slice 2 (reset workflow) is still outstanding
 - Current deployment: Vercel stage at `https://inventory-stage.vercel.app`
   (public, no deployment protection; it serves the committed shell, not slices 1
   and 3)
@@ -62,7 +63,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [x] App shell and navigation (local only, uncommitted pending review)
 - [x] Business selector (local only; cookie-based, pre-authentication)
 - [x] Authentication (built and linked; one manual browser sign-in pending)
-- [ ] Products
+- [x] Products and categories (local, uncommitted; data layer verified)
 - [ ] Suppliers
 - [ ] Stock ledger
 - [ ] Inventory screens
@@ -72,7 +73,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [ ] Reports
 - [ ] CSV workflows
 - [ ] Image upload
-- [ ] Seed and reset
+- [ ] Seed and reset (catalogue seeded; reset workflow outstanding)
 
 ### Phase 6: Validation
 
@@ -99,6 +100,26 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-22 — Phase 5 slice 4 built locally, uncommitted.** Products and
+  categories: a dense table with URL-held filters (name or SKU search, category,
+  archived, five sort keys, 50-per-page pagination), a detail panel driven by
+  `?product=`, create and edit forms, archive and restore, and category management
+  in Settings. Writes are server actions that resolve the business from the
+  session, validate with Zod (`productInputSchema`) and run inside `withTenant`, so
+  a form's ids are lookups and never authority; a duplicate SKU is reported as a
+  form error. The seed now carries the Gate A catalogue: 60 cafe ingredients and
+  160 retail lines across 19 categories, plus 219 `opening` movements, so on-hand
+  and the low/out states are real ledger sums. Verified: seed run twice reports 220
+  products and 219 opening movements both times; `local/verify-products.ts` acting
+  as the linked Supabase id returns 60 cafe products with categories resolved,
+  search "tomato" finds 2, the Produce filter returns 12, the retail business
+  returns 0 rows for the cafe owner, and a create → update → archive round trip
+  hid the row from the default list while "Include archived" still showed it (the
+  probe row was deleted afterwards). Gates: check 0 errors (2 pre-existing
+  warnings), unit 15/15 (9 new), DB isolation 9/9, build 0 errors, `secrets:check`
+  ok. Not verified: the screens in a browser. Every route needs a session and the
+  account's password is not held here, so the table, panel, form, pagination and
+  empty states have not been seen rendered.
 - **2026-11-22 — Auth user linked; seed fixture collision fixed.** The Supabase
   account `owner@cafe.test` (id `7de96fda-b270-41b8-93d9-f9dd4ae50130`) was already
   confirmed, had a password, and recorded `last_sign_in_at` 2026-11-22 03:18:54, so

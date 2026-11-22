@@ -3,13 +3,22 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { databaseUrl, needsAuthShim } from "./env";
 import * as schema from "./schema";
+import {
+  CAFE_CATEGORIES,
+  CAFE_PRODUCTS,
+  RETAIL_CATEGORIES,
+  RETAIL_PRODUCTS,
+  type SeedProduct,
+} from "./seed-catalogue";
 
 /**
- * Idempotent demo seed: two businesses, three demo users, their memberships.
+ * Idempotent demo seed: two businesses, three demo users, their memberships, the
+ * catalogue (60 cafe ingredients, 160 retail lines) and opening stock.
  *
- * Deliberately no catalogue rows. Products, suppliers and purchase orders are
- * seeded in Phase 5 alongside the UI that reads them, so this runner proves the
- * seed process without inventing half a dataset.
+ * Products upsert on (business_id, sku), so re-running updates rather than
+ * duplicates. Opening balances are written as `opening` stock movements, one per
+ * product, guarded so a second run adds none: stock is always the ledger's sum.
+ * Suppliers and purchase orders arrive with their slices.
  *
  * Development and CI only: it writes to auth.users, which Supabase owns. A hosted
  * database is rejected until Phase 5 adds a Supabase Auth seeding path.
@@ -50,6 +59,30 @@ const DEMO_USERS = [
   },
 ] as const;
 
+/** Each business's catalogue, with the owner who signs the opening balances. */
+const CATALOGUES: ReadonlyArray<{
+  businessId: string;
+  skuPrefix: string;
+  categories: readonly string[];
+  products: SeedProduct[];
+  ownerId: string;
+}> = [
+  {
+    businessId: DEMO_BUSINESSES[0].id,
+    skuPrefix: "CAF",
+    categories: CAFE_CATEGORIES,
+    products: CAFE_PRODUCTS,
+    ownerId: DEMO_USERS[0].id,
+  },
+  {
+    businessId: DEMO_BUSINESSES[1].id,
+    skuPrefix: "RET",
+    categories: RETAIL_CATEGORIES,
+    products: RETAIL_PRODUCTS,
+    ownerId: DEMO_USERS[1].id,
+  },
+];
+
 const DEMO_MEMBERSHIPS = [
   {
     businessId: DEMO_BUSINESSES[0].id,
@@ -67,6 +100,87 @@ const DEMO_MEMBERSHIPS = [
     role: "staff",
   },
 ] as const;
+
+/**
+ * Seed one business's catalogue. Runs as the owner connection, which is the only
+ * role allowed to write opening movements: the application role can read the
+ * ledger but never insert into it directly.
+ */
+async function seedCatalogue(
+  pool: Pool,
+  catalogue: (typeof CATALOGUES)[number],
+) {
+  for (const name of catalogue.categories) {
+    await pool.query(
+      `insert into categories (business_id, name)
+       select $1, $2
+        where not exists (
+          select 1 from categories
+           where business_id = $1 and lower(name) = lower($2)
+        )`,
+      [catalogue.businessId, name],
+    );
+  }
+
+  const stored = await pool.query<{ id: string; name: string }>(
+    "select id, name from categories where business_id = $1",
+    [catalogue.businessId],
+  );
+  const categoryIds = new Map(
+    stored.rows.map((row) => [row.name.toLowerCase(), row.id]),
+  );
+
+  for (const [index, product] of catalogue.products.entries()) {
+    const [name, category, unit, cost, price, reorder, onHand] = product;
+    const sku = `${catalogue.skuPrefix}-${String(index + 1).padStart(3, "0")}`;
+
+    const saved = await pool.query<{ id: string }>(
+      `insert into products
+         (business_id, name, sku, category_id, unit_of_measure, cost_price,
+          selling_price, reorder_level)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
+       on conflict (business_id, sku) do update
+         set name = excluded.name,
+             category_id = excluded.category_id,
+             unit_of_measure = excluded.unit_of_measure,
+             cost_price = excluded.cost_price,
+             selling_price = excluded.selling_price,
+             reorder_level = excluded.reorder_level,
+             updated_at = now()
+       returning id`,
+      [
+        catalogue.businessId,
+        name,
+        sku,
+        categoryIds.get(category.toLowerCase()) ?? null,
+        unit,
+        cost.toFixed(2),
+        price === null ? null : price.toFixed(2),
+        String(reorder),
+      ],
+    );
+
+    if (onHand > 0) {
+      await pool.query(
+        `insert into stock_movements
+           (business_id, product_id, movement_type, quantity_delta, reason,
+            created_by)
+         select $1, $2, 'opening', $3::numeric, 'Opening balance', $4
+          where not exists (
+            select 1 from stock_movements
+             where business_id = $1 and product_id = $2
+               and movement_type = 'opening'
+          )`,
+        [
+          catalogue.businessId,
+          saved.rows[0].id,
+          String(onHand),
+          catalogue.ownerId,
+        ],
+      );
+    }
+  }
+}
 
 async function main(): Promise<void> {
   const url = databaseUrl();
@@ -112,15 +226,25 @@ async function main(): Promise<void> {
         });
     }
 
+    for (const catalogue of CATALOGUES) {
+      await seedCatalogue(pool, catalogue);
+    }
+
     const [{ businesses }] = await db
       .select({ businesses: sql<number>`count(*)::int` })
       .from(schema.businesses);
     const [{ members }] = await db
       .select({ members: sql<number>`count(*)::int` })
       .from(schema.businessMembers);
+    const [{ products }] = await db
+      .select({ products: sql<number>`count(*)::int` })
+      .from(schema.products);
+    const [{ movements }] = await db
+      .select({ movements: sql<number>`count(*)::int` })
+      .from(schema.stockMovements);
 
     console.log(
-      `seed: ok — ${businesses} businesses, ${DEMO_USERS.length} demo users, ${members} memberships (idempotent)`,
+      `seed: ok — ${businesses} businesses, ${DEMO_USERS.length} demo users, ${members} memberships, ${products} products, ${movements} opening movements (idempotent)`,
     );
   } finally {
     await pool.end();
