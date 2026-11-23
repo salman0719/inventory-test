@@ -1,4 +1,5 @@
 import { PendingLink } from "@/components/pending-link";
+import { ResultsBusy } from "@/components/results-busy";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { PanelGrid, PanelProvider } from "@/components/panel-host";
 import { PanelLink } from "@/components/panel-link";
@@ -92,44 +93,46 @@ export default async function SuppliersPage({
           )}
         </header>
 
-        <SupplierFilters q={q} archived={archived} />
+        <ResultsBusy>
+          <SupplierFilters q={q} archived={archived} />
 
-        <PanelGrid panel={<SupplierPanelColumn />} label="Supplier details">
-          {suppliers.length > 0 ? (
-            <SupplierTable
-              suppliers={suppliers}
-              hrefFor={(id) => hrefFor({ supplier: id })}
-            />
-          ) : (
-            <div className="rounded border border-dashed border-line bg-panel px-4 py-12 text-center">
-              <p className="text-[13px] font-medium">
-                {filtered
-                  ? "No suppliers match those filters"
-                  : "No suppliers yet"}
-              </p>
-              <p className="mx-auto mt-1 max-w-[46ch] text-[12px] text-ink-muted">
-                {filtered
-                  ? "Clear the filters, or search for a different name, contact or email."
-                  : "Add the first supplier so products and purchase orders can point at it."}
-              </p>
-              {filtered ? (
-                <PendingLink
-                  href="/suppliers"
-                  className="mt-4 inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
-                >
-                  Clear filters
-                </PendingLink>
-              ) : (
-                <PanelLink
-                  href={hrefFor({ new: "true" })}
-                  className="mt-4 inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
-                >
-                  New supplier
-                </PanelLink>
-              )}
-            </div>
-          )}
-        </PanelGrid>
+          <PanelGrid panel={<SupplierPanelColumn />} label="Supplier details">
+            {suppliers.length > 0 ? (
+              <SupplierTable
+                suppliers={suppliers}
+                hrefFor={(id) => hrefFor({ supplier: id })}
+              />
+            ) : (
+              <div className="rounded border border-dashed border-line bg-panel px-4 py-12 text-center">
+                <p className="text-[13px] font-medium">
+                  {filtered
+                    ? "No suppliers match those filters"
+                    : "No suppliers yet"}
+                </p>
+                <p className="mx-auto mt-1 max-w-[46ch] text-[12px] text-ink-muted">
+                  {filtered
+                    ? "Clear the filters, or search for a different name, contact or email."
+                    : "Add the first supplier so products and purchase orders can point at it."}
+                </p>
+                {filtered ? (
+                  <PendingLink
+                    href="/suppliers"
+                    className="mt-4 inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
+                  >
+                    Clear filters
+                  </PendingLink>
+                ) : (
+                  <PanelLink
+                    href={hrefFor({ new: "true" })}
+                    className="mt-4 inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
+                  >
+                    New supplier
+                  </PanelLink>
+                )}
+              </div>
+            )}
+          </PanelGrid>
+        </ResultsBusy>
       </section>
     </PanelProvider>
   );

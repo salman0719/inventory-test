@@ -35,7 +35,7 @@ export function SupplierTable({
             </th>
           </tr>
         </thead>
-        <tbody>
+        <tbody data-rows>
           {suppliers.map((supplier) => {
             return (
               <tr
@@ -74,6 +74,27 @@ export function SupplierTable({
               </tr>
             );
           })}
+        </tbody>
+        {/* Shown by `[data-busy="true"]` while a filter or pager change is in
+            flight, so the rows are replaced in place instead of the page. */}
+        <tbody
+          data-skeleton
+          aria-hidden
+          className="animate-pulse motion-reduce:animate-none"
+        >
+          {Array.from({ length: 8 }, (_, row) => (
+            <tr key={row} className="border-b border-line last:border-b-0">
+              {Array.from({ length: 4 }, (_, column) => (
+                <td key={column} className={TD}>
+                  <span
+                    className={`block h-3 rounded bg-line ${
+                      column === 0 ? "w-32" : "w-10"
+                    }`}
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
