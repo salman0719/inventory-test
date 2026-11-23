@@ -133,6 +133,23 @@ describe("the proxy session check", () => {
     expect(mocks.next).toHaveBeenCalledTimes(1);
   });
 
+  it("redirects a rejected refresh instead of erroring", async () => {
+    // The session is expired and Supabase refuses its refresh token. Both
+    // verification paths return that error, not a session, so the answer is the
+    // sign-in page — and the request must not render a page without an identity.
+    const rejected = new Error("Invalid Refresh Token");
+    mocks.getClaims.mockResolvedValue({ data: null, error: rejected });
+    mocks.getUser.mockResolvedValue({ data: { user: null }, error: rejected });
+
+    await proxy(requestFor("/products"));
+
+    expect(mocks.redirect).toHaveBeenCalledTimes(1);
+    const url = mocks.redirect.mock.calls[0]?.[0] as URL;
+    expect(url.pathname).toBe("/sign-in");
+    expect(url.searchParams.get("next")).toBe("/products");
+    expect(mocks.next).not.toHaveBeenCalled();
+  });
+
   it("redirects to sign-in when the fallback finds no user", async () => {
     mocks.getClaims.mockResolvedValue({ data: null, error: null });
     mocks.getUser.mockResolvedValue({ data: { user: null }, error: null });
@@ -269,5 +286,32 @@ describe("the verified identity handed to the render path", () => {
     expect(lastNextInit().request.headers.get("x-verified-user-id")).toBe(
       USER_ID,
     );
+  });
+
+  it("clears the rejected session's cookies on the sign-in page", async () => {
+    // A rejected refresh removes the dead session from storage; on the signed-out
+    // sign-in pass-through that deletion has to reach the browser, or every later
+    // request retries a refresh that cannot succeed.
+    const rejected = new Error("Invalid Refresh Token");
+    mocks.getClaims.mockImplementation(async () => {
+      mocks.cookiesAdapter?.setAll?.([
+        {
+          name: "sb-auth-token",
+          value: "",
+          options: { path: "/", maxAge: 0 },
+        },
+      ]);
+      return { data: null, error: rejected };
+    });
+    mocks.getUser.mockResolvedValue({ data: { user: null }, error: rejected });
+
+    await proxy(requestFor("/sign-in"));
+
+    expect(mocks.redirect).not.toHaveBeenCalled();
+    expect(mocks.next).toHaveBeenCalledTimes(1);
+    expect(mocks.setCookie).toHaveBeenCalledWith("sb-auth-token", "", {
+      path: "/",
+      maxAge: 0,
+    });
   });
 });
