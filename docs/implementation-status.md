@@ -133,6 +133,21 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-23 — The More sheet became modal, and the phone nav got tests.**
+  Opening the sheet now marks the content column (`#app-content`, set by
+  `AppShell`) and both the rail and the bottom bar `inert`, and locks `html` and
+  `body` overflow, so the page behind it leaves the tab order and stops
+  scrolling instead of only being covered by the scrim. Closing returns focus to
+  the More button from an effect, after the bar's `inert` is lifted — an inert
+  element cannot take focus. Following a section link closes the sheet without
+  pulling focus back, since the screen is changing. `tests/unit/app-nav.test.ts`
+  covers the three tabs and their hrefs, the active tab (including a panel URL),
+  More marked current on a sheet section, the modal state (dialog attributes,
+  `inert` on page/rail/bar, both scroll locks), Escape and both close controls
+  with focus return, the Tab trap at both ends, and a section link that closes
+  the sheet. Gates: `npm run check` exit 0, `npm run test` 138/138 in 24 files,
+  `npm run build` exit 0, `npm run secrets:check` ok.
+
 - **2026-11-23 — The phone gets bottom tabs, and the wordmark moves into the
   header.** Below 600px `AppNav` renders a fixed bottom bar on the rail colour
   with Dashboard, Products, Stock and More; the other four screens open in a modal
