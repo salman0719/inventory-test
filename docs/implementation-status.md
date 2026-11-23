@@ -169,7 +169,17 @@ Add date, task, verification method, and result.
   happens while `getClaims()` loads the expired session, before local
   verification; `getUser()` remains the fallback when local verification cannot
   decide. Covered by a unit test that a `getUser()` refresh's cookies reach both
-  the forwarded request and the response (`proxy-session`, 14 tests).
+  the forwarded request and the response.
+
+  The rejected half, same session: replacing that expired cookie's refresh token
+  with a value Supabase refuses made `/products` answer 307 to
+  `/sign-in?next=%2Fproducts` with no `Set-Cookie`; the sign-in page answered 200
+  and carried the dead cookie's `Max-Age=0` deletion, so the browser dropped it, a
+  second `/products` visit redirected with no refresh attempt left (110 ms), and
+  signing in again worked — 5/5 checks in
+  `local/perf/prove-refresh-rejected.mjs` (untracked). Covered by tests for the
+  redirect when both verification paths fail and for the deletion reaching the
+  response on the signed-out sign-in pass-through.
 
 - **2026-11-22 — Stage 3 item 2: the proxy verifies locally (`bb6dcea`).**
   `src/proxy.ts` now calls `supabase.auth.getClaims()`, which checks the access
