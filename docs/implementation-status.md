@@ -133,6 +133,20 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-23 — An open detail panel no longer covers the phone's tab bar.**
+  `DetailPanel`'s overlay was `z-40`, the bar's own layer, and renders after it,
+  so on a phone every open row painted over the bar and its three destinations
+  plus More could not be tapped. The overlay is now `z-30` and stops at
+  `bottom-[calc(56px_+_env(safe-area-inset-bottom))]` below 600px; from 600px it
+  still runs to the bottom edge beside the rail. Verified on the running dev
+  server at 390×844 with an open product: the panel spans 52–788 and the bar
+  788–844, `elementFromPoint` at the bar's centre returned the Stock link
+  (`/inventory`), clicking it navigated from `/products?product=…` to
+  `/inventory`, and the panel's 735px viewport fits its content. Gates:
+  `npm run check` exit 0 (0 errors, the same 2 pre-existing warnings in
+  `src/lib/permissions.ts`), `npm run test` 138/138 in 24 files, `npm run build`
+  exit 0, `npm run secrets:check` ok.
+
 - **2026-11-23 — The More sheet became modal, and the phone nav got tests.**
   Opening the sheet now marks the content column (`#app-content`, set by
   `AppShell`) and both the rail and the bottom bar `inert`, and locks `html` and

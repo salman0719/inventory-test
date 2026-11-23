@@ -66,7 +66,10 @@
 - The content column reserves 76px plus `env(safe-area-inset-bottom)` below 600px,
   so a list's last row and its pager stay clear of the bar (measured: pager bottom
   768 against a bar top of 788 at the bottom of `/products`).
-- An open detail panel paints above the bar and runs to the bottom of the screen,
-  which matches the prototype's sheet: one way out, not two.
+- An open detail panel stops at the top of the tab bar instead of running over
+  it. The prototype's sheet covered the bar, and the implementation first copied
+  that, but it hid the phone's primary navigation behind every open row; the bar
+  now stays visible and tappable while the panel is open. The panel's own Close
+  link and the scrim still close it.
 - The card lists, filter sheet and pinned detail sheet chosen alongside this are
   **not** implemented; the tables, filter bar and panel overlay are unchanged.
