@@ -1,4 +1,5 @@
 import { PendingLink } from "@/components/pending-link";
+import { ResultsBusy } from "@/components/results-busy";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { PanelGrid, PanelProvider } from "@/components/panel-host";
 import { PanelLink } from "@/components/panel-link";
@@ -113,57 +114,59 @@ export default async function PurchaseOrdersPage({
           )}
         </header>
 
-        <PurchaseOrderFilters q={q} status={filter} />
+        <ResultsBusy>
+          <PurchaseOrderFilters q={q} status={filter} />
 
-        <PanelGrid panel={<OrderPanelColumn />} label="Order details">
-          <div className="flex min-w-0 flex-col gap-3">
-            {orders.length > 0 ? (
-              <PurchaseOrderTable
-                orders={orders}
-                currency={active.currencyCode}
-                rowHref={(orderId) =>
-                  hrefFor({ order: orderId, saved: undefined })
-                }
-                canViewValues={canViewValues}
-              />
-            ) : (
-              <div className="rounded border border-dashed border-line bg-panel px-4 py-12 text-center">
-                <p className="text-[13px] font-medium">
-                  {filtered
-                    ? "No orders match those filters"
-                    : "No purchase orders yet"}
-                </p>
-                <p className="mx-auto mt-1 max-w-[46ch] text-[12px] text-ink-muted">
-                  {filtered
-                    ? "Clear the filters, or search for a different order number or supplier."
-                    : "Create an order for one supplier, then receive it in full or in parts as deliveries arrive."}
-                </p>
-                {filtered ? (
-                  <PendingLink
-                    href="/purchase-orders"
-                    className={`${BUTTON} mt-4`}
-                  >
-                    Clear filters
-                  </PendingLink>
-                ) : (
-                  <PanelLink
-                    href={hrefFor({ new: "true" })}
-                    className={`${BUTTON} mt-4`}
-                  >
-                    New order
-                  </PanelLink>
-                )}
-              </div>
-            )}
+          <PanelGrid panel={<OrderPanelColumn />} label="Order details">
+            <div className="flex min-w-0 flex-col gap-3">
+              {orders.length > 0 ? (
+                <PurchaseOrderTable
+                  orders={orders}
+                  currency={active.currencyCode}
+                  rowHref={(orderId) =>
+                    hrefFor({ order: orderId, saved: undefined })
+                  }
+                  canViewValues={canViewValues}
+                />
+              ) : (
+                <div className="rounded border border-dashed border-line bg-panel px-4 py-12 text-center">
+                  <p className="text-[13px] font-medium">
+                    {filtered
+                      ? "No orders match those filters"
+                      : "No purchase orders yet"}
+                  </p>
+                  <p className="mx-auto mt-1 max-w-[46ch] text-[12px] text-ink-muted">
+                    {filtered
+                      ? "Clear the filters, or search for a different order number or supplier."
+                      : "Create an order for one supplier, then receive it in full or in parts as deliveries arrive."}
+                  </p>
+                  {filtered ? (
+                    <PendingLink
+                      href="/purchase-orders"
+                      className={`${BUTTON} mt-4`}
+                    >
+                      Clear filters
+                    </PendingLink>
+                  ) : (
+                    <PanelLink
+                      href={hrefFor({ new: "true" })}
+                      className={`${BUTTON} mt-4`}
+                    >
+                      New order
+                    </PanelLink>
+                  )}
+                </div>
+              )}
 
-            {orders.length === 100 ? (
-              <p className="text-[11.5px] text-ink-faint">
-                Showing the 100 most recent orders. Filter by status or search
-                to narrow the list.
-              </p>
-            ) : null}
-          </div>
-        </PanelGrid>
+              {orders.length === 100 ? (
+                <p className="text-[11.5px] text-ink-faint">
+                  Showing the 100 most recent orders. Filter by status or search
+                  to narrow the list.
+                </p>
+              ) : null}
+            </div>
+          </PanelGrid>
+        </ResultsBusy>
       </section>
     </PanelProvider>
   );
