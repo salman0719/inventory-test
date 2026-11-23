@@ -132,3 +132,19 @@ tbody[data-skeleton] {
     padding-block: 13px;
   }
 }
+
+/*
+ * The fixed bottom tab bar (below 600px) is chrome over the page, so the content
+ * column reserves its height and the last row of a list is never underneath it.
+ * The bar pads for the home indicator itself; this is the 52px bar, its 4px/4px
+ * padding and a little air. From 600px the rail takes over and `py-5` applies.
+ */
+.mobile-tab-space {
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 600px) {
+  .mobile-tab-space {
+    padding-bottom: 1.25rem;
+  }
+}

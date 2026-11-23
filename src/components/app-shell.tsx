@@ -37,7 +37,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Suspense>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-[1180px] px-3 py-5 min-[600px]:px-5">
+        <main className="mobile-tab-space mx-auto w-full max-w-[1180px] px-3 py-5 min-[600px]:px-5">
           {children}
         </main>
       </div>
