@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PendingLink } from "@/components/pending-link";
 import { formatQuantity, stockStatus } from "@/lib/product-input";
 import type { AttentionItem } from "@/lib/dashboard";
 import { StatusLabel } from "@/components/products/status-label";
@@ -30,12 +30,12 @@ export function AttentionTable({
         <p className="text-[11px] text-ink-faint">
           {total} product{total === 1 ? "" : "s"} at or below the reorder level
         </p>
-        <Link
+        <PendingLink
           href="/inventory"
           className="ml-auto inline-flex min-h-[36px] items-center text-[11px] font-medium text-accent hover:underline"
         >
           Open inventory
-        </Link>
+        </PendingLink>
       </div>
 
       {items.length === 0 ? (
@@ -84,12 +84,12 @@ export function AttentionTable({
                     className="border-b border-line last:border-b-0 hover:bg-panel"
                   >
                     <td className={`${TD} border-l-2 border-transparent`}>
-                      <Link
+                      <PendingLink
                         href={`/inventory?product=${item.id}`}
                         className="font-medium hover:text-accent"
                       >
                         {item.name}
-                      </Link>
+                      </PendingLink>
                       <span className="ml-2 font-mono text-[11px] text-ink-faint">
                         {item.sku}
                       </span>
@@ -131,12 +131,12 @@ export function AttentionTable({
       {items.length > 0 && total > limit ? (
         <p className="border-t border-line px-3 py-1.5 text-[11px] text-ink-faint">
           Showing the {limit} most urgent of {total}.{" "}
-          <Link
+          <PendingLink
             href="/inventory"
             className="font-medium text-accent hover:underline"
           >
             See the rest in inventory
-          </Link>
+          </PendingLink>
           .
         </p>
       ) : null}

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PendingLink } from "@/components/pending-link";
 import { formatMoney } from "@/lib/product-input";
 import type { DashboardSummary } from "@/lib/dashboard";
 
@@ -78,7 +78,7 @@ function Stat({
   tone?: "plain" | "warning";
 }) {
   return (
-    <Link
+    <PendingLink
       href={href}
       className="flex min-h-[74px] flex-col justify-center rounded border border-line bg-panel px-3 py-2 hover:border-accent"
     >
@@ -93,6 +93,6 @@ function Stat({
         {value}
       </span>
       <span className="text-[10.5px] text-ink-faint">{note}</span>
-    </Link>
+    </PendingLink>
   );
 }

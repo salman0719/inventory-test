@@ -1,8 +1,8 @@
-import Link from "next/link";
 import {
   LEDGER_MOVEMENT_LABELS,
   formatSignedQuantity,
 } from "@/lib/stock-input";
+import { PendingLink } from "@/components/pending-link";
 import type { RecentMovement } from "@/lib/dashboard";
 
 function formatMoment(iso: string): string {
@@ -30,12 +30,12 @@ export function RecentMovements({
         <h2 className="text-[10px] uppercase tracking-[0.07em] text-ink-muted">
           Recent movements
         </h2>
-        <Link
+        <PendingLink
           href="/inventory"
           className="ml-auto inline-flex min-h-[36px] items-center text-[11px] font-medium text-accent hover:underline"
         >
           Open inventory
-        </Link>
+        </PendingLink>
       </div>
 
       {movements.length === 0 ? (
@@ -47,7 +47,7 @@ export function RecentMovements({
         <ul className="divide-y divide-line">
           {movements.map((movement) => (
             <li key={movement.id}>
-              <Link
+              <PendingLink
                 href={`/inventory?product=${movement.productId}`}
                 className="flex min-h-[38px] items-baseline gap-2 px-3 py-1.5 hover:bg-panel"
               >
@@ -72,7 +72,7 @@ export function RecentMovements({
                 <span className="ml-auto shrink-0 text-[10.5px] text-ink-faint">
                   {formatMoment(movement.createdAt)}
                 </span>
-              </Link>
+              </PendingLink>
             </li>
           ))}
         </ul>

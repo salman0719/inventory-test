@@ -1,7 +1,6 @@
 "use client";
 
-import { useLinkStatus } from "next/link";
-import { RouteProgress } from "./route-progress";
+import { LinkPending } from "./link-pending";
 
 /**
  * A dot on the rail item being followed, for the gap between the click and the new
@@ -13,16 +12,5 @@ import { RouteProgress } from "./route-progress";
  * hook knows which navigation it belongs to.
  */
 export function NavPending() {
-  const { pending } = useLinkStatus();
-  if (!pending) return null;
-
-  return (
-    <>
-      <RouteProgress active />
-      <span
-        aria-hidden
-        className="absolute right-1.5 top-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-accent motion-reduce:animate-none"
-      />
-    </>
-  );
+  return <LinkPending cue="bar-and-dot" />;
 }
