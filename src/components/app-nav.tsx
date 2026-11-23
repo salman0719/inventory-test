@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import type { KeyboardEvent, ReactNode } from "react";
-import { PAGE_CONTENT_ID } from "@/lib/nav";
+import type { ReactNode } from "react";
 import { NavPending } from "./nav-pending";
+import { useModalSheet } from "./use-modal-sheet";
 
 type Item = {
   href: string;
@@ -155,45 +155,7 @@ export function AppNav() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
-  const sheetRef = useRef<HTMLDivElement>(null);
   const returnFocus = useRef(false);
-
-  // The dialog takes focus when it opens, so Escape and Tab start inside it.
-  // Closing puts focus back on the button that opened it, but not while it is
-  // still inert: the effect below lifts that first, so this runs after it.
-  useEffect(() => {
-    if (moreOpen) {
-      // Without `preventScroll`, focusing a sheet that is still below the edge
-      // scrolls its clipping overlay up to reveal it: the overlay's scroll
-      // offset then tracks the slide, the sheet is pinned in place, and it
-      // never visibly rises from the bottom.
-      sheetRef.current?.focus({ preventScroll: true });
-      return;
-    }
-    if (returnFocus.current) {
-      returnFocus.current = false;
-      moreButtonRef.current?.focus();
-    }
-  }, [moreOpen]);
-
-  // The sheet is modal in behaviour, not only on screen: the page and the nav
-  // behind it leave the tab order and the accessibility tree, and the document
-  // stops scrolling. The scrim alone only stops the pointer.
-  useEffect(() => {
-    if (!moreOpen) return;
-    const page = document.getElementById(PAGE_CONTENT_ID);
-    const body = document.body.style;
-    const html = document.documentElement.style;
-    const previous = [body.overflow, html.overflow];
-    page?.setAttribute("inert", "");
-    body.overflow = "hidden";
-    html.overflow = "hidden";
-    return () => {
-      page?.removeAttribute("inert");
-      body.overflow = previous[0];
-      html.overflow = previous[1];
-    };
-  }, [moreOpen]);
 
   /** Any dismissal moves focus back; following a section link does not. */
   function closeMore() {
@@ -201,29 +163,18 @@ export function AppNav() {
     setMoreOpen(false);
   }
 
-  function onSheetKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.key === "Escape") {
-      event.stopPropagation();
-      closeMore();
-      return;
-    }
-    if (event.key !== "Tab" || !sheetRef.current) return;
+  // The dialog takes focus when it opens, keeps Tab inside, closes on Escape and
+  // takes the page and both navs out of reach while it is up.
+  const { sheetRef, onKeyDown } = useModalSheet(moreOpen, closeMore);
 
-    // Keep Tab inside the sheet: it is modal, and everything behind it is inert.
-    const focusable = sheetRef.current.querySelectorAll<HTMLElement>(
-      "a[href], button:not([disabled])",
-    );
-    if (focusable.length === 0) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    } else if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    }
-  }
+  // Closing puts focus back on the button that opened it. The hook's effects are
+  // registered above, so its cleanup has already lifted the scroll lock and the
+  // bar's `inert` by the time this body runs.
+  useEffect(() => {
+    if (moreOpen || !returnFocus.current) return;
+    returnFocus.current = false;
+    moreButtonRef.current?.focus();
+  }, [moreOpen]);
 
   const moreActive = MORE.some((item) => isActive(pathname, item.href));
 
@@ -341,7 +292,7 @@ export function AppNav() {
           aria-modal="true"
           aria-label="More"
           tabIndex={-1}
-          onKeyDown={onSheetKeyDown}
+          onKeyDown={onKeyDown}
           className={`absolute inset-x-0 bottom-0 rounded-t-2xl border-t border-line bg-surface shadow-lg outline-none transition-transform duration-[220ms] ease-[cubic-bezier(0.25,0.1,0.25,1)] motion-reduce:transition-none ${
             moreOpen
               ? "pointer-events-auto translate-y-0"

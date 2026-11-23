@@ -203,6 +203,36 @@ Add date, task, verification method, and result.
   `src/lib/permissions.ts`), `npm run test` 138/138 in 24 files, `npm run build`
   exit 0, `npm run secrets:check` ok.
 
+- **2026-11-23 — The phone's filters became search plus a sheet.** Below 600px
+  `MobileFilters` keeps the search field on its own row, moves category, sort,
+  stock status, order status and include-archived into a Filters sheet with Clear
+  and Apply filters, and shows each active sheet filter as a chip that links to
+  the view without it; the Filters button carries the count. From 600px up the
+  inline bar is unchanged — the field markup is written once per screen and
+  rendered in both forms, with `min-[600px]:contents` keeping it inline in the bar.
+  The sheet shares `useModalSheet` with the More sheet (focus in without scrolling,
+  Tab trap, Escape, scroll lock, 220ms `ease` slide, 180ms scrim) but does not
+  inert the page, because it sits inside the form it submits.
+  Measured on the dev server at 390×844: the bar is 366×44 with a 298×44 search
+  field, and the first product card starts at 188px instead of below a three-row
+  bar; the sheet is 347px tall and slides from `top: 861` to `497` with the
+  overlay's `scrollTop` at 0, focus lands inside it and both scroll locks are on;
+  applying Bakery pushes `/products?cat=…&sort=name`, leaves one chip
+  ("Category: Bakery" → `/products`), shows a count of 1, hides the sheet
+  (`aria-hidden="true"`) and returns focus to the Filters button; removing the
+  chip returns to `/products` with no chips. At 1280 the inline bar renders with
+  its search field and the phone form is `display: none`. The first cut left the
+  controls showing what had been picked: after a chip removed the category the
+  sheet still showed it, and Clear left the cleared term in the search field, so
+  Apply would have re-submitted both. Each screen's field wrapper is now keyed by
+  the URL's values and the search box follows the URL's term; re-measured with
+  `local/prototypes/mobile/measure-filter-staleness.ts` — chip removal leaves
+  `cat` empty with no `cat` in the URL, Clear leaves an empty search box, Back
+  restores both. Gates: `npm run check`
+  exit 0 (0 errors, the same 2 pre-existing warnings in `src/lib/permissions.ts`),
+  `npm run test` 147/147 in 25 files, `npm run build` exit 0, and
+  `npm run secrets:check` ok. Decision in `docs/decisions/0010-mobile-filters.md`.
+
 - **2026-11-23 — The More sheet slides in and out instead of appearing.** The
   sheet's overlay now stays mounted and `moreOpen` moves the sheet from
   `translateY(105%)` to `0` over 220ms while the scrim fades over 180ms, so

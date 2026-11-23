@@ -129,7 +129,12 @@ describe("the list filter bar", () => {
 
   it("announces for itself when no results region wraps it", async () => {
     await renderProducts();
-    expect(container.querySelectorAll('form [role="status"]')).toHaveLength(1);
+    // One bar per breakpoint, each with its own live region.
+    const bars = container.querySelectorAll("form");
+    expect(bars).toHaveLength(2);
+    for (const bar of bars) {
+      expect(bar.querySelectorAll('[role="status"]')).toHaveLength(1);
+    }
   });
 
   it("leaves the announcement to the results region when there is one", async () => {
