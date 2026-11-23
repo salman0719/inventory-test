@@ -133,6 +133,25 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-23 — Clear reports to the region, and all four lists swap rows.** The
+  filter bar's Clear now renders `LinkBusy`, so a Clear navigation flips the same
+  `data-busy` flag Apply's transition does and the table swaps its body. Suppliers
+  and purchase orders gained the region and matching skeleton bodies in their
+  tables, which were previously one body outside any `ResultsBusy`. Measured with
+  `local/perf/filter-submit-probe.ts` (2 runs per case, signed in, `next dev` on
+  :25000, 1280×900, first frame each signal appears): products Apply
+  `data-busy`/skeleton 118 → 130 ms, Clear 98 ms bar only → 100 ms bar plus
+  busy/skeleton 113 ms; inventory Apply 97 → 116 ms, Clear 103 → 77 ms bar plus
+  94 ms busy/skeleton; suppliers Apply "Applying…" only at 82 ms → 92 ms plus
+  111 ms busy/skeleton, Clear 71 ms bar → 81 ms plus 99 ms; purchase orders Apply
+  "Applying…" only at 111 ms → 85 ms plus 104 ms busy/skeleton, Clear 92 → 76 ms
+  plus 90 ms. All eight cases made 0 document requests (one RSC fetch for Apply,
+  two for Clear), and the skeleton bodies are `display: none` until
+  `[data-busy="true"]`, so they cost nothing when idle. Verified: `npm run check`
+  0 errors (the 2 pre-existing `_role`/`_action` warnings), `npm run test` 131/131
+  across 23 files (one new filter-form test: Clear flips the region busy), `npm run
+build` clean. Not verified: throttled or production timings, the skeletons at
+  other widths, and a viewer's five-column order table.
 - **2026-11-23 — Filter Apply swaps in the skeleton rows; reports Apply is a
   transition.** The filter bar sat above `ResultsBusy` on products and inventory, so
   `TransitionBusy` reported to no region and an Apply left the old rows on screen;
