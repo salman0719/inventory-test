@@ -133,6 +133,28 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-23 — One pending indicator for any link; dashboard links use it.**
+  `LinkPending` (`src/components/link-pending.tsx`) holds the signal that
+  `useLinkStatus` drives — the viewport `RouteProgress` bar, the rail's corner dot,
+  or both — and `PendingLink` (`src/components/pending-link.tsx`) is a `<Link>` that
+  renders it inside itself, so a Server Component can opt a link in without moving
+  that screen to the client. `NavPending` now delegates to `LinkPending`, so there
+  is one implementation. The dashboard's inventory links use `PendingLink`: both
+  "Open inventory" headings, "See the rest in inventory", the per-row links
+  (`/inventory?product=…`), and the stat tiles — the five tiles share one `Stat`
+  component, so all five gain the bar, not only the two that point at inventory.
+  Re-ran the same browser probe (3 runs per case, signed in, `next dev` on :25000,
+  1280×900): the dashboard bar now paints 55–73 ms after the click (medians 72 for
+  "Open inventory" and 62 for the "Stock value" tile) against 63–77 ms (median 74)
+  for the rail; both still show the skeleton at 128–175 ms and the final screen at
+  450–488 ms, so the added feedback costs nothing measurable. Verified: `npm run
+check` 0 errors (the 2 pre-existing `_role`/`_action` warnings), `npm run test`
+  130/130 across 23 files (4 new `pending-link` tests: a real anchor with its href
+  and caller class, the bar while pending, the dot when asked, and the signal gone
+  when settled), `npm run build` clean with the same dynamic routes and proxy,
+  `secrets:check ok`. Not measured: a production build, a throttled profile, widths
+  below 1280 px, and whether the bar reads well on the dashboard tiles at those
+  widths.
 - **2026-11-23 — Navigation feedback observed in a browser; dashboard links have
   none.** Signed in as the linked local account and drove a headless Chromium probe
   (`local/perf/nav-pending-probe.ts`; 3 runs per case; 1280×900; `next dev` on
