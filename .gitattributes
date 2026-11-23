@@ -1,0 +1,18 @@
+# Line endings are LF in the index and in the worktree, on every platform.
+#
+# Without this, a Windows checkout with core.autocrlf=true writes CRLF into the
+# worktree: `.editorconfig` only asks editors for LF, and Prettier's default
+# (endOfLine: "lf") then fails `npm run format:check` on every file, while a
+# line-ending-only change shows up as a whole-file diff. Git obeys this file, not
+# .editorconfig.
+* text=auto eol=lf
+
+# Never convert anything detected as binary.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
