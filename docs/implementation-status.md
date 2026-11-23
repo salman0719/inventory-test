@@ -133,6 +133,24 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-23 — `PendingLink` applied to the remaining route-changing links.**
+  Every plain `<Link>` that starts a route change now uses `PendingLink`: the four
+  list empty states ("Open products" and "Clear filters" on inventory, products,
+  suppliers and purchase orders), the dashboard's empty-state "Open products", the
+  reports tabs, the reports Clear filter, `EmptyReport`, `SectionPlaceholder`, the
+  two 404 links, the panels' cross-links ("Open in catalogue", a supplier's
+  products) and the filter bars' Clear. Left alone deliberately: `PanelLink` (opens
+  a panel without a route navigation), `Pagination` (its own pending label plus the
+  table's skeleton rows) and the filter _apply_ path (a `router.push` transition
+  already reported to the results region). Verified: `npm run check` 0 errors (the
+  2 pre-existing `_role`/`_action` warnings), `npm run test` 130/130 across 23 files
+  (unchanged — the wrapper's own tests cover the behaviour), `npm run build` clean,
+  `secrets:check ok`, and a browser probe (`local/perf/pending-link-probe.ts`, 3
+  runs per case, signed in, `next dev` on :25000, 1280×900) saw the bar on 3 of 3
+  runs for a reports tab (median 65 ms), the products empty state (median 74 ms)
+  and the inventory empty state (median 73 ms). Not measured: a production build
+  or a throttled connection, and the 404, the panel cross-links and the settings
+  placeholders were not clicked in a browser.
 - **2026-11-23 — One pending indicator for any link; dashboard links use it.**
   `LinkPending` (`src/components/link-pending.tsx`) holds the signal that
   `useLinkStatus` drives — the viewport `RouteProgress` bar, the rail's corner dot,
