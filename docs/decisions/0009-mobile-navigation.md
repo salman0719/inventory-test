@@ -71,5 +71,8 @@
   that, but it hid the phone's primary navigation behind every open row; the bar
   now stays visible and tappable while the panel is open. The panel's own Close
   link and the scrim still close it.
-- The card lists, filter sheet and pinned detail sheet chosen alongside this are
-  **not** implemented; the tables, filter bar and panel overlay are unchanged.
+- The card lists chosen alongside this are implemented below 600px on products,
+  inventory, suppliers and purchase orders; the filter sheet and the pinned detail
+  sheet are **not**, so the filter bar and the panel overlay are unchanged. The
+  reports tables are also unchanged, since they are not one of the four list
+  routes.

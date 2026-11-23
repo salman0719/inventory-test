@@ -133,6 +133,30 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-23 — The phone's lists are cards.** Products, inventory, suppliers and
+  purchase orders rendered their tables at every width; the tables are 620–760px
+  wide inside a 374px content column, so a phone saw four or six columns worth of
+  horizontal scroll and the status — the reason to look — furthest right. Below
+  600px each record is now the chosen card (`src/components/list-card.tsx`): the
+  whole card is the panel link, with the record's name (or order number), its SKU
+  and category (or contact, or supplier and expected date), a tinted status chip and
+  one row of labelled figures. Status chips reuse the dot-and-word labels' tones
+  (`StatusChip`, `OrderStatusChip`), so colour is still never the only signal; the
+  inventory card colours on-hand `out`/`low`. The table is unchanged from 600px up.
+  Measured on the dev server at 390×844: 50 product cards, 374px wide and 85px
+  tall, `docWidth` 374 (no horizontal overflow); the real table reports
+  `display: none`, and at 1280 the table is `block` at 1262px with the cards
+  `display: none`. Suppliers: 9 cards; orders: 2 cards with supplier, expected
+  date, lines, value and received progress. A low-stock card shows `--warning-soft`
+  behind the chip and `--warning` on its on-hand figure. The open record's card
+  takes `--accent-soft` with an accent border and the panel opens, as before.
+  The route-level skeletons now draw four cards below 600px instead of a 680px
+  table (302px reserved), and the busy swap hides the cards and shows their
+  skeleton, measured by setting `data-busy` on the results region.
+  Gates: `npm run check` exit 0 (0 errors, the same 2 pre-existing warnings in
+  `src/lib/permissions.ts`), `npm run test` 138/138 in 24 files,
+  `npm run build` exit 0, `npm run secrets:check` ok.
+
 - **2026-11-23 — Paging no longer reopens a closed detail panel.** The product and
   inventory screens build every link through `hrefFor`, which carried the open
   row, so the pager's Next and Previous hrefs held `product` as well. Closing a

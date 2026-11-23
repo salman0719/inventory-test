@@ -117,9 +117,56 @@ export function FilterBarSkeleton({ fields = 1 }: { fields?: number }) {
 }
 
 /**
+ * The phone's cards while a page or filter change is in flight. `globals.css`
+ * reveals it from `[data-busy="true"]` below 600px and hides it again once the
+ * rows arrive, the way `tbody[data-skeleton]` works for the table. A route-level
+ * skeleton has no busy region, so it passes `alwaysVisible`.
+ */
+export function ListCardSkeletons({
+  count = 4,
+  figures = 3,
+  alwaysVisible = false,
+}: {
+  count?: number;
+  figures?: number;
+  alwaysVisible?: boolean;
+}) {
+  return (
+    <div
+      aria-hidden
+      {...(alwaysVisible ? {} : { "data-card-skeleton": true })}
+      className={`animate-pulse flex-col gap-2 motion-reduce:animate-none ${
+        alwaysVisible ? "flex" : ""
+      }`}
+    >
+      {Array.from({ length: count }, (_, card) => (
+        <div
+          key={card}
+          className="flex flex-col gap-1.5 rounded-lg border border-line bg-surface p-3"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-col gap-1">
+              <span className="block h-3 w-32 rounded bg-line" />
+              <span className="block h-2.5 w-24 rounded bg-line" />
+            </div>
+            <span className="block h-4 w-12 rounded-full bg-line" />
+          </div>
+          <div className="flex gap-4">
+            {Array.from({ length: figures }, (_, figure) => (
+              <span key={figure} className="block h-3 w-16 rounded bg-line" />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
  * A list table: the header row, then `rows` body rows with the name-and-SKU pair in
  * the first column. `minWidth` matches the real table so narrow screens behave the
- * same while it loads.
+ * same while it loads. Below 600px the list is cards, so the skeleton is cards too
+ * rather than a 680px table the phone cannot show.
  */
 export function TableSkeleton({
   columns,
@@ -131,50 +178,59 @@ export function TableSkeleton({
   minWidth?: string;
 }) {
   return (
-    <div
-      className="overflow-x-auto rounded border border-line bg-surface"
-      aria-hidden
-    >
-      <table
-        className="w-full border-collapse text-[13px]"
-        style={{ minWidth }}
+    <>
+      <div className="min-[600px]:hidden">
+        <ListCardSkeletons
+          alwaysVisible
+          count={4}
+          figures={Math.min(Math.max(columns - 2, 1), 3)}
+        />
+      </div>
+      <div
+        className="hidden overflow-x-auto rounded border border-line bg-surface min-[600px]:block"
+        aria-hidden
       >
-        <thead className="border-b border-line bg-panel">
-          <tr>
-            {Array.from({ length: columns }, (_, column) => (
-              <th key={column} scope="col" className="px-2.5 py-1.5">
-                <span
-                  className={`block h-2 rounded bg-line ${
-                    column === 0 ? "w-20" : "w-10"
-                  }`}
-                />
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {Array.from({ length: rows }, (_, row) => (
-            <tr key={row} className="border-b border-line last:border-b-0">
+        <table
+          className="w-full border-collapse text-[13px]"
+          style={{ minWidth }}
+        >
+          <thead className="border-b border-line bg-panel">
+            <tr>
               {Array.from({ length: columns }, (_, column) => (
-                <td key={column} className="px-2.5 py-1.5">
-                  {column === 0 ? (
-                    <span className="flex items-center gap-2">
-                      <span className="h-3 w-28 rounded bg-line" />
-                      <span className="h-2.5 w-12 rounded bg-line/60" />
-                    </span>
-                  ) : (
-                    <span
-                      className={`block h-3 rounded bg-line/70 ${
-                        column === columns - 1 ? "w-16" : "w-10"
-                      }`}
-                    />
-                  )}
-                </td>
+                <th key={column} scope="col" className="px-2.5 py-1.5">
+                  <span
+                    className={`block h-2 rounded bg-line ${
+                      column === 0 ? "w-20" : "w-10"
+                    }`}
+                  />
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {Array.from({ length: rows }, (_, row) => (
+              <tr key={row} className="border-b border-line last:border-b-0">
+                {Array.from({ length: columns }, (_, column) => (
+                  <td key={column} className="px-2.5 py-1.5">
+                    {column === 0 ? (
+                      <span className="flex items-center gap-2">
+                        <span className="h-3 w-28 rounded bg-line" />
+                        <span className="h-2.5 w-12 rounded bg-line/60" />
+                      </span>
+                    ) : (
+                      <span
+                        className={`block h-3 rounded bg-line/70 ${
+                          column === columns - 1 ? "w-16" : "w-10"
+                        }`}
+                      />
+                    )}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

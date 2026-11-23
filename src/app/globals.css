@@ -105,6 +105,25 @@ tbody[data-skeleton] {
 }
 
 /*
+ * The same swap for the phone cards. Below 600px the table is not rendered at all,
+ * so the card list is the region that steps aside and its skeleton that takes over;
+ * from 600px the two above rules do the work and the card skeleton stays hidden.
+ */
+[data-card-skeleton] {
+  display: none;
+}
+
+[data-busy="true"] [data-card-rows] {
+  display: none;
+}
+
+@media (max-width: 599px) {
+  [data-busy="true"] [data-card-skeleton] {
+    display: flex;
+  }
+}
+
+/*
  * Touch pass (Phase 6). Below 900px every control is at least 44px tall and table
  * row links get enough padding to be tapped, which the component classes (36px
  * controls, dense cells) do not provide. Desktop density is untouched.
