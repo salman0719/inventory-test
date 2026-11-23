@@ -151,7 +151,11 @@ Add date, task, verification method, and result.
   every run, and each switch made a single request, the server action POST to the
   current URL, from which the dashboard committed; no second fetch was observed. The
   bar ends 37–49 ms before the new screen commits, because the transition ends with
-  the action, not with the navigation it starts. Gates: `npm run check` 0 errors
+  the action, not with the navigation it starts. The bar is `aria-hidden`, so the
+  selector also names the destination in a polite `role="status"` — "Switching to
+  Demo Retail" — first seen at 9–22 ms across runs and cleared when the
+  transition ends; that is the only screen-reader signal before the dashboard
+  commits. Gates: `npm run check` 0 errors
   (2 pre-existing `_role`/`_action` warnings), `npm run test` 131/131 across 23
   files, `npm run build` clean, `secrets:check ok`. Not committed; not reviewed at
   other widths, on a throttled connection or in a production build.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { selectBusiness } from "@/app/(app)/actions";
 import type { BusinessOption } from "@/lib/active-business";
 import { RouteProgress } from "./route-progress";
@@ -12,7 +12,8 @@ import { RouteProgress } from "./route-progress";
  *
  * That redirect is a route change, which `loading.tsx` alone cannot acknowledge on
  * the screen being left, so the transition renders the same top-of-viewport bar a
- * link click does.
+ * link click does. The bar is `aria-hidden` — it is decoration — so the destination
+ * is named in a polite status region instead: "Switching to Demo Retail".
  */
 export function BusinessSwitcher({
   businesses,
@@ -22,6 +23,7 @@ export function BusinessSwitcher({
   active: BusinessOption | null;
 }) {
   const [pending, startTransition] = useTransition();
+  const [announcement, setAnnouncement] = useState("");
 
   if (businesses.length === 0) {
     return (
@@ -35,6 +37,11 @@ export function BusinessSwitcher({
   return (
     <>
       <RouteProgress active={pending} />
+      <span role="status" className="sr-only">
+        {/* Derived rather than cleared in an effect: the region is empty again as
+            soon as the transition ends, so it never describes a finished switch. */}
+        {pending ? announcement : ""}
+      </span>
       <div className="flex items-center gap-2">
         <label className="flex items-center gap-2">
           <span className="hidden text-[10px] uppercase tracking-[0.07em] text-ink-muted sm:inline">
@@ -45,6 +52,10 @@ export function BusinessSwitcher({
             disabled={pending}
             onChange={(event) => {
               const businessId = event.target.value;
+              const name = event.target.selectedOptions[0]?.textContent?.trim();
+              setAnnouncement(
+                name ? `Switching to ${name}` : "Switching business",
+              );
               startTransition(async () => {
                 await selectBusiness(businessId);
               });
