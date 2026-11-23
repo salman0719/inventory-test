@@ -133,6 +133,20 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-23 — Navigation feedback observed in a browser; dashboard links have
+  none.** Signed in as the linked local account and drove a headless Chromium probe
+  (`local/perf/nav-pending-probe.ts`; 3 runs per case; 1280×900; `next dev` on
+  :25000; the DOM sampled every animation frame from the click until the Inventory
+  heading existed). Rail link to `/inventory`: the `RouteProgress` bar and the
+  pending dot painted 64–75 ms after the click (median 67), the inventory
+  `loading.tsx` skeleton at 136–338 ms (median 165), the header and filter bar at
+  457–666 ms (median 483). Dashboard "Open inventory" and the "Stock value" card:
+  no bar and no dot at any point, the same skeleton at 129–281 ms (median 130),
+  content at 446–603 ms (median 451). The skeleton, its `role="status"` "Loading
+  inventory" announcement and the final screen are therefore identical from either
+  entry point; only the acknowledgement before the first bytes differs. Not
+  measured: a production build (dev disables viewport prefetching, so dev
+  overstates the wait), a throttled profile, or widths below 1280 px.
 - **2026-11-23 — Stage 3 item 3: one auth check per navigation.** The page's
   `getSessionUser()` no longer calls `supabase.auth.getUser()`: `src/proxy.ts`
   forwards the identity it verified as `x-verified-user-id` (and a percent-encoded
