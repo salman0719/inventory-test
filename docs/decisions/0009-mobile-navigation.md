@@ -55,8 +55,11 @@
 
 - `role="dialog"`, `aria-modal="true"`, a labelled Close, Escape to close, Tab kept
   inside the sheet, and focus returned to the More button on close (all measured).
-- The scrim is a button labelled "Close menu"; the page behind it is not marked
-  inert and does not lock scroll — see `docs/known-limitations.md`.
+- The scrim is a button labelled "Close menu". Modal also means out of reach: the
+  content column (`#app-content`) and the nav behind the sheet get `inert`, and
+  both `html` and `body` stop scrolling until it closes. Closing returns focus to
+  the More button only after that attribute is lifted, because an inert element
+  cannot take focus. `tests/unit/app-nav.test.ts` covers all of it in jsdom.
 
 ## Consequences
 

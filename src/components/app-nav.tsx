@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
+import { PAGE_CONTENT_ID } from "@/lib/nav";
 import { NavPending } from "./nav-pending";
 
 type Item = {
@@ -155,15 +156,45 @@ export function AppNav() {
   const [moreOpen, setMoreOpen] = useState(false);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
+  const returnFocus = useRef(false);
 
   // The dialog takes focus when it opens, so Escape and Tab start inside it.
+  // Closing puts focus back on the button that opened it, but not while it is
+  // still inert: the effect below lifts that first, so this runs after it.
   useEffect(() => {
-    if (moreOpen) sheetRef.current?.focus();
+    if (moreOpen) {
+      sheetRef.current?.focus();
+      return;
+    }
+    if (returnFocus.current) {
+      returnFocus.current = false;
+      moreButtonRef.current?.focus();
+    }
   }, [moreOpen]);
 
+  // The sheet is modal in behaviour, not only on screen: the page and the nav
+  // behind it leave the tab order and the accessibility tree, and the document
+  // stops scrolling. The scrim alone only stops the pointer.
+  useEffect(() => {
+    if (!moreOpen) return;
+    const page = document.getElementById(PAGE_CONTENT_ID);
+    const body = document.body.style;
+    const html = document.documentElement.style;
+    const previous = [body.overflow, html.overflow];
+    page?.setAttribute("inert", "");
+    body.overflow = "hidden";
+    html.overflow = "hidden";
+    return () => {
+      page?.removeAttribute("inert");
+      body.overflow = previous[0];
+      html.overflow = previous[1];
+    };
+  }, [moreOpen]);
+
+  /** Any dismissal moves focus back; following a section link does not. */
   function closeMore() {
+    returnFocus.current = true;
     setMoreOpen(false);
-    moreButtonRef.current?.focus();
   }
 
   function onSheetKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -174,7 +205,7 @@ export function AppNav() {
     }
     if (event.key !== "Tab" || !sheetRef.current) return;
 
-    // Keep Tab inside the sheet: it is modal, and the scrim behind it is inert.
+    // Keep Tab inside the sheet: it is modal, and everything behind it is inert.
     const focusable = sheetRef.current.querySelectorAll<HTMLElement>(
       "a[href], button:not([disabled])",
     );
@@ -194,7 +225,10 @@ export function AppNav() {
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[76px] flex-col bg-rail min-[600px]:flex">
+      <aside
+        inert={moreOpen}
+        className="fixed inset-y-0 left-0 z-40 hidden w-[76px] flex-col bg-rail min-[600px]:flex"
+      >
         <Link
           href="/"
           className="relative flex h-[52px] shrink-0 items-center justify-center text-[15px] font-bold tracking-tight text-surface"
@@ -232,7 +266,10 @@ export function AppNav() {
         </nav>
       </aside>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 min-[600px]:hidden">
+      <div
+        inert={moreOpen}
+        className="fixed inset-x-0 bottom-0 z-40 min-[600px]:hidden"
+      >
         <nav
           aria-label="Primary"
           className="flex items-stretch gap-0.5 bg-rail px-1 pt-1 pb-[env(safe-area-inset-bottom)]"
@@ -312,7 +349,7 @@ export function AppNav() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={closeMore}
+                    onClick={() => setMoreOpen(false)}
                     aria-current={active ? "page" : undefined}
                     className={`flex min-h-[48px] items-center gap-3 border-b border-line text-[13px] last:border-b-0 ${
                       active ? "text-accent" : "text-ink"
