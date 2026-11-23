@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * empty fields stay out of the URL.
  */
 
-const mocks = vi.hoisted(() => ({ push: vi.fn() }));
+const mocks = vi.hoisted(() => ({ push: vi.fn(), pending: false }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mocks.push }),
@@ -26,7 +26,7 @@ vi.mock("next/link", () => ({
       { href: props.href, className: props.className },
       props.children as never,
     ),
-  useLinkStatus: () => ({ pending: false }),
+  useLinkStatus: () => ({ pending: mocks.pending }),
 }));
 
 const { ProductFilters } =
@@ -42,6 +42,7 @@ beforeEach(() => {
   (
     globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
   ).IS_REACT_ACT_ENVIRONMENT = true;
+  mocks.pending = false;
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
@@ -135,6 +136,16 @@ describe("the list filter bar", () => {
     await renderProducts({ region: true });
     expect(container.querySelectorAll('form [role="status"]')).toHaveLength(0);
     expect(container.querySelectorAll('[role="status"]')).toHaveLength(1);
+  });
+
+  it("reports Clear to the results region while its navigation is in flight", async () => {
+    mocks.pending = true;
+    await renderProducts({ q: "apples", region: true });
+
+    const region = container.querySelector("[data-busy]");
+    expect(region?.getAttribute("data-busy")).toBe("true");
+
+    mocks.pending = false;
   });
 
   it("offers Clear against the bare list only while filtered", async () => {

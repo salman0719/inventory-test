@@ -3,7 +3,7 @@
 import { PendingLink } from "@/components/pending-link";
 import { useRouter } from "next/navigation";
 import { useTransition, type ReactNode } from "react";
-import { TransitionBusy, useResultsRegion } from "./results-busy";
+import { LinkBusy, TransitionBusy, useResultsRegion } from "./results-busy";
 
 /**
  * The URL is still the filter state; the browser no longer navigates to set it.
@@ -66,6 +66,9 @@ export function FilterForm({
           href={clearHref}
           className="min-h-[36px] rounded border border-line bg-surface px-2.5 text-[12px] font-medium leading-[34px] hover:border-accent hover:text-accent"
         >
+          {/* Clear starts the same navigation Apply does, so the region has to hear
+              about it too; otherwise only the bar moves and the rows stand still. */}
+          <LinkBusy id="filters-clear" />
           Clear
         </PendingLink>
       ) : null}
