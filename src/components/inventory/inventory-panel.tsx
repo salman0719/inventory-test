@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { PendingLink } from "@/components/pending-link";
 import type { ReactNode } from "react";
 import { PanelLink } from "@/components/panel-link";
 import { formatMoney, formatQuantity, stockStatus } from "@/lib/product-input";
@@ -155,9 +155,9 @@ export function InventoryPanel({
       </div>
 
       <div className="flex items-center gap-2 border-t border-line px-3 py-2">
-        <Link href={`/products?product=${item.id}`} className={BUTTON}>
+        <PendingLink href={`/products?product=${item.id}`} className={BUTTON}>
           Open in catalogue
-        </Link>
+        </PendingLink>
       </div>
     </aside>
   );

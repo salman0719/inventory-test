@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PendingLink } from "@/components/pending-link";
 import { InventoryFilters } from "@/components/inventory/inventory-filters";
 import { InventoryPanelColumn } from "@/components/inventory/inventory-panel-column";
 import { InventoryTable } from "@/components/inventory/inventory-table";
@@ -142,12 +142,12 @@ export default async function InventoryPage({
                     ? "Clear the filters, or search for a different name or SKU."
                     : "Add products in the catalogue first; their stock positions appear here."}
                 </p>
-                <Link
+                <PendingLink
                   href={filtered ? "/inventory" : "/products"}
                   className="mt-4 inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
                 >
                   {filtered ? "Clear filters" : "Open products"}
-                </Link>
+                </PendingLink>
               </div>
             )}
 

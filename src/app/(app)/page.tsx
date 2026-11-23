@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PendingLink } from "@/components/pending-link";
 import { AttentionTable } from "@/components/dashboard/attention-table";
 import { DashboardStats } from "@/components/dashboard/dashboard-stats";
 import { RecentMovements } from "@/components/dashboard/recent-movements";
@@ -56,12 +56,12 @@ export default async function DashboardPage() {
             Add products and their opening stock, and this page will show what
             is low, what is on order and what moved.
           </p>
-          <Link
+          <PendingLink
             href="/products"
             className="mt-4 inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
           >
             Open products
-          </Link>
+          </PendingLink>
         </div>
       ) : (
         <AttentionTable

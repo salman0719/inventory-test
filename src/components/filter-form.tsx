@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { PendingLink } from "@/components/pending-link";
 import { useRouter } from "next/navigation";
 import { useTransition, type ReactNode } from "react";
 import { TransitionBusy, useResultsRegion } from "./results-busy";
@@ -59,12 +59,12 @@ export function FilterForm({
         {pending ? "Applying…" : "Apply"}
       </button>
       {filtered ? (
-        <Link
+        <PendingLink
           href={action}
           className="min-h-[36px] rounded border border-line bg-surface px-2.5 text-[12px] font-medium leading-[34px] hover:border-accent hover:text-accent"
         >
           Clear
-        </Link>
+        </PendingLink>
       ) : null}
       {inResultsRegion ? null : (
         <span role="status" className="sr-only">

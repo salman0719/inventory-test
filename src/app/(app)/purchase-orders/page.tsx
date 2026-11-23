@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PendingLink } from "@/components/pending-link";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { PanelGrid, PanelProvider } from "@/components/panel-host";
 import { PanelLink } from "@/components/panel-link";
@@ -139,9 +139,12 @@ export default async function PurchaseOrdersPage({
                     : "Create an order for one supplier, then receive it in full or in parts as deliveries arrive."}
                 </p>
                 {filtered ? (
-                  <Link href="/purchase-orders" className={`${BUTTON} mt-4`}>
+                  <PendingLink
+                    href="/purchase-orders"
+                    className={`${BUTTON} mt-4`}
+                  >
                     Clear filters
-                  </Link>
+                  </PendingLink>
                 ) : (
                   <PanelLink
                     href={hrefFor({ new: "true" })}

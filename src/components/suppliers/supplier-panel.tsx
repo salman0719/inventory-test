@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { PendingLink } from "@/components/pending-link";
 import type { ReactNode } from "react";
 import { PanelLink } from "@/components/panel-link";
 import { setArchived } from "@/app/(app)/suppliers/actions";
@@ -129,12 +129,12 @@ function SupplierBody({
                 key={product.id}
                 className="flex items-baseline gap-2 text-[12px]"
               >
-                <Link
+                <PendingLink
                   href={`/products?product=${product.id}`}
                   className="truncate hover:text-accent"
                 >
                   {product.name}
-                </Link>
+                </PendingLink>
                 <span className="ml-auto shrink-0 font-mono text-[11px] text-ink-faint">
                   {product.sku} · {formatQuantity(product.onHand)}
                 </span>

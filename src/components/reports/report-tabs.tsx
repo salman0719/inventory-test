@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PendingLink } from "@/components/pending-link";
 import {
   REPORT_KINDS,
   REPORT_LABELS,
@@ -18,7 +18,7 @@ export function ReportTabs({ kind }: { kind: ReportKind }) {
       {REPORT_KINDS.map((option) => {
         const active = option === kind;
         return (
-          <Link
+          <PendingLink
             key={option}
             href={`/reports?report=${option}`}
             aria-current={active ? "page" : undefined}
@@ -29,7 +29,7 @@ export function ReportTabs({ kind }: { kind: ReportKind }) {
             }`}
           >
             {REPORT_LABELS[option]}
-          </Link>
+          </PendingLink>
         );
       })}
     </nav>

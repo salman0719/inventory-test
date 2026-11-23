@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PendingLink } from "@/components/pending-link";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { Pagination } from "@/components/pagination";
 import { PanelGrid, PanelProvider } from "@/components/panel-host";
@@ -148,12 +148,12 @@ export default async function ProductsPage({
                     : "Add the first product to start the catalogue, or seed the demo data with npm run db:seed."}
                 </p>
                 {filtered ? (
-                  <Link
+                  <PendingLink
                     href="/products"
                     className="mt-4 inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
                   >
                     Clear filters
-                  </Link>
+                  </PendingLink>
                 ) : (
                   <PanelLink
                     href={hrefFor({ new: "true" })}

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PendingLink } from "@/components/pending-link";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { PanelGrid, PanelProvider } from "@/components/panel-host";
 import { PanelLink } from "@/components/panel-link";
@@ -113,12 +113,12 @@ export default async function SuppliersPage({
                   : "Add the first supplier so products and purchase orders can point at it."}
               </p>
               {filtered ? (
-                <Link
+                <PendingLink
                   href="/suppliers"
                   className="mt-4 inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
                 >
                   Clear filters
-                </Link>
+                </PendingLink>
               ) : (
                 <PanelLink
                   href={hrefFor({ new: "true" })}

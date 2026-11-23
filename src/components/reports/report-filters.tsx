@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PendingLink } from "@/components/pending-link";
 import {
   MOVEMENT_TYPE_FILTERS,
   ORDER_REPORT_STATUSES,
@@ -150,12 +150,12 @@ export function ReportFilters({
       </button>
 
       {filtered ? (
-        <Link
+        <PendingLink
           href={`/reports?report=${kind}`}
           className="min-h-[36px] rounded border border-line bg-surface px-2.5 text-[12px] font-medium leading-[34px] hover:border-accent hover:text-accent"
         >
           Clear
-        </Link>
+        </PendingLink>
       ) : null}
     </form>
   );

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PendingLink } from "@/components/pending-link";
 
 /**
  * Any address that does not match a route. It renders inside the document shell
@@ -19,18 +19,18 @@ export default function NotFound() {
         again from the dashboard.
       </p>
       <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-        <Link
+        <PendingLink
           href="/"
           className="inline-flex min-h-[36px] items-center rounded bg-accent px-3 text-[12px] font-semibold text-on-accent"
         >
           Go to dashboard
-        </Link>
-        <Link
+        </PendingLink>
+        <PendingLink
           href="/products"
           className="inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
         >
           Products
-        </Link>
+        </PendingLink>
       </div>
     </main>
   );
