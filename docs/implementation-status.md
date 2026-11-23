@@ -133,6 +133,34 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-23 — The phone's detail panel is the chosen sheet.** Below 900px an
+  open row is now the prototype's 86% bottom sheet with a pinned head, a
+  scrolling body and pinned actions; from 900px up the panel is the same sticky
+  column it was, because one DOM tree serves both (`min-[900px]:` resets).
+  `PanelFrame` (`src/components/panel-frame.tsx`) owns the three regions and all
+  four panels use it: products, suppliers and inventory moved Edit/Archive or
+  "Open in catalogue" into the footer, purchase orders kept their actions and
+  receive form in the body (a pinned receive footer is deferred). The dialog
+  semantics — `role="dialog"`, `aria-modal`, the Tab trap, Escape and the scroll
+  lock — apply only where the sheet is (`useCompact`, `(max-width: 899px)` read
+  through `useSyncExternalStore`), so the desktop column stays a region. Focus is
+  captured before the sheet takes it and restored to the row when the panel
+  unmounts. The sheet covers the tab bar, reversing the consequence recorded in
+  `0009`, and rises on open with a 220ms `sheet-up` keyframe; it has no exit
+  animation, because closing replaces the row out of the URL and unmounts it.
+  Measured with `local/prototypes/mobile/measure-panel.ts` on the dev server: at
+  390×844 the stock sheet spans 304–844 with `max-height` 725.84px, focus inside,
+  both scroll locks on, and `elementFromPoint` at the bar's centre lands inside
+  the dialog; at 390×520 the body holds 405px in 312px and scrolling it to 93
+  leaves the head at 86–147 and the footer at 459–520; Escape clears `?product=`,
+  removes the sheet and returns focus to the row link; at 1280×900 the panel is
+  `position: sticky`, 360px wide at left 888, with no dialog role and no scrim.
+  `tests/unit/detail-panel.test.ts` covers the compact dialog, Escape with focus
+  return and the wide column. Gates: `npm run check` exit 0 (0 errors, the same 2
+  pre-existing warnings in `src/lib/permissions.ts`), `npm run test` 152/152 in 26
+  files, `npm run build` exit 0, and `npm run secrets:check` ok. Decision in
+  `docs/decisions/0011-mobile-detail-panel.md`.
+
 - **2026-11-23 — The phone's lists are cards.** Products, inventory, suppliers and
   purchase orders rendered their tables at every width; the tables are 620–760px
   wide inside a 374px content column, so a phone saw four or six columns worth of

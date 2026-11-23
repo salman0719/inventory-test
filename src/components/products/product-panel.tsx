@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { setArchived } from "@/app/(app)/products/actions";
 import { ArchiveForm } from "@/components/archive-form";
+import { PanelFrame } from "@/components/panel-frame";
 import { EMPTY_PRODUCT } from "@/lib/product-defaults";
 import { formatMoney, formatQuantity, stockStatus } from "@/lib/product-input";
 import type {
@@ -21,6 +22,9 @@ const BUTTON =
  * Direction C keeps details beside the list rather than on another page, so
  * scanning a supplier's catalogue does not lose the list position. The panel is
  * driven by the URL; every action inside it is a real link, form or server action.
+ *
+ * On a phone the frame pins the name, the SKU and Close at the top and Edit and
+ * Archive at the bottom, so a destructive action never scrolls under a thumb.
  */
 export function ProductPanel({
   mode,
@@ -47,29 +51,50 @@ export function ProductPanel({
   const title =
     mode === "create" ? "New product" : (product?.name ?? "Product");
 
-  return (
-    <aside
-      aria-label="Product details"
-      className="rounded border border-line bg-surface"
-    >
-      <header className="flex items-start gap-2 border-b border-line px-3 py-2">
-        <div className="min-w-0">
-          <h2 className="truncate text-[13px] font-semibold">{title}</h2>
-          {mode !== "create" && product ? (
-            <p className="font-mono text-[10.5px] text-ink-faint">
-              {product.sku}
-            </p>
-          ) : null}
-        </div>
-        <PanelLink
-          href={closeHref}
-          aria-label="Close product panel"
-          className={`${BUTTON} ml-auto shrink-0`}
-        >
-          Close
+  const actions =
+    mode === "detail" && product && canViewValues ? (
+      <>
+        <PanelLink href={editHref ?? closeHref} className={BUTTON}>
+          Edit
         </PanelLink>
-      </header>
+        <ArchiveForm action={setArchived}>
+          <input type="hidden" name="id" value={product.id} />
+          <input
+            type="hidden"
+            name="archived"
+            value={product.isArchived ? "false" : "true"}
+          />
+          <button type="submit" className={BUTTON}>
+            {product.isArchived ? "Restore" : "Archive"}
+          </button>
+        </ArchiveForm>
+      </>
+    ) : undefined;
 
+  return (
+    <PanelFrame
+      label="Product details"
+      header={
+        <>
+          <div className="min-w-0">
+            <h2 className="truncate text-[13px] font-semibold">{title}</h2>
+            {mode !== "create" && product ? (
+              <p className="font-mono text-[10.5px] text-ink-faint">
+                {product.sku}
+              </p>
+            ) : null}
+          </div>
+          <PanelLink
+            href={closeHref}
+            aria-label="Close product panel"
+            className={`${BUTTON} ml-auto shrink-0`}
+          >
+            Close
+          </PanelLink>
+        </>
+      }
+      footer={actions}
+    >
       {mode === "create" || mode === "edit" ? (
         <div className="px-3 py-3">
           <ProductForm
@@ -84,11 +109,10 @@ export function ProductPanel({
           product={product}
           currency={currency}
           saved={saved}
-          editHref={editHref ?? closeHref}
           canViewValues={canViewValues}
         />
       ) : null}
-    </aside>
+    </PanelFrame>
   );
 }
 
@@ -96,13 +120,11 @@ function ProductBody({
   product,
   currency,
   saved,
-  editHref,
   canViewValues,
 }: {
   product: ProductSummary;
   currency: string;
   saved: boolean;
-  editHref: string;
   canViewValues: boolean;
 }) {
   return (
@@ -161,25 +183,6 @@ function ProductBody({
           This product is archived. It keeps its history and stays out of stock
           screens until it is restored.
         </p>
-      ) : null}
-
-      {canViewValues ? (
-        <div className="flex flex-wrap items-center gap-2 border-t border-line px-3 py-2">
-          <PanelLink href={editHref} className={BUTTON}>
-            Edit
-          </PanelLink>
-          <ArchiveForm action={setArchived}>
-            <input type="hidden" name="id" value={product.id} />
-            <input
-              type="hidden"
-              name="archived"
-              value={product.isArchived ? "false" : "true"}
-            />
-            <button type="submit" className={BUTTON}>
-              {product.isArchived ? "Restore" : "Archive"}
-            </button>
-          </ArchiveForm>
-        </div>
       ) : null}
     </>
   );

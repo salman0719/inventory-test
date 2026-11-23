@@ -136,7 +136,7 @@ function PanelSkeleton({
     <aside
       aria-busy="true"
       aria-label={label}
-      className="rounded border border-line bg-surface"
+      className="rounded border border-line bg-surface max-[899px]:rounded-none max-[899px]:border-0"
     >
       <div className="flex animate-pulse items-center gap-2 border-b border-line px-3 py-2 motion-reduce:animate-none">
         <div className="flex flex-1 flex-col gap-1.5">

@@ -2,6 +2,7 @@
 
 import { PendingLink } from "@/components/pending-link";
 import type { ReactNode } from "react";
+import { PanelFrame } from "@/components/panel-frame";
 import { PanelLink } from "@/components/panel-link";
 import { setArchived } from "@/app/(app)/suppliers/actions";
 import { ArchiveForm } from "@/components/archive-form";
@@ -13,6 +14,11 @@ import { SupplierForm } from "./supplier-form";
 const BUTTON =
   "inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-2.5 text-[12px] font-medium hover:border-accent hover:text-accent";
 
+/**
+ * Supplier detail. On a phone the frame pins the name and Close at the top and
+ * Edit and Archive at the bottom, so the destructive action never sits under a
+ * thumb that is scrolling the products list.
+ */
 export function SupplierPanel({
   mode,
   supplier,
@@ -31,22 +37,45 @@ export function SupplierPanel({
   const title =
     mode === "create" ? "New supplier" : (supplier?.name ?? "Supplier");
 
-  return (
-    <aside
-      aria-label="Supplier details"
-      className="rounded border border-line bg-surface"
-    >
-      <header className="flex items-start gap-2 border-b border-line px-3 py-2">
-        <h2 className="min-w-0 truncate text-[13px] font-semibold">{title}</h2>
-        <PanelLink
-          href={closeHref}
-          aria-label="Close supplier panel"
-          className={`${BUTTON} ml-auto shrink-0`}
-        >
-          Close
+  const actions =
+    mode === "detail" && supplier ? (
+      <>
+        <PanelLink href={editHref ?? closeHref} className={BUTTON}>
+          Edit
         </PanelLink>
-      </header>
+        <ArchiveForm action={setArchived}>
+          <input type="hidden" name="id" value={supplier.id} />
+          <input
+            type="hidden"
+            name="archived"
+            value={supplier.isArchived ? "false" : "true"}
+          />
+          <button type="submit" className={BUTTON}>
+            {supplier.isArchived ? "Restore" : "Archive"}
+          </button>
+        </ArchiveForm>
+      </>
+    ) : undefined;
 
+  return (
+    <PanelFrame
+      label="Supplier details"
+      header={
+        <>
+          <h2 className="min-w-0 truncate text-[13px] font-semibold">
+            {title}
+          </h2>
+          <PanelLink
+            href={closeHref}
+            aria-label="Close supplier panel"
+            className={`${BUTTON} ml-auto shrink-0`}
+          >
+            Close
+          </PanelLink>
+        </>
+      }
+      footer={actions}
+    >
       {mode === "create" || mode === "edit" ? (
         <div className="px-3 py-3">
           <SupplierForm
@@ -55,14 +84,9 @@ export function SupplierPanel({
           />
         </div>
       ) : supplier ? (
-        <SupplierBody
-          supplier={supplier}
-          products={products}
-          saved={saved}
-          editHref={editHref ?? closeHref}
-        />
+        <SupplierBody supplier={supplier} products={products} saved={saved} />
       ) : null}
-    </aside>
+    </PanelFrame>
   );
 }
 
@@ -70,12 +94,10 @@ function SupplierBody({
   supplier,
   products,
   saved,
-  editHref,
 }: {
   supplier: SupplierSummary;
   products: SuppliedProduct[];
   saved: boolean;
-  editHref: string;
 }) {
   return (
     <>
@@ -159,23 +181,6 @@ function SupplierBody({
           supplier is hidden from new orders and from the product form.
         </p>
       ) : null}
-
-      <div className="flex flex-wrap items-center gap-2 border-t border-line px-3 py-2">
-        <PanelLink href={editHref} className={BUTTON}>
-          Edit
-        </PanelLink>
-        <ArchiveForm action={setArchived}>
-          <input type="hidden" name="id" value={supplier.id} />
-          <input
-            type="hidden"
-            name="archived"
-            value={supplier.isArchived ? "false" : "true"}
-          />
-          <button type="submit" className={BUTTON}>
-            {supplier.isArchived ? "Restore" : "Archive"}
-          </button>
-        </ArchiveForm>
-      </div>
     </>
   );
 }

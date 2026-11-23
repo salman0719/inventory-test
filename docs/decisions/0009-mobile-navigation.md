@@ -83,8 +83,9 @@ hidden` made it a scroll container, and focusing the off-screen dialog
 - An open detail panel stops at the top of the tab bar instead of running over
   it. The prototype's sheet covered the bar, and the implementation first copied
   that, but it hid the phone's primary navigation behind every open row; the bar
-  now stays visible and tappable while the panel is open. The panel's own Close
-  link and the scrim still close it.
+  stayed visible and tappable while the overlay page was open. **Reversed by
+  `0011-mobile-detail-panel.md`:** the panel is now the chosen 86% bottom sheet,
+  which covers the bar and closes through Close, the scrim or Escape.
 - The card lists chosen alongside this are implemented below 600px on products,
   inventory, suppliers and purchase orders; the filter sheet and the pinned detail
   sheet are **not**, so the filter bar and the panel overlay are unchanged. The

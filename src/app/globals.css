@@ -68,6 +68,33 @@
 }
 
 /*
+ * The phone's detail panel rises from the bottom edge on mount. Closing removes the
+ * panel from the grid rather than hiding it, so there is no exit to animate; the
+ * keyframes are scoped below 900px so the desktop column never moves.
+ */
+@keyframes sheet-up {
+  from {
+    transform: translateY(105%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 899px) {
+  .panel-sheet {
+    animation: sheet-up 220ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-sheet {
+    animation: none;
+  }
+}
+
+/*
  * The row whose product is open. The panel changes through `history.replaceState`
  * rather than a page render, so the marker has to come from the row link's own
  * state (`data-panel-active`) instead of a server prop; `:has` keeps the row

@@ -2,6 +2,7 @@
 
 import { PendingLink } from "@/components/pending-link";
 import type { ReactNode } from "react";
+import { PanelFrame } from "@/components/panel-frame";
 import { PanelLink } from "@/components/panel-link";
 import { formatMoney, formatQuantity, stockStatus } from "@/lib/product-input";
 import { StatusLabel } from "@/components/products/status-label";
@@ -28,6 +29,9 @@ function formatMoment(iso: string): string {
  * Stock detail: the current position, the one control that changes it, and the
  * ledger lines behind it. History is load-bearing here — an on-hand number nobody
  * can explain is the thing an operator stops trusting.
+ *
+ * On a phone the frame pins the name, SKU and Close, and keeps the way into the
+ * catalogue on the bottom edge under the ledger.
  */
 export function InventoryPanel({
   item,
@@ -48,24 +52,29 @@ export function InventoryPanel({
   const status = stockStatus(item.onHand, item.reorderLevel);
 
   return (
-    <aside
-      aria-label="Stock details"
-      className="rounded border border-line bg-surface"
+    <PanelFrame
+      label="Stock details"
+      header={
+        <>
+          <div className="min-w-0">
+            <h2 className="truncate text-[13px] font-semibold">{item.name}</h2>
+            <p className="font-mono text-[10.5px] text-ink-faint">{item.sku}</p>
+          </div>
+          <PanelLink
+            href={closeHref}
+            aria-label="Close stock panel"
+            className={`${BUTTON} ml-auto shrink-0`}
+          >
+            Close
+          </PanelLink>
+        </>
+      }
+      footer={
+        <PendingLink href={`/products?product=${item.id}`} className={BUTTON}>
+          Open in catalogue
+        </PendingLink>
+      }
     >
-      <header className="flex items-start gap-2 border-b border-line px-3 py-2">
-        <div className="min-w-0">
-          <h2 className="truncate text-[13px] font-semibold">{item.name}</h2>
-          <p className="font-mono text-[10.5px] text-ink-faint">{item.sku}</p>
-        </div>
-        <PanelLink
-          href={closeHref}
-          aria-label="Close stock panel"
-          className={`${BUTTON} ml-auto shrink-0`}
-        >
-          Close
-        </PanelLink>
-      </header>
-
       {saved ? (
         <p
           role="status"
@@ -153,13 +162,7 @@ export function InventoryPanel({
           </ul>
         )}
       </div>
-
-      <div className="flex items-center gap-2 border-t border-line px-3 py-2">
-        <PendingLink href={`/products?product=${item.id}`} className={BUTTON}>
-          Open in catalogue
-        </PendingLink>
-      </div>
-    </aside>
+    </PanelFrame>
   );
 }
 

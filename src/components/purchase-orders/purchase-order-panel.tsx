@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { PanelFrame } from "@/components/panel-frame";
 import { PanelLink } from "@/components/panel-link";
 import { formatMoney, formatQuantity } from "@/lib/product-input";
 import { canReceive, outstandingQuantity } from "@/lib/purchase-order-input";
@@ -80,28 +81,28 @@ export function PurchaseOrderPanel({
   const message = SAVED_MESSAGES[saved] ?? "";
 
   return (
-    <aside
-      aria-label="Purchase order details"
-      className="rounded border border-line bg-surface"
+    <PanelFrame
+      label="Purchase order details"
+      header={
+        <>
+          <div className="min-w-0">
+            <h2 className="truncate font-mono text-[13px] font-semibold">
+              {order.orderNumber}
+            </h2>
+            <p className="truncate text-[11px] text-ink-muted">
+              {order.supplierName}
+            </p>
+          </div>
+          <PanelLink
+            href={closeHref}
+            aria-label="Close order panel"
+            className={`${BUTTON} ml-auto shrink-0`}
+          >
+            Close
+          </PanelLink>
+        </>
+      }
     >
-      <header className="flex items-start gap-2 border-b border-line px-3 py-2">
-        <div className="min-w-0">
-          <h2 className="truncate font-mono text-[13px] font-semibold">
-            {order.orderNumber}
-          </h2>
-          <p className="truncate text-[11px] text-ink-muted">
-            {order.supplierName}
-          </p>
-        </div>
-        <PanelLink
-          href={closeHref}
-          aria-label="Close order panel"
-          className={`${BUTTON} ml-auto shrink-0`}
-        >
-          Close
-        </PanelLink>
-      </header>
-
       {message !== "" ? (
         <p
           role="status"
@@ -258,7 +259,7 @@ export function PurchaseOrderPanel({
           </ul>
         )}
       </div>
-    </aside>
+    </PanelFrame>
   );
 }
 
