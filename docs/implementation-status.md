@@ -133,6 +133,28 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-23 — The phone gets bottom tabs, and the wordmark moves into the
+  header.** Below 600px `AppNav` renders a fixed bottom bar on the rail colour
+  with Dashboard, Products, Stock and More; the other four screens open in a modal
+  More sheet. The header carries the “Stk” wordmark as the home link, and `main`
+  reserves 76px plus the safe-area inset so the pager is never under the bar. The
+  detail panel's overlay now paints above the bar instead of ending behind it.
+  Verified on the running dev server with
+  `npx tsx local/prototypes/mobile/measure-impl.ts`: at 390×844 the bar spans
+  788–844 (56px) on `rgb(15, 23, 42)` with four tabs 94px wide and 52px tall, none
+  off-screen, the current tab marked on `/products`, the wordmark 44px tall in the
+  52px header, `main` padding 76px, and no document overflow; scrolled to the
+  bottom of `/products` the last row ends at 711px and the pager at 768px against
+  a bar top of 788px; an open product panel runs to 844px and covers the bar; the
+  More sheet lists Suppliers, Purchase orders, Reports and Settings, closes on
+  Escape with focus back on its button, and following Reports closes it and marks
+  More current; at 1280×900 the rail is the only primary nav (left 0, top 52), the
+  header wordmark is hidden and `main` padding is 20px. Gates on the branch:
+  `npm run check` exit 0 (0 errors, the same 2 pre-existing warnings in
+  `src/lib/permissions.ts`), `npm run test` 131/131 in 23 files, `npm run build`
+  exit 0 (13 routes plus the proxy), `npm run secrets:check` ok. Decision and
+  contrast numbers in `docs/decisions/0009-mobile-navigation.md`. Card lists,
+  the filter sheet and the pinned detail sheet remain unimplemented.
 - **2026-11-23 — The business switch redirects to the dashboard and shows the top
   bar.** `selectBusiness` ends with `redirect("/")` after setting the cookie and
   revalidating the layout, so a switch can no longer leave the previous business's
