@@ -133,6 +133,22 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-23 — The detail panel holds the right column again.** On the wide
+  split view the panel was placed with `order-last`, which made it the third
+  auto-placed grid item: the table took row 1 column 1, the pagination row 1
+  column 2 and the panel row 2 column 1, so the pager sat beside the table and
+  the panel below it. `DetailPanel` is now placed with
+  `min-[900px]:col-start-2 min-[900px]:row-start-1`, so the panel takes the
+  360px column and the table and pager stack in the list column. Measured at
+  1280×900 with a product open: tracks 891px/360px, the panel at the table's top
+  spanning 903–1263, the table 1–890, and the pager directly below the table at
+  3111 against a table bottom of 3098. The dev server's streamed Suspense
+  boundaries did not hydrate in this browser session, so that measurement ran on
+  the server-rendered markup with the hidden wrapper removed; the change is CSS
+  placement only. Gates: `npm run check` exit 0 (0 errors, the same 2 pre-existing
+  warnings in `src/lib/permissions.ts`), `npm run test` 138/138 in 24 files,
+  `npm run build` exit 0, `npm run secrets:check` ok.
+
 - **2026-11-23 — An open detail panel no longer covers the phone's tab bar.**
   `DetailPanel`'s overlay was `z-40`, the bar's own layer, and renders after it,
   so on a phone every open row painted over the bar and its three destinations
