@@ -12,6 +12,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  * Switch the active business. The id is checked against the businesses this user
  * can actually see, so a guessed id cannot select another tenant even if the
  * cookie is edited by hand.
+ *
+ * The switch always lands on the dashboard: the URL's filters, page and open panel
+ * describe rows of the business being left, so keeping them would mean showing the
+ * new tenant a view it never asked for (or a "not in this business" panel).
+ * `revalidatePath` clears the client cache first, so the navigation cannot be
+ * answered from a payload fetched before the cookie changed.
  */
 export async function selectBusiness(businessId: string): Promise<void> {
   const user = await getSessionUser();
@@ -28,6 +34,7 @@ export async function selectBusiness(businessId: string): Promise<void> {
     maxAge: 60 * 60 * 24 * 30,
   });
   revalidatePath("/", "layout");
+  redirect("/");
 }
 
 export async function signOut(): Promise<void> {

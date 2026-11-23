@@ -208,6 +208,15 @@ data path is `db:seed:hosted` (verified 2026-11-22: 2 businesses, 2 memberships,
 | The switch between rows and skeleton is CSS, not a Suspense boundary                                 | medium   | A real boundary would only reveal the skeleton after the page's own session and business awaits, which is most of the wait, so the region reports busy instead | No           | By design; revisit with the auth work |
 | The row/skeleton swap was unobserved in a browser until 2026-11-23                                   | low      | Seen on all four lists for Apply and Clear at 90–130 ms unthrottled; throttled behaviour and other widths are still unobserved                                 | No           | Verified 2026-11-23                   |
 
+## Business switch — 2026-11-23
+
+| Limitation or risk                                                                                 | Severity | Workaround                                                                                                                                    | Blocks demo? | Status     |
+| -------------------------------------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ---------- |
+| Switching always lands on the dashboard, discarding the screen, filters and open panel you were on | low      | That is the point: the old URL described rows of the business being left. Getting back is one rail click                                      | No           | By design  |
+| The top bar is decorative and ends with the action, 37–49 ms before the new screen commits         | low      | `aria-hidden`; the dashboard's own "Loading page" announcement arrives with the new tree. The gap was 40 ms in dev, unobserved when throttled | No           | Accepted   |
+| A switch waits on one round trip that renders the whole dashboard, with no row skeletons           | low      | The bar covers the wait at 16–23 ms; the dashboard replaces every figure anyway, so a row skeleton would not match it                         | No           | By design  |
+| The switch timings come from `next dev`, unthrottled, at 1280×900, two runs per direction          | low      | Dev overstates a production wait; a throttled production-build pass is still owed                                                             | No           | Unverified |
+
 ## Navigation latency — 2026-11-22
 
 | Limitation or risk                                                                                                                                                               | Severity | Workaround                                                                                                                                                          | Blocks demo? | Status                         |

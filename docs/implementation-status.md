@@ -17,7 +17,7 @@ Keep this file current. Do not report a task as complete until it has been verif
 - Current deployment: Vercel stage at `https://inventory-stage.vercel.app`
   (public, no deployment protection; serves `main` through `e50688a`, with the
   hosted Supabase database seeded through `db:seed:hosted`)
-- Last updated: 2026-11-22
+- Last updated: 2026-11-23
 
 ## Phase checklist
 
@@ -133,6 +133,28 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-23 — The business switch redirects to the dashboard and shows the top
+  bar.** `selectBusiness` ends with `redirect("/")` after setting the cookie and
+  revalidating the layout, so a switch can no longer leave the previous business's
+  URL in place: its filters, page number and open panel described rows of the
+  business being left, and a foreign panel id resolved to a "not in this business"
+  panel. `BusinessSwitcher` renders `RouteProgress active={pending}`, the same 3px
+  bar a link click paints, because the redirect is a route change that the screen
+  being left cannot otherwise acknowledge. Measured with
+  `local/perf/business-switch-probe.ts` (2 runs per start, both directions, signed
+  in, `next dev` on :25000, 1280×900, first and last frame each signal appears):
+  from `/products` the bar painted at 16 and 23 ms and stayed until 156 and 274 ms;
+  the path became `/` at 197 and 323 ms with the header badge and dashboard heading
+  (Demo Retail / Demo Cafe) committing in the same frame; from `/` — already home —
+  the bar painted at 18 ms and the data committed at 192/164 ms without a path
+  change, so a switch on the dashboard still refreshes it. 0 document requests in
+  every run, and each switch made a single request, the server action POST to the
+  current URL, from which the dashboard committed; no second fetch was observed. The
+  bar ends 37–49 ms before the new screen commits, because the transition ends with
+  the action, not with the navigation it starts. Gates: `npm run check` 0 errors
+  (2 pre-existing `_role`/`_action` warnings), `npm run test` 131/131 across 23
+  files, `npm run build` clean, `secrets:check ok`. Not committed; not reviewed at
+  other widths, on a throttled connection or in a production build.
 - **2026-11-23 — Clear reports to the region, and all four lists swap rows.** The
   filter bar's Clear now renders `LinkBusy`, so a Clear navigation flips the same
   `data-busy` flag Apply's transition does and the table swaps its body. Suppliers
