@@ -95,6 +95,22 @@ export default async function ProductsPage({
     return query ? `/products?${query}` : "/products";
   }
 
+  /**
+   * A link to another page of the list, with no panel in it. The pager is rendered
+   * by the server while a row may be open, and closing a panel only rewrites the
+   * client URL, so a pager href that kept `product` would reopen the row the user
+   * had just closed.
+   */
+  function listHrefFor(overrides: Record<string, string | undefined>): string {
+    return hrefFor({
+      product: undefined,
+      new: undefined,
+      edit: undefined,
+      saved: undefined,
+      ...overrides,
+    });
+  }
+
   return (
     <PanelProvider initialHref={hrefFor({})}>
       <section className="flex flex-col gap-4">
@@ -169,11 +185,11 @@ export default async function ProductsPage({
               page={page}
               pageCount={pageCount}
               previousHref={
-                page > 1 ? hrefFor({ page: String(page - 1) }) : undefined
+                page > 1 ? listHrefFor({ page: String(page - 1) }) : undefined
               }
               nextHref={
                 page < pageCount
-                  ? hrefFor({ page: String(page + 1) })
+                  ? listHrefFor({ page: String(page + 1) })
                   : undefined
               }
             />

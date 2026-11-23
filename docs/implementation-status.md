@@ -133,6 +133,22 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-23 — Paging no longer reopens a closed detail panel.** The product and
+  inventory screens build every link through `hrefFor`, which carried the open
+  row, so the pager's Next and Previous hrefs held `product` as well. Closing a
+  panel only rewrites the client URL through the History API, which leaves the
+  server-rendered pager untouched; paging then navigated to a URL that still
+  named the row, and the panel opened again. Both screens now give the pager
+  `listHrefFor`, which drops `product`, `new`, `edit` and `saved` and keeps the
+  search, category, status, sort and page. Verified against the running dev
+  server: with a product open, `/products?product=…` renders
+  `/products?page=2` for Next and `/products?page=2&product=…` renders
+  `/products?page=1` for Previous, and `/inventory?product=…` renders
+  `/inventory?page=2`. Gates after the change: `npm run check` exit 0 (0 errors,
+  the same 2 pre-existing warnings in `src/lib/permissions.ts`),
+  `npm run test` 138/138 in 24 files, `npm run build` exit 0,
+  `npm run secrets:check` ok.
+
 - **2026-11-23 — The detail panel holds the right column again.** On the wide
   split view the panel was placed with `order-last`, which made it the third
   auto-placed grid item: the table took row 1 column 1, the pagination row 1
