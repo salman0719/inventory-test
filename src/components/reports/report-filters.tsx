@@ -1,4 +1,4 @@
-import { PendingLink } from "@/components/pending-link";
+import { FilterForm } from "@/components/filter-form";
 import {
   MOVEMENT_TYPE_FILTERS,
   ORDER_REPORT_STATUSES,
@@ -16,9 +16,10 @@ const LABEL =
   "flex flex-col gap-1 text-[10px] uppercase tracking-[0.07em] text-ink-muted";
 
 /**
- * A plain GET form, like the other lists: the URL describes the report, so a
- * filtered view can be bookmarked and its export link carries the same filters.
- * The valuation report has nothing to filter, so it renders no form at all.
+ * A GET form submitted through the router, like the other lists: the URL describes
+ * the report, so a filtered view can be bookmarked and its export link carries the
+ * same filters. Clear keeps the report in the URL rather than dropping to the
+ * default one. The valuation report has nothing to filter, so it renders no form.
  */
 export function ReportFilters({
   kind,
@@ -39,10 +40,10 @@ export function ReportFilters({
     (kind === "orders" && filters.orderStatus !== "all");
 
   return (
-    <form
-      method="get"
+    <FilterForm
       action="/reports"
-      className="flex flex-wrap items-end gap-2 rounded border border-line bg-panel px-2.5 py-2"
+      clearHref={`/reports?report=${kind}`}
+      filtered={filtered}
     >
       <input type="hidden" name="report" value={kind} />
 
@@ -141,22 +142,6 @@ export function ReportFilters({
           </select>
         </label>
       ) : null}
-
-      <button
-        type="submit"
-        className="min-h-[36px] rounded bg-accent px-3 text-[12px] font-semibold text-on-accent"
-      >
-        Apply
-      </button>
-
-      {filtered ? (
-        <PendingLink
-          href={`/reports?report=${kind}`}
-          className="min-h-[36px] rounded border border-line bg-surface px-2.5 text-[12px] font-medium leading-[34px] hover:border-accent hover:text-accent"
-        >
-          Clear
-        </PendingLink>
-      ) : null}
-    </form>
+    </FilterForm>
   );
 }

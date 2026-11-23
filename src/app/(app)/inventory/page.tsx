@@ -111,16 +111,16 @@ export default async function InventoryPage({
           </p>
         </header>
 
-        <InventoryFilters
-          q={q}
-          categoryId={categoryId}
-          categories={categories}
-          status={status}
-          sort={sort}
-        />
+        <ResultsBusy>
+          <InventoryFilters
+            q={q}
+            categoryId={categoryId}
+            categories={categories}
+            status={status}
+            sort={sort}
+          />
 
-        <PanelGrid panel={<InventoryPanelColumn />} label="Stock details">
-          <ResultsBusy>
+          <PanelGrid panel={<InventoryPanelColumn />} label="Stock details">
             {items.length > 0 ? (
               <InventoryTable
                 items={items}
@@ -163,8 +163,8 @@ export default async function InventoryPage({
                   : undefined
               }
             />
-          </ResultsBusy>
-        </PanelGrid>
+          </PanelGrid>
+        </ResultsBusy>
       </section>
     </PanelProvider>
   );

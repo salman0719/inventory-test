@@ -17,10 +17,13 @@ import { TransitionBusy, useResultsRegion } from "./results-busy";
  */
 export function FilterForm({
   action,
+  clearHref = action,
   filtered,
   children,
 }: {
   action: string;
+  /** Where Clear goes when the bare action would drop a param, e.g. the report. */
+  clearHref?: string;
   filtered: boolean;
   children: ReactNode;
 }) {
@@ -60,7 +63,7 @@ export function FilterForm({
       </button>
       {filtered ? (
         <PendingLink
-          href={action}
+          href={clearHref}
           className="min-h-[36px] rounded border border-line bg-surface px-2.5 text-[12px] font-medium leading-[34px] hover:border-accent hover:text-accent"
         >
           Clear

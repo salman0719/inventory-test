@@ -118,16 +118,16 @@ export default async function ProductsPage({
           )}
         </header>
 
-        <ProductFilters
-          q={q}
-          categoryId={categoryId}
-          categories={categories}
-          sort={sort}
-          archived={archived}
-        />
+        <ResultsBusy>
+          <ProductFilters
+            q={q}
+            categoryId={categoryId}
+            categories={categories}
+            sort={sort}
+            archived={archived}
+          />
 
-        <PanelGrid panel={<ProductPanelColumn />} label="Product details">
-          <ResultsBusy>
+          <PanelGrid panel={<ProductPanelColumn />} label="Product details">
             {products.length > 0 ? (
               <ProductTable
                 products={products}
@@ -177,8 +177,8 @@ export default async function ProductsPage({
                   : undefined
               }
             />
-          </ResultsBusy>
-        </PanelGrid>
+          </PanelGrid>
+        </ResultsBusy>
       </section>
     </PanelProvider>
   );

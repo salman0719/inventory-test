@@ -133,6 +133,27 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-23 — Filter Apply swaps in the skeleton rows; reports Apply is a
+  transition.** The filter bar sat above `ResultsBusy` on products and inventory, so
+  `TransitionBusy` reported to no region and an Apply left the old rows on screen;
+  both bars now render inside the region. `ReportFilters` now uses `FilterForm`
+  instead of a native GET submit, with a new `clearHref` prop so its Clear keeps
+  `?report=` while the form's action stays `/reports`. Same browser probe
+  (`local/perf/filter-submit-probe.ts`, signed in, `next dev` on :25000, 1280×900):
+  inventory Apply before — no bar, no `data-busy`, no skeleton, "Applying…" at
+  69 ms, 1 RSC fetch and 0 document requests; after — `data-busy` and the skeleton
+  rows at 84 ms, "Updating results" announced, still 1 fetch and 0 document
+  requests. Reports Apply before — 1 document request and 0 fetches, no "Applying…"
+  label; after — 0 document requests, 1 RSC fetch, "Applying…" and `aria-busy` at
+  61 ms. Inventory Clear is unchanged (bar at 65 ms, no skeleton, because a link
+  reports nothing to the region). Suppliers and purchase orders are unchanged too:
+  those pages have no `ResultsBusy` and their tables render no skeleton body, so
+  Apply still shows only the button state and its sr-only announcement. Verified:
+  `npm run check` 0 errors (the 2 pre-existing `_role`/`_action` warnings), `npm run
+test` 130/130 across 23 files, `npm run build` clean. Not verified: throttled or
+  production timings, and the layout consequence of wrapping the filter bar and the
+  grid in one region (12 px between them instead of 16 px) has not been reviewed at
+  any width.
 - **2026-11-23 — `PendingLink` applied to the remaining route-changing links.**
   Every plain `<Link>` that starts a route change now uses `PendingLink`: the four
   list empty states ("Open products" and "Clear filters" on inventory, products,
