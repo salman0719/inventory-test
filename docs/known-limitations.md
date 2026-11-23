@@ -210,11 +210,11 @@ data path is `db:seed:hosted` (verified 2026-11-22: 2 businesses, 2 memberships,
 
 ## Navigation latency — 2026-11-22
 
-| Limitation or risk                                                                                                                      | Severity | Workaround                                                                                                                                                          | Blocks demo? | Status                         |
-| --------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ------------------------------ |
-| The page's `getSessionUser()` still calls `supabase.auth.getUser()` once per render; it is now the only Auth round trip in a navigation | medium   | The proxy verifies locally (2026-11-22); this one remains, and removing it needs the session passed down instead of re-verified                                     | No           | Open — see below               |
-| A session revoked server-side stays usable until its access token expires                                                               | medium   | Local JWT verification cannot see revocation. Bounded by the token lifetime (1h by default), sign-out clears the cookies, and the refresh path calls Supabase again | No           | Accepted for the prototype     |
-| `next dev` disables viewport prefetching, so a click in development is always a cold round trip                                         | low      | Hover the link first (intent prefetch is not dev-gated) or judge timing from a production build; dev timings overstate the wait                                     | No           | By design (Next 16 `links.js`) |
+| Limitation or risk                                                                                                                                                               | Severity | Workaround                                                                                                                                                          | Blocks demo? | Status                         |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ------------------------------ |
+| The render path trusts the identity the proxy forwarded instead of verifying the token again: a request that reached a page without the proxy's headers is treated as signed out | medium   | One gate instead of two. The proxy is the only writer of `x-verified-user-id`, it overwrites any inbound copy, and RLS still keys every transaction off that id     | No           | Accepted — see below           |
+| A session revoked server-side stays usable until its access token expires                                                                                                        | medium   | Local JWT verification cannot see revocation. Bounded by the token lifetime (1h by default), sign-out clears the cookies, and the refresh path calls Supabase again | No           | Accepted for the prototype     |
+| `next dev` disables viewport prefetching, so a click in development is always a cold round trip                                                                                  | low      | Hover the link first (intent prefetch is not dev-gated) or judge timing from a production build; dev timings overstate the wait                                     | No           | By design (Next 16 `links.js`) |
 
 Local JWT verification is the open fix for the first row: replacing the proxy's
 `auth.getUser()` with `getClaims()` removes that round trip, but only if the
@@ -250,3 +250,25 @@ React `cache()`, so the calls in `products/page.tsx` and in `AppShell`
 costs two Supabase auth round trips — one in `proxy.ts`, one in the render — not
 four. Only two things remain open: `getClaims` in the proxy, and whether the two
 reads can be cut to one by passing the session down instead of verifying again.
+
+Implemented 2026-11-23: the render path no longer calls Supabase. `src/proxy.ts`
+forwards what it verified as request headers — `x-verified-user-id`, plus a
+percent-encoded `x-verified-user-email` when the session carries one — and
+`src/lib/session.ts` reads them through Zod (`src/lib/verified-session.ts`).
+Measured in one session, old code then new, 40 signed-in `/products` navigations
+each, `NAV_TIMING=1` on a dev server against Docker Postgres: before,
+`proxy.claims` 1.3 ms p50 / 1.8 p95 **plus** `session.auth` 53.8 p50 / 116.1 p95;
+after, `proxy.claims` 1.3 p50 / 2.0 p95 and **zero `session.auth` samples** (0 of
+40 navigations). `proxy.auth` was 0 in both windows. Client wall clock was not
+comparable across windows in dev (566.5–621.2 ms p50 for full-document fetches,
+spread wider than the delta), so only the layer delta is claimed: about 54 ms p50
+/ 116 ms p95 of server time removed from a navigation. Route handlers and Server
+Actions read the same headers; the panel route and the CSV export both answered
+200 with data and the signed-out equivalent got a 307 to `/sign-in`.
+
+The trade-off is the new row above: the proxy is now the single gate. The
+consequences are deliberate — the header is overwritten rather than merged, a
+browser-supplied `x-verified-*` never survives, a missing header is "signed out"
+rather than "verify again", and every tenant query still takes its user id from
+that verified session, with RLS deciding access. Server revocation is unaffected:
+it is still invisible until the access token expires, for the same JWKS reason.

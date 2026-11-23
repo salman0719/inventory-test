@@ -39,6 +39,23 @@ Do not implement social sign-in, MFA, complex roles, invitations, or enterprise 
 
 Do not create a custom authentication system. Do not add Better Auth alongside Supabase Auth.
 
+### Where the session is verified
+
+`src/proxy.ts` verifies the access token once per request — locally against the
+project's published JWKS, falling back to `supabase.auth.getUser()` when local
+verification cannot decide — and forwards the result to the app as request headers
+(`x-verified-user-id`, and a percent-encoded `x-verified-user-email` when the
+session carries one). Server Components, route handlers and Server Actions read
+that through `getSessionUser()` instead of calling Supabase again, so a navigation
+pays for one auth check, not two.
+
+That makes the proxy the single gate, so it owns three rules: it overwrites the
+headers on every request it handles and never forwards a browser-supplied value;
+the render path fails closed when they are absent (`src/lib/verified-session.ts`);
+and every tenant query still takes its user id from that verified session, never
+from the client. Do not add an independent second verification inside pages. A new
+route that must bypass the proxy needs its own check.
+
 ## Storage
 
 Use Supabase Storage rather than introducing UploadThing at this stage.

@@ -133,6 +133,31 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-23 — Stage 3 item 3: one auth check per navigation.** The page's
+  `getSessionUser()` no longer calls `supabase.auth.getUser()`: `src/proxy.ts`
+  forwards the identity it verified as `x-verified-user-id` (and a percent-encoded
+  `x-verified-user-email` when the session has one), and `src/lib/session.ts` reads
+  those headers through Zod in `src/lib/verified-session.ts`. The email is
+  percent-encoded because a header value must be ASCII; Zod validates the id as a
+  UUID (it grants access) but not the email, since `z.email()` rejects valid
+  addresses like `josé@example.com` and a rejected email would sign that user out.
+  Cookies refreshed by the `getUser()` fallback are collected and replayed onto the
+  response that carries the headers, so the browser still stores the new session.
+  Measured in one session — same driver, old code stashed then restored, 40
+  signed-in `/products` navigations per window, `NAV_TIMING=1` dev server on
+  Windows against Docker Postgres: before, `proxy.claims` 1.3 ms p50 / 1.8 p95 and
+  `session.auth` **40 samples**, 53.8 p50 / 116.1 p95; after, `proxy.claims` 1.3 p50
+  / 2.0 p95 and `session.auth` **0 samples**. `proxy.auth` 0 in both windows, tenant
+  transactions still 2 per page, `tenant.setup` 5.0 p50 / 8.8 p95. Client wall clock
+  is not claimed as a delta: full-document fetches measured 566.5–621.2 ms p50 with
+  a spread wider than the change. End-to-end checks with a real signed-in session:
+  `/products` 200 for all 40 navigations, list and account email both rendered; the
+  panel route handler answered 200 `private, no-store` with product data; the CSV
+  export answered 200 `text/csv`; a signed-out panel request still got 307 to
+  `/sign-in`. Verified: `npm run check` 0 errors (2 pre-existing warnings), unit
+  **123/123** in 22 files, build clean with `ƒ Proxy (Middleware)` present,
+  `secrets:check ok`.
+
 - **2026-11-22 — Stage 3 item 2: the proxy verifies locally (`bb6dcea`).**
   `src/proxy.ts` now calls `supabase.auth.getClaims()`, which checks the access
   token's signature against the project's published ES256 JWKS, and only falls back
