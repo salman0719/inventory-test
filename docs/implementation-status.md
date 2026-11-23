@@ -158,6 +158,19 @@ Add date, task, verification method, and result.
   **123/123** in 22 files, build clean with `ƒ Proxy (Middleware)` present,
   `secrets:check ok`.
 
+  Token refresh, proven end to end later on 2026-11-23: a signed-in browser's
+  stored session cookie was rewritten so both the access token's `exp` and the
+  cookie's `expires_at` were in the past, then `/products` was loaded. The
+  navigation request carried that expired cookie, answered 200 with the list and
+  the account email rendered, and returned `Set-Cookie` for the auth cookie; the
+  stored session then held a different access token (new `exp` an hour out) and a
+  different refresh token, and a second navigation reused it without refreshing
+  again — 8/8 checks in `local/perf/prove-refresh.mjs` (untracked). The refresh
+  happens while `getClaims()` loads the expired session, before local
+  verification; `getUser()` remains the fallback when local verification cannot
+  decide. Covered by a unit test that a `getUser()` refresh's cookies reach both
+  the forwarded request and the response (`proxy-session`, 14 tests).
+
 - **2026-11-22 — Stage 3 item 2: the proxy verifies locally (`bb6dcea`).**
   `src/proxy.ts` now calls `supabase.auth.getClaims()`, which checks the access
   token's signature against the project's published ES256 JWKS, and only falls back
