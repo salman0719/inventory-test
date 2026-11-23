@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   next: vi.fn(),
   redirect: vi.fn(),
   setCookie: vi.fn(),
+  requestCookieSet: vi.fn(),
   cookiesAdapter: undefined as
     { setAll?: (cookies: unknown[]) => void } | undefined,
 }));
@@ -52,7 +53,7 @@ function requestFor(pathname: string, headers: Record<string, string> = {}) {
   return {
     nextUrl: nextUrlFor(`http://localhost:3000${pathname}`),
     headers: new Headers(headers),
-    cookies: { getAll: () => [], set: () => {} },
+    cookies: { getAll: () => [], set: mocks.requestCookieSet },
   } as unknown as NextRequest;
 }
 
@@ -69,6 +70,7 @@ beforeEach(() => {
     mocks.next,
     mocks.redirect,
     mocks.setCookie,
+    mocks.requestCookieSet,
   ]) {
     fn.mockReset();
   }
@@ -229,6 +231,41 @@ describe("the verified identity handed to the render path", () => {
     expect(mocks.setCookie).toHaveBeenCalledWith("sb-auth-token", "refreshed", {
       path: "/",
     });
+    expect(lastNextInit().request.headers.get("x-verified-user-id")).toBe(
+      USER_ID,
+    );
+  });
+
+  it("replays the cookies a getUser refresh wrote", async () => {
+    // What an expired access token produces: local verification cannot answer, so
+    // `getUser()` refreshes the session and the SDK hands the rotated cookies to the
+    // adapter. They must reach both the request (the page reads the new session) and
+    // the response (the browser has to store it), on a request that still renders.
+    mocks.getClaims.mockResolvedValue({
+      data: null,
+      error: new Error("JWT expired"),
+    });
+    mocks.getUser.mockImplementation(async () => {
+      mocks.cookiesAdapter?.setAll?.([
+        { name: "sb-auth-token", value: "rotated", options: { path: "/" } },
+      ]);
+      return {
+        data: { user: { id: USER_ID, email: "owner@cafe.test" } },
+        error: null,
+      };
+    });
+
+    await proxy(requestFor("/products"));
+
+    expect(mocks.getUser).toHaveBeenCalledTimes(1);
+    expect(mocks.requestCookieSet).toHaveBeenCalledWith(
+      "sb-auth-token",
+      "rotated",
+    );
+    expect(mocks.setCookie).toHaveBeenCalledWith("sb-auth-token", "rotated", {
+      path: "/",
+    });
+    expect(mocks.redirect).not.toHaveBeenCalled();
     expect(lastNextInit().request.headers.get("x-verified-user-id")).toBe(
       USER_ID,
     );
