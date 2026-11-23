@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import type { ReactNode } from "react";
 import { signOut } from "@/app/(app)/actions";
@@ -21,6 +22,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       <AppNav />
       <div className="min-[600px]:pl-[76px]">
         <header className="sticky top-0 z-30 flex min-h-[52px] items-center gap-3 border-b border-line bg-surface px-3 min-[600px]:min-h-[46px] min-[600px]:px-4">
+          {/* The rail carries the wordmark from 600px up; below that the rail is
+              gone, so it moves into the header and stays the home link. */}
+          <Link
+            href="/"
+            aria-label="Stk home"
+            className="inline-flex min-h-[44px] items-center text-[14px] font-bold tracking-tight text-ink min-[600px]:hidden"
+          >
+            Stk
+          </Link>
           <Suspense
             fallback={
               <>
