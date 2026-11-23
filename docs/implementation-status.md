@@ -203,6 +203,36 @@ Add date, task, verification method, and result.
   `src/lib/permissions.ts`), `npm run test` 138/138 in 24 files, `npm run build`
   exit 0, `npm run secrets:check` ok.
 
+- **2026-11-23 — The More sheet slides in and out instead of appearing.** The
+  sheet's overlay now stays mounted and `moreOpen` moves the sheet from
+  `translateY(105%)` to `0` over 220ms while the scrim fades over 180ms, so
+  closing animates the same way opening does (the prototype's timings). A
+  mounted closed sheet is `inert` and `aria-hidden`, so it keeps the modal
+  behaviour the previous slice gave it, and `motion-reduce:transition-none`
+  drops the movement under `prefers-reduced-motion`. `tests/unit/app-nav.test.ts`
+  now asserts the closed state through those attributes rather than the sheet's
+  absence from the DOM. Sampled in Chromium at 390×844 with
+  `local/prototypes/mobile/measure-more-motion.ts`: the sheet's `translate` runs
+  105% → 0 and back over ~220ms each way on the CSS `ease` curve, and the
+  scrim's opacity moves with it. Closed, the overlay reads `translate: 0px 105%`,
+  `aria-hidden="true"`, `inert` and `pointer-events: none`, and a tap at the
+  bottom of the screen still lands on the tab bar; under
+  `prefers-reduced-motion: reduce` the transition property is `none` and no
+  sampled frame moves. Two attempts hid the real cause. Tailwind's `ease-out`
+  covered a quarter of the 286px travel in its first painted frame, so the curve
+  became the prototype's `ease`; opening still did not rise, because the
+  overlay's `overflow: hidden` is a scroll container and focusing the off-screen
+  dialog scrolled it 287px to reveal it — the overlay's scroll offset then
+  tracked the slide frame for frame and held the sheet at its settled position.
+  The overlay is now `overflow-clip` (no scroll container) and focus uses
+  `preventScroll`. Measured with `local/prototypes/mobile/probe-more-visual.ts`:
+  opening runs the sheet's `rect.top` 858 → 571 over 220ms on `ease` with the
+  overlay's `scrollTop` at 0 throughout, and closing runs it back to 858 over the
+  same 220ms, so the two directions mirror each other. Gates: `npm run check` exit 0
+  (0 errors, the same 2 pre-existing warnings in `src/lib/permissions.ts`),
+  `npm run test` 138/138 in 24 files, `npm run build` exit 0, and
+  `npm run secrets:check` ok.
+
 - **2026-11-23 — The More sheet became modal, and the phone nav got tests.**
   Opening the sheet now marks the content column (`#app-content`, set by
   `AppShell`) and both the rail and the bottom bar `inert`, and locks `html` and

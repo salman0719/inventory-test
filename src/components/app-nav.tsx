@@ -163,7 +163,11 @@ export function AppNav() {
   // still inert: the effect below lifts that first, so this runs after it.
   useEffect(() => {
     if (moreOpen) {
-      sheetRef.current?.focus();
+      // Without `preventScroll`, focusing a sheet that is still below the edge
+      // scrolls its clipping overlay up to reveal it: the overlay's scroll
+      // offset then tracks the slide, the sheet is pinned in place, and it
+      // never visibly rises from the bottom.
+      sheetRef.current?.focus({ preventScroll: true });
       return;
     }
     if (returnFocus.current) {
@@ -308,69 +312,87 @@ export function AppNav() {
         </nav>
       </div>
 
-      {moreOpen ? (
-        <div className="fixed inset-0 z-50 min-[600px]:hidden">
-          <button
-            type="button"
-            aria-label="Close menu"
-            onClick={closeMore}
-            className="absolute inset-0 bg-scrim"
-          />
+      {/*
+        Mounted even while closed: the sheet has to be in the document before
+        and after the toggle for the 220ms slide to run in both directions, the
+        same as the prototype. `inert` and `aria-hidden` put the closed sheet
+        and its scrim out of the tab order and the accessibility tree, so the
+        mount is only for the transition. The easing is CSS `ease`, again the
+        prototype's: `ease-out` covers a quarter of the distance in its first
+        frame, which reads as the sheet starting halfway up rather than at the
+        bottom.
+      */}
+      <div
+        inert={!moreOpen}
+        aria-hidden={!moreOpen}
+        className="pointer-events-none fixed inset-0 z-50 overflow-clip min-[600px]:hidden"
+      >
+        <button
+          type="button"
+          aria-label="Close menu"
+          onClick={closeMore}
+          className={`absolute inset-0 bg-scrim transition-opacity duration-[180ms] ease-[cubic-bezier(0.25,0.1,0.25,1)] motion-reduce:transition-none ${
+            moreOpen ? "pointer-events-auto opacity-100" : "opacity-0"
+          }`}
+        />
+        <div
+          ref={sheetRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="More"
+          tabIndex={-1}
+          onKeyDown={onSheetKeyDown}
+          className={`absolute inset-x-0 bottom-0 rounded-t-2xl border-t border-line bg-surface shadow-lg outline-none transition-transform duration-[220ms] ease-[cubic-bezier(0.25,0.1,0.25,1)] motion-reduce:transition-none ${
+            moreOpen
+              ? "pointer-events-auto translate-y-0"
+              : "translate-y-[105%]"
+          }`}
+        >
           <div
-            ref={sheetRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label="More"
-            tabIndex={-1}
-            onKeyDown={onSheetKeyDown}
-            className="absolute inset-x-0 bottom-0 rounded-t-2xl border-t border-line bg-surface shadow-lg outline-none"
-          >
-            <div
-              aria-hidden
-              className="mx-auto mt-2 h-1 w-9 rounded-full bg-line"
-            />
-            <div className="flex items-center gap-3 px-3 pt-2 pb-1">
-              <h2 className="text-[14px] font-semibold">More</h2>
-              <button
-                type="button"
-                onClick={closeMore}
-                className="ml-auto min-h-[36px] rounded border border-line px-2.5 text-[12px] font-medium"
-              >
-                Close
-              </button>
-            </div>
-            <nav
-              aria-label="More sections"
-              className="flex flex-col px-3 pb-[calc(12px_+_env(safe-area-inset-bottom))]"
+            aria-hidden
+            className="mx-auto mt-2 h-1 w-9 rounded-full bg-line"
+          />
+          <div className="flex items-center gap-3 px-3 pt-2 pb-1">
+            <h2 className="text-[14px] font-semibold">More</h2>
+            <button
+              type="button"
+              onClick={closeMore}
+              className="ml-auto min-h-[36px] rounded border border-line px-2.5 text-[12px] font-medium"
             >
-              {MORE.map((item) => {
-                const active = isActive(pathname, item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMoreOpen(false)}
-                    aria-current={active ? "page" : undefined}
-                    className={`flex min-h-[48px] items-center gap-3 border-b border-line text-[13px] last:border-b-0 ${
-                      active ? "text-accent" : "text-ink"
-                    }`}
-                  >
-                    <span aria-hidden className="text-ink-muted">
-                      {item.icon}
-                    </span>
-                    {item.label}
-                    {active ? (
-                      <span className="ml-auto text-[11px] text-ink-muted">
-                        Current
-                      </span>
-                    ) : null}
-                  </Link>
-                );
-              })}
-            </nav>
+              Close
+            </button>
           </div>
+          <nav
+            aria-label="More sections"
+            className="flex flex-col px-3 pb-[calc(12px_+_env(safe-area-inset-bottom))]"
+          >
+            {MORE.map((item) => {
+              const active = isActive(pathname, item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMoreOpen(false)}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex min-h-[48px] items-center gap-3 border-b border-line text-[13px] last:border-b-0 ${
+                    active ? "text-accent" : "text-ink"
+                  }`}
+                >
+                  <span aria-hidden className="text-ink-muted">
+                    {item.icon}
+                  </span>
+                  {item.label}
+                  {active ? (
+                    <span className="ml-auto text-[11px] text-ink-muted">
+                      Current
+                    </span>
+                  ) : null}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
-      ) : null}
+      </div>
     </>
   );
 }

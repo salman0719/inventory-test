@@ -60,6 +60,20 @@
   both `html` and `body` stop scrolling until it closes. Closing returns focus to
   the More button only after that attribute is lifted, because an inert element
   cannot take focus. `tests/unit/app-nav.test.ts` covers all of it in jsdom.
+- The sheet slides in and out rather than appearing: it sits at
+  `translateY(105%)` and moves to `0` over 220ms while the scrim fades over
+  180ms — the prototype's timings and its CSS `ease` curve, which starts at
+  4px of the travel. Tailwind's `ease-out` was tried first and covered a quarter
+  of the distance in one frame, so the sheet looked like it began part-way up.
+- That still did not make it rise: the overlay is a clipping box, `overflow:
+hidden` made it a scroll container, and focusing the off-screen dialog
+  scrolled it (287px) so the sheet sat at its settled position while the
+  transition ran. The overlay uses `overflow: clip` and the dialog is focused
+  with `preventScroll: true`, which keeps the slide visible from the bottom
+  edge in both directions. The overlay is mounted while closed so the
+  same transition runs on close; `inert` and `aria-hidden` carry the closed
+  state, so a mounted sheet is still out of the tab order and the accessibility
+  tree, and `prefers-reduced-motion` removes the movement.
 
 ## Consequences
 

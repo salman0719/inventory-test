@@ -104,6 +104,19 @@ function dialog(): HTMLElement | null {
   return container.querySelector<HTMLElement>('[role="dialog"]');
 }
 
+/**
+ * The sheet stays mounted while closed so the slide runs in both directions;
+ * "closed" therefore means inert and out of the accessibility tree, not absent.
+ */
+function sheetIsOpen(): boolean {
+  const sheet = dialog();
+  if (!sheet) throw new Error("No sheet rendered");
+  return (
+    sheet.closest("[inert]") === null &&
+    sheet.closest('[aria-hidden="true"]') === null
+  );
+}
+
 function scatter<T extends Element>(parent: ParentNode, selector: string): T[] {
   return Array.from(parent.querySelectorAll<T>(selector));
 }
@@ -189,6 +202,7 @@ describe("the phone navigation", () => {
     await render("/products");
     await openMore();
 
+    expect(sheetIsOpen()).toBe(true);
     const sheet = dialog();
     if (!sheet) throw new Error("No sheet rendered");
     expect(sheet.getAttribute("aria-modal")).toBe("true");
@@ -216,7 +230,7 @@ describe("the phone navigation", () => {
 
     await press("Escape");
 
-    expect(dialog()).toBeNull();
+    expect(sheetIsOpen()).toBe(false);
     expect(moreButton().getAttribute("aria-expanded")).toBe("false");
     expect(isInert(page)).toBe(false);
     expect(isInert(tabBar().parentElement)).toBe(false);
@@ -243,7 +257,7 @@ describe("the phone navigation", () => {
         control.click();
       });
 
-      expect(dialog()).toBeNull();
+      expect(sheetIsOpen()).toBe(false);
       expect(document.activeElement).toBe(moreButton());
     }
   });
@@ -286,7 +300,7 @@ describe("the phone navigation", () => {
       suppliers.click();
     });
 
-    expect(dialog()).toBeNull();
+    expect(sheetIsOpen()).toBe(false);
     expect(isInert(page)).toBe(false);
     expect(document.body.style.overflow).toBe("");
     // The screen is changing, so focus is not pulled back to the bar.
