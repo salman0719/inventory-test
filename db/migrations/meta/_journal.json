@@ -57,6 +57,13 @@
       "when": 1795344385254,
       "tag": "0007_public_schema_usage",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795495916733,
+      "tag": "0008_signup_requests",
+      "breakpoints": true
     }
   ]
 }

@@ -383,3 +383,58 @@ export const purchaseReceiptLines = pgTable(
     }),
   ],
 );
+
+/**
+ * Who may review registrations. Deliberately tiny and platform-wide: an admin is
+ * not a tenant role, so this table has no business_id and never appears in a
+ * business's own screens.
+ *
+ * References to auth.users are added by the registration migration, for the same
+ * reason as business_members: Drizzle must not own the auth schema.
+ */
+export const platformAdmins = pgTable("platform_admins", {
+  userId: uuid("user_id").primaryKey(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/**
+ * A registration waiting for a human. The row is written by the applicant after
+ * their address is confirmed, and only a platform admin can move it off `pending`
+ * (see `private.approve_signup_request`). No business exists until approval, which
+ * is what makes an unapproved account harmless even if it signs in.
+ */
+export const signupRequests = pgTable(
+  "signup_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull(),
+    email: text("email").notNull(),
+    fullName: text("full_name").notNull(),
+    businessName: text("business_name").notNull(),
+    businessType: text("business_type").notNull(),
+    status: text("status").notNull().default("pending"),
+    businessId: uuid("business_id").references(() => businesses.id, {
+      onDelete: "set null",
+    }),
+    adminNote: text("admin_note"),
+    decidedBy: uuid("decided_by"),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("signup_requests_user_key").on(t.userId),
+    index("signup_requests_status_created_idx").on(t.status, t.createdAt),
+    check(
+      "signup_requests_status_check",
+      sql`${t.status} in ('pending', 'approved', 'rejected')`,
+    ),
+    check(
+      "signup_requests_business_type_check",
+      sql`${t.businessType} in ('cafe', 'retail', 'other')`,
+    ),
+  ],
+);

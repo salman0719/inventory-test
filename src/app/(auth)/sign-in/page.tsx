@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { SignInForm } from "./sign-in-form";
 
 export const metadata: Metadata = { title: "Sign in — Stk" };
@@ -27,8 +28,11 @@ export default async function SignInPage({
           <SignInForm next={next} />
         </div>
         <p className="mt-3 text-[11px] text-ink-faint">
-          Accounts are created in Supabase. There is no self-service sign-up in
-          this prototype.
+          New here?{" "}
+          <Link href="/register" className="underline hover:text-accent">
+            Create an account
+          </Link>
+          . Every business is reviewed before it opens.
         </p>
       </div>
     </main>

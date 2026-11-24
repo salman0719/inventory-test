@@ -95,8 +95,13 @@ export async function proxy(request: NextRequest) {
 
   const { pathname, search } = request.nextUrl;
   const isSignIn = pathname === "/sign-in";
+  const isRegister = pathname === "/register";
+  // The email link has to be reachable without a session: confirming the address is
+  // what creates one. Registration and reset both land here.
+  const isConfirm = pathname === "/auth/confirm";
+  const isSignedOutPage = isSignIn || isRegister || isConfirm;
 
-  if (!user && !isSignIn) {
+  if (!user && !isSignedOutPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/sign-in";
     url.search = "";
@@ -104,7 +109,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && isSignIn) {
+  // Already signed in: neither form has anything to do. `/auth/confirm` is left
+  // alone, because a recovery link opens while a session exists.
+  if (user && (isSignIn || isRegister)) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     url.search = "";

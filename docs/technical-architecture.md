@@ -28,6 +28,11 @@ Do not add a separate API server unless a concrete need emerges. Prefer server a
 Prototype requirements:
 
 - Email/password sign-in.
+- Self-service registration, held for manual approval: a registration creates a
+  request, and only approval creates the business and its owner membership
+  (`docs/decisions/0012-registration-and-approval.md`).
+- A platform admin reviews registrations. This is not a tenant role and never
+  appears in a business's own screens.
 - Logout.
 - Password reset.
 - Persistent sessions.
@@ -36,6 +41,9 @@ Prototype requirements:
 - Business selector for switching active business.
 
 Do not implement social sign-in, MFA, complex roles, invitations, or enterprise SSO initially.
+Google OAuth is the first social option if one is asked for; SAML SSO needs a paid
+Supabase plan and per-customer configuration. Both are assessed in
+`docs/plans/registration-and-admin.md` §6.
 
 Do not create a custom authentication system. Do not add Better Auth alongside Supabase Auth.
 

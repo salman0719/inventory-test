@@ -133,6 +133,59 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-24 — Registration with manual approval (uncommitted).**
+  `/register` collects a name, business name, type, email and password; Supabase Auth
+  sends the confirmation link, `/auth/confirm` accepts either a PKCE `code` or a
+  `token_hash` (so the default templates work unchanged), and the confirmed account
+  files a `signup_requests` row from its metadata. `0008_signup_requests.sql` adds
+  `signup_requests` and `platform_admins`, RLS that lets an applicant file and read
+  only their own pending row, `private.is_platform_admin()`, and
+  `private.approve_signup_request` / `private.reject_signup_request`: approval creates
+  the business and the owner membership in one transaction, refuses a rejected
+  request, and is idempotent. `(app)/layout.tsx` now requires a business, so a
+  signed-in account with no membership is sent to `/awaiting-approval`, which states
+  pending, rejected, approved or no-request and offers sign out. The proxy allowlists
+  `/register` and `/auth/confirm` while signed out and sends a signed-in visitor away
+  from `/register`. The admin panel is a sketch only
+  (`local/prototypes/registration/registration.html`: overview with the queue and a
+  stall funnel, registrations with filter/search/detail and working approve/reject,
+  accounts, businesses) with the phased plan in
+  `docs/plans/registration-and-admin.md`; SSO is assessed there too. Verified:
+  `npm run test:db` 52/52 in 5 files against the local Postgres, including 8 new
+  boundary tests (an applicant cannot approve themselves, read another request, or
+  call the function; a non-admin is refused with 42501; approval creates one business
+  and one owner and is idempotent; a rejected request cannot be approved).
+  `npm run test` 159/159 in 27 files, including the new schema and metadata tests.
+  `npm run check` exit 0 with the same 2 pre-existing warnings in
+  `src/lib/permissions.ts`, `npm run build` exit 0, `npm run secrets:check` ok.
+  **Not verified:** no confirmation email was opened, so the inbox round trip, a real
+  registration against the hosted project, and `/awaiting-approval` for a real
+  unapproved account were not exercised; `0008` is applied locally only and **must be
+  run hosted before the next deployment**; the five files' format was fixed with
+  Prettier before the gate run.
+
+- **2026-11-24 — Sign-in plan was superseded by registration.** The earlier plan and
+  its three prototypes were removed: the request was registration, not sign-in. The
+  password-reset requirement it covered is still open and is recorded in
+  `docs/plans/registration-and-admin.md` §1; `/auth/confirm` already accepts a
+  recovery token.
+
+- **2026-11-24 — Sign-in plan and three prototypes (no production code touched).**
+  `docs/plans/sign-in.md` records what the sign-in screen already does against the
+  architecture's auth requirements, the nine gaps with their file evidence
+  (password reset is the only required one that is missing), the scope, four
+  phases with acceptance criteria, the rules the work must not break, and the four
+  decisions that block it. Three interactive directions are in
+  `local/prototypes/sign-in/` (`index.html`, Directions A–C) with the notices,
+  error, pending and reset states and the demo account `owner@cafe.test`.
+  Two findings are worth carrying: `src/proxy.ts` allows only `/sign-in` while
+  signed out, so a reset route added without an allowlist entry bounces back to
+  sign-in; and the recovery exchange needs `token_hash` plus a Recovery email
+  template change in the Supabase dashboard, which is an owner action. The
+  prototypes were not reviewed by anyone yet and the reset flow in them is a
+  screen sketch, not a working flow. No source changed, so the gates are
+  unaffected; they were re-run with this documentation in place.
+
 - **2026-11-24 — The phone's detail sheet slides out the way the More sheet does.**
   Closing a row used to remove the panel from the grid in the frame it happened,
   so the sheet rose on open and vanished on close. `PanelGrid` now keeps the panel
