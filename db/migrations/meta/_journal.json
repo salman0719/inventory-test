@@ -71,6 +71,13 @@
       "when": 1795497600000,
       "tag": "0009_admin_panel",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795497700000,
+      "tag": "0010_admin_lists",
+      "breakpoints": true
     }
   ]
 }

@@ -5,28 +5,28 @@ implemented and committed (`db32b9a`), and `0008` is applied to hosted Supabase.
 registration has been walked end to end on the stage (see
 `docs/implementation-status.md`); the emailed link still returns to the Site URL
 instead of `/auth/confirm`, which stays open in `docs/known-limitations.md`. The first
-platform admin exists, so approval from the application is possible. Phase 2 is built
-(`0009_admin_panel.sql` plus `/admin`), but its migration and build are local only — the
-stage still has no panel until `npm run db:migrate:hosted` and a deploy ship. The
-admin panel exists as a
+platform admin exists, so approval from the application is possible. Phases 2 and 3 are
+built (`0009` and `0010` plus `/admin`), but both migrations and the build are local
+only — the stage still has no panel until `npm run db:migrate:hosted` and a deploy ship.
+The admin panel exists as a
 prototype only: `local/prototypes/registration/registration.html` (untracked, one
 self-contained file so the preview can serve it). This plan replaces the earlier
 sign-in plan, which covered a different slice.
 
 ## 1. Where the product is, against the architecture's auth list
 
-| Requirement (`docs/technical-architecture.md` §Authentication) | State                                   | Where                                                             |
-| -------------------------------------------------------------- | --------------------------------------- | ----------------------------------------------------------------- |
-| Email/password sign-in                                         | Built                                   | `src/app/(auth)/sign-in/actions.ts`                               |
-| Logout                                                         | Built                                   | `src/app/(app)/actions.ts` (`signOut`)                            |
-| Password reset                                                 | **Missing**                             | no forgot/reset routes; `/auth/confirm` already accepts the token |
-| Persistent sessions                                            | Built                                   | `@supabase/ssr` cookies, refreshed in `src/proxy.ts`              |
-| Protected application routes                                   | Built                                   | `src/proxy.ts`                                                    |
-| User-to-business membership                                    | Built                                   | `src/lib/businesses.ts`, RLS                                      |
-| Business selector                                              | Built                                   | `src/lib/active-business.ts` (`pickBusiness`)                     |
-| **Self-service registration**                                  | **Built this slice**                    | `/register`, `/auth/confirm`, `src/lib/signup.ts`                 |
-| **Approval before a business exists**                          | **Built this slice**                    | `signup_requests`, `(app)/layout.tsx`, `/awaiting-approval`       |
-| **Admin review and the panel**                                 | **Approval functions built; panel not** | `private.approve_signup_request`, prototype                       |
+| Requirement (`docs/technical-architecture.md` §Authentication) | State                           | Where                                                             |
+| -------------------------------------------------------------- | ------------------------------- | ----------------------------------------------------------------- |
+| Email/password sign-in                                         | Built                           | `src/app/(auth)/sign-in/actions.ts`                               |
+| Logout                                                         | Built                           | `src/app/(app)/actions.ts` (`signOut`)                            |
+| Password reset                                                 | **Missing**                     | no forgot/reset routes; `/auth/confirm` already accepts the token |
+| Persistent sessions                                            | Built                           | `@supabase/ssr` cookies, refreshed in `src/proxy.ts`              |
+| Protected application routes                                   | Built                           | `src/proxy.ts`                                                    |
+| User-to-business membership                                    | Built                           | `src/lib/businesses.ts`, RLS                                      |
+| Business selector                                              | Built                           | `src/lib/active-business.ts` (`pickBusiness`)                     |
+| **Self-service registration**                                  | **Built this slice**            | `/register`, `/auth/confirm`, `src/lib/signup.ts`                 |
+| **Approval before a business exists**                          | **Built this slice**            | `signup_requests`, `(app)/layout.tsx`, `/awaiting-approval`       |
+| **Admin review and the panel**                                 | **Built locally, not deployed** | `0008`–`0010`, `/admin`, `src/lib/admin.ts`                       |
 
 ## 2. Registration, as built
 
@@ -158,7 +158,11 @@ Phases:
   the panel calls the same function the SQL path does, so it produces the same
   business and membership, but the button itself has not been clicked in a browser yet
   (`docs/known-limitations.md`).
-- **Phase 3:** accounts and businesses lists, read-only.
+- **Phase 3 — built locally 2026-11-24, not deployed.** `/admin/accounts` (email,
+  confirmed, joined, business, role, registration status) and `/admin/businesses`
+  (active products, open orders, members, owner) read `private.list_accounts` and
+  `private.list_businesses`. The business projection is counts only, and a test pins
+  the returned column list so no catalogue, price or ledger column can creep in.
 - **Phase 4:** notifications — an email to the admin when a request arrives, and one
   to the applicant when it is decided. This needs a mail provider (a spend decision,
   see §7 D2).

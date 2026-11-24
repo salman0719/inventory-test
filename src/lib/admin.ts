@@ -44,6 +44,28 @@ export type AdminOverview = {
   recent: RecentDecision[];
 };
 
+export type AccountRow = {
+  userId: string;
+  email: string;
+  emailConfirmed: boolean;
+  createdAt: Date;
+  businessId: string | null;
+  businessName: string | null;
+  role: string | null;
+  registrationStatus: RegistrationStatus | null;
+};
+
+export type BusinessSummary = {
+  id: string;
+  name: string;
+  businessType: BusinessType;
+  createdAt: Date;
+  products: number;
+  openOrders: number;
+  members: number;
+  ownerEmail: string | null;
+};
+
 type RegistrationRow = {
   id: string;
   status: string;
@@ -129,6 +151,74 @@ export function waitingLabel(createdAt: Date): string {
   const days = Math.floor((Date.now() - createdAt.getTime()) / 86_400_000);
   if (days <= 0) return "today";
   return days === 1 ? "1 day" : `${days} days`;
+}
+
+type AccountDbRow = {
+  user_id: string;
+  email: string;
+  email_confirmed: boolean;
+  created_at: Date;
+  business_id: string | null;
+  business_name: string | null;
+  role: string | null;
+  registration_status: string | null;
+};
+
+type BusinessDbRow = {
+  id: string;
+  name: string;
+  business_type: string;
+  created_at: Date;
+  products: number;
+  open_orders: number;
+  members: number;
+  owner_email: string | null;
+};
+
+/** Every account with the business it belongs to, or nulls when it has none. */
+export async function listAccounts(
+  userId: string,
+  search: string,
+): Promise<AccountRow[]> {
+  return withTenant(userId, async (client) => {
+    const result = await client.query<AccountDbRow>(
+      "select * from private.list_accounts($1)",
+      [search === "" ? null : search],
+    );
+    return result.rows.map((row) => ({
+      userId: row.user_id,
+      email: row.email,
+      emailConfirmed: row.email_confirmed,
+      createdAt: row.created_at,
+      businessId: row.business_id,
+      businessName: row.business_name,
+      role: row.role,
+      registrationStatus: row.registration_status as RegistrationStatus | null,
+    }));
+  });
+}
+
+/** Every business as counts and its owner, never its catalogue. */
+export async function listBusinesses(
+  userId: string,
+  search: string,
+): Promise<BusinessSummary[]> {
+  return withTenant(userId, async (client) => {
+    const result = await client.query<BusinessDbRow>(
+      "select * from private.list_businesses($1)",
+      [search === "" ? null : search],
+    );
+    return result.rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      businessType: row.business_type as BusinessType,
+      createdAt: row.created_at,
+      products: row.products,
+      openOrders: row.open_orders,
+      members: row.members,
+      ownerEmail: row.owner_email,
+    }));
+  });
 }
 
 export async function getRegistration(

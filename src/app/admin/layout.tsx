@@ -50,6 +50,18 @@ export default async function AdminLayout({
             >
               Registrations
             </Link>
+            <Link
+              href="/admin/accounts"
+              className="min-h-[32px] content-center text-ink-muted hover:text-accent"
+            >
+              Accounts
+            </Link>
+            <Link
+              href="/admin/businesses"
+              className="min-h-[32px] content-center text-ink-muted hover:text-accent"
+            >
+              Businesses
+            </Link>
           </nav>
 
           <div className="ml-auto flex items-center gap-2">

@@ -59,8 +59,14 @@ export default async function AdminOverviewPage() {
           value={overview.newThisWeek}
           note={`${overview.decidedThisWeek} decided`}
         />
-        <Tile label="Businesses" value={overview.businesses} note="open" />
         <Tile
+          href="/admin/businesses"
+          label="Businesses"
+          value={overview.businesses}
+          note="open"
+        />
+        <Tile
+          href="/admin/accounts"
           label="Accounts"
           value={overview.accounts}
           note={

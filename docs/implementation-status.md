@@ -133,6 +133,30 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-24 — Admin panel Phase 3 built: accounts and businesses, read-only.**
+  Migration `0010_admin_lists.sql` adds two more admin-guarded reads.
+  `list_accounts(search)` returns every `auth.users` row with its membership — one row
+  per business, null business when there is none — plus the registration status;
+  `list_businesses(search)` returns each business with active product count, open
+  purchase-order count, member count and owner email. Both are SECURITY DEFINER with
+  the `0008` guard and granted to `authenticated` only; neither has a write path.
+  **Screens:** `/admin/accounts` and `/admin/businesses`, each with a search in the URL
+  parsed by `parseAdminSearch`, and links from the overview tiles. The businesses
+  screen is deliberately counts-only and has no link into a tenant's catalogue.
+  The local auth shim gained `created_at`, because `list_accounts` orders by it and
+  hosted Supabase has the column while the shim did not.
+  **Gates:** `npm run check` 0 errors (2 pre-existing warnings), `npm run test` 182
+  passed in 29 files, `npm run test:db` 65 passed in 6 files, `npm run build` exit 0,
+  `npm run secrets:check` ok; `npm run db:migrate` applied 1 migration, 11 tracked.
+  **Verified:** `tests/db/admin-panel.test.ts` now also proves the account row carries
+  its business, role and registration status, an account with no business comes back
+  with nulls, the business counts ignore an archived product (2 of 3), and the
+  returned column list is exactly the eight allowed ones — no price, stock or
+  catalogue column. Both pages were read as server-rendered HTML with the local demo
+  data (“Demo Cafe”, the owner account, the counts) and no error boundary. Clicking
+  through them is still unverified for the same browser reason as Phase 2.
+  **Not on hosted:** `0010` is local only, like `0009`.
+
 - **2026-11-24 — Admin panel Phase 2 built: overview, queue and decisions.**
   Migration `0009_admin_panel.sql` adds the panel's reads, each a SECURITY DEFINER
   function with the same guard as `0008` (the owner role is the manual path, any

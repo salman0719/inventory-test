@@ -36,10 +36,13 @@ BEGIN
     EXECUTE format('CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS %L', uid_body);
   END IF;
 
-  -- Hosted Supabase records this on auth.users; the admin overview counts accounts
-  -- that registered and never confirmed, which is the biggest silent drop-off.
+  -- Hosted Supabase records both of these on auth.users. The admin overview counts
+  -- accounts that registered and never confirmed, and the accounts list shows when
+  -- an account joined, so the shim carries the same two columns.
   ALTER TABLE auth.users
     ADD COLUMN IF NOT EXISTS email_confirmed_at timestamp with time zone;
+  ALTER TABLE auth.users
+    ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now() NOT NULL;
 END
 $$;
 

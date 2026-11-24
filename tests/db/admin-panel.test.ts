@@ -25,6 +25,8 @@ const ids = {
 
 const requests: Record<string, string> = {};
 
+let businessId = "";
+
 async function asUser<T>(
   userId: string | null,
   fn: (client: PoolClient) => Promise<T>,
@@ -120,9 +122,39 @@ beforeAll(async () => {
     );
     requests[key] = result.rows[0].id;
   }
+
+  // A business with two active products and one archived, so the counts have
+  // something to count: the archived row must not appear.
+  const business = await pool.query<{ id: string }>(
+    "insert into businesses (name, business_type) values ('Panel Summary Cafe', 'cafe') returning id",
+  );
+  businessId = business.rows[0].id;
+  await pool.query(
+    "insert into business_members (business_id, user_id, role) values ($1, $2, 'owner')",
+    [businessId, ids.older],
+  );
+  await pool.query(
+    `insert into products (business_id, name, sku)
+     values ($1, 'Espresso Beans', 'PB-1'), ($1, 'Oat Milk', 'PB-2'),
+            ($1, 'Retired Syrup', 'PB-3')`,
+    [businessId],
+  );
+  await pool.query(
+    "update products set is_archived = true where business_id = $1 and sku = 'PB-3'",
+    [businessId],
+  );
 });
 
 afterAll(async () => {
+  if (businessId !== "") {
+    await pool.query("delete from products where business_id = $1", [
+      businessId,
+    ]);
+    await pool.query("delete from business_members where business_id = $1", [
+      businessId,
+    ]);
+    await pool.query("delete from businesses where id = $1", [businessId]);
+  }
   await pool.query(
     "delete from signup_requests where user_id = any($1::uuid[])",
     [[ids.older, ids.newer, ids.rejected]],
@@ -272,6 +304,102 @@ describe("private.admin_overview", () => {
       expect(error.message).toBe(
         "Only a platform admin can read the admin overview.",
       );
+    });
+  });
+});
+
+describe("private.list_accounts", () => {
+  it("shows an account with its business, role and registration", async () => {
+    const rows = await asUser(ids.admin, async (client) => {
+      const result = await client.query<{
+        email: string;
+        email_confirmed: boolean;
+        business_id: string;
+        business_name: string;
+        role: string;
+        registration_status: string;
+      }>("select * from private.list_accounts($1)", ["panel-older@"]);
+      return result.rows;
+    });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      business_id: businessId,
+      business_name: "Panel Summary Cafe",
+      role: "owner",
+      registration_status: "pending",
+      email_confirmed: false,
+    });
+  });
+
+  it("includes an account that never got a business", async () => {
+    const rows = await asUser(ids.admin, async (client) => {
+      const result = await client.query<{ business_name: string | null }>(
+        "select * from private.list_accounts($1)",
+        ["panel-stranger@"],
+      );
+      return result.rows;
+    });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].business_name).toBeNull();
+  });
+
+  it("refuses a signed-in account that is not an admin", async () => {
+    await asUser(ids.reviewer, async (client) => {
+      const error = await refusal(
+        client,
+        "select * from private.list_accounts($1)",
+        ["panel-older@"],
+      );
+      expect(error.code).toBe("42501");
+      expect(error.message).toBe("Only a platform admin can read accounts.");
+    });
+  });
+});
+
+describe("private.list_businesses", () => {
+  it("counts active products and members, and nothing else", async () => {
+    const rows = await asUser(ids.admin, async (client) => {
+      const result = await client.query<Record<string, unknown>>(
+        "select * from private.list_businesses($1)",
+        ["Panel Summary"],
+      );
+      return result.rows;
+    });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      id: businessId,
+      name: "Panel Summary Cafe",
+      products: 2,
+      open_orders: 0,
+      members: 1,
+      owner_email: "panel-older@example.invalid",
+    });
+
+    // The projection is the boundary: no price, stock or catalogue column may appear.
+    expect(Object.keys(rows[0]).sort()).toEqual([
+      "business_type",
+      "created_at",
+      "id",
+      "members",
+      "name",
+      "open_orders",
+      "owner_email",
+      "products",
+    ]);
+  });
+
+  it("refuses a signed-in account that is not an admin", async () => {
+    await asUser(ids.stranger, async (client) => {
+      const error = await refusal(
+        client,
+        "select * from private.list_businesses()",
+        [],
+      );
+      expect(error.code).toBe("42501");
+      expect(error.message).toBe("Only a platform admin can read businesses.");
     });
   });
 });

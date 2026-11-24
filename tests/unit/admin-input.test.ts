@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   decisionErrorCode,
   decisionSchema,
+  parseAdminSearch,
   parseRegistrationFilter,
 } from "@/lib/admin-input";
 
@@ -37,6 +38,18 @@ describe("parseRegistrationFilter", () => {
       "rae@example",
     );
     expect(parseRegistrationFilter({ q: "a".repeat(81) }).search).toBe("");
+  });
+});
+
+describe("parseAdminSearch", () => {
+  it("trims a search and drops one that is too long", () => {
+    expect(parseAdminSearch("  Panel Cafe  ")).toBe("Panel Cafe");
+    expect(parseAdminSearch("a".repeat(81))).toBe("");
+  });
+
+  it("treats a missing or repeated parameter as no search", () => {
+    expect(parseAdminSearch(undefined)).toBe("");
+    expect(parseAdminSearch(["one", "two"])).toBe("");
   });
 });
 

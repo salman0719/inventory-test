@@ -46,6 +46,16 @@ export function parseRegistrationFilter(params: {
   });
 }
 
+/**
+ * A free-text search from a query string. Bounded before it reaches SQL, and an
+ * over-long or repeated value becomes an empty search rather than an error page.
+ */
+export const adminSearchSchema = z.string().trim().max(80).catch("");
+
+export function parseAdminSearch(value: string | string[] | undefined): string {
+  return adminSearchSchema.parse(typeof value === "string" ? value : "");
+}
+
 export const decisionSchema = z.object({
   requestId: z.uuid("That registration is no longer available."),
   note: z
