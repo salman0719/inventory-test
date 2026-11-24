@@ -159,11 +159,17 @@ Add date, task, verification method, and result.
   `alreadyConfirmed`; an account with no answers, or a partial set, is confirmed with
   nothing filed; a rejected decision keeps its status and note; invalid answers, an
   unknown id, a non-admin and no session are all refused and change nothing.
-  **Not verified in a browser:** the button was not clicked. The local browser session
-  expired during this work and the documented demo password (`owner@cafe.test` /
-  `demo1234`) is rejected by the hosted auth this local app points at, so the panel
-  could not be re-entered. The page typechecks and builds; its rendered state is
-  unverified.
+  **Verified in a browser (local, 1280px, signed in as `owner@cafe.test`):** a seeded
+  unconfirmed account (`panel-confirm-a5ae284a@example.invalid`) appeared with
+  “address not confirmed · No business · registration never filed” and a **Confirm
+  address** button; clicking it redirected to `?done=confirmed&filed=1`, showed
+  “Address confirmed and the registration filed. It is waiting in Registrations.”,
+  removed the warning and the button, and changed the row's registration to
+  “waiting”. `/admin/registrations` then read “1 registration · 1 waiting” with
+  “Confirm Walk Cafe — Casey Confirm · panel-confirm-…@example.invalid”. The seeded
+  account and its request were deleted afterwards, so the local queue is empty again.
+  An earlier attempt failed because the documented demo password was stale; the local
+  demo password is `Owca1234` (the sandbox README is corrected).
 
 - **2026-11-24 — The panel gained a way out, and its counterpart in the header now
   matches its neighbours.** The **Admin** link added with the reviewer redirect used a
