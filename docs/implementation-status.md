@@ -133,6 +133,27 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-24 — The panel gained a way out, and its counterpart in the header now
+  matches its neighbours.** The **Admin** link added with the reviewer redirect used a
+  muted pill that did not measure like the **Sign out** button beside it, so it read as
+  a stray disabled control. It now carries the same box — `min-h-[36px]`, 10px padding,
+  0.8px `line` border, 4px radius, 12px/500 text, accent hover — and differs only by the
+  `hidden min-[600px]:inline-flex` pair that makes it desktop-only. In the other
+  direction, `/admin`'s header shows **← Business app** (`/`) when the reviewer also
+  belongs to a business, read from the same membership list the app's gate uses; it is
+  absent for a reviewer who owns none, where it would only bounce.
+  **Verified:** on `/admin` at 1280px the header reads “Stk ADMIN Overview Registrations
+  Accounts Businesses ← Business app owner@cafe.test Sign out”, and the link measures
+  82×32 with `href="/"`. For the app header the served HTML was compared element by
+  element: the Admin link's computed box (36px, 10px/10px, 0.8px, 4px, 12px/500) is
+  identical to Sign out's, and the right-hand cluster is `Admin · email · Sign out`. The
+  painted header is still unverified in this browser because the shell's suspended
+  content stays in a `[hidden]` streaming container, the same stall as earlier phases.
+  **Gates:** `npm run check` 0 errors (2 pre-existing warnings), `npm run test` 191
+  passed in 30 files, `npm run build` exit 0; `npm run format:check` re-run after the
+  documentation edit. `npm run test:db` and `npm run secrets:check` were not re-run: no
+  SQL, dependency or secret changed.
+
 - **2026-11-24 — A reviewer is routed to the queue instead of the wait screen.** The
   app's "requires a business" gate could not tell a reviewer from an applicant: the
   one account that can approve registrations owns no business by design, so signing in

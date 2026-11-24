@@ -78,9 +78,12 @@ async function UserMenu() {
   return (
     <div className="flex items-center gap-2">
       {admin ? (
+        // Deliberately the same box as Sign out: same height, border, padding,
+        // text size and hover. A quieter style read as a disabled control next to
+        // it, and anything with different metrics broke the header's baseline.
         <Link
           href="/admin"
-          className="hidden min-h-[36px] content-center rounded border border-line bg-surface px-2.5 text-[12px] font-medium text-ink-muted hover:border-accent hover:text-accent min-[600px]:inline-flex"
+          className="hidden min-h-[36px] items-center rounded border border-line bg-surface px-2.5 text-[12px] font-medium hover:border-accent hover:text-accent min-[600px]:inline-flex"
         >
           Admin
         </Link>

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { signOut } from "@/app/(app)/actions";
 import { isPlatformAdmin } from "@/lib/admin";
+import { listBusinesses } from "@/lib/businesses";
 import { getSessionUser } from "@/lib/session";
 
 /**
@@ -22,6 +23,10 @@ export default async function AdminLayout({
   const user = await getSessionUser();
   if (!user) redirect("/sign-in");
   if (!(await isPlatformAdmin(user.id))) notFound();
+
+  // A reviewer usually owns no business, so the way back is shown only when there is
+  // something to go back to: the same membership list the app's own gate reads.
+  const hasBusiness = (await listBusinesses(user.id)).length > 0;
 
   return (
     <div className="min-h-dvh bg-surface text-ink">
@@ -65,6 +70,14 @@ export default async function AdminLayout({
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
+            {hasBusiness ? (
+              <Link
+                href="/"
+                className="inline-flex min-h-[32px] items-center text-[12px] text-ink-muted hover:text-accent"
+              >
+                ← Business app
+              </Link>
+            ) : null}
             <span className="hidden max-w-[220px] truncate text-[11px] text-ink-muted min-[600px]:inline">
               {user.email}
             </span>
