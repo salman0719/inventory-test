@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   approvalSchema,
+  confirmAccountSchema,
   decisionErrorCode,
   decisionSchema,
   parseAdminSearch,
@@ -119,6 +120,15 @@ describe("decisionErrorCode", () => {
     ).toBe("missing");
   });
 
+  it("recognises unusable registration answers", () => {
+    expect(
+      decisionErrorCode({
+        code: "22023",
+        message: "The registration answers on that account are not valid.",
+      }),
+    ).toBe("answers");
+  });
+
   it("recognises a refused role", () => {
     expect(
       decisionErrorCode({
@@ -186,6 +196,23 @@ describe("approvalSchema", () => {
     expect(
       approvalSchema.safeParse({ requestId: id, businessId: "cafe" }).success,
     ).toBe(false);
+  });
+});
+
+describe("confirmAccountSchema", () => {
+  const id = "2cad023d-b710-4920-889f-c0d812ca0597";
+
+  it("accepts an account id", () => {
+    expect(confirmAccountSchema.safeParse({ accountId: id }).success).toBe(
+      true,
+    );
+  });
+
+  it("refuses anything that is not a uuid", () => {
+    expect(confirmAccountSchema.safeParse({ accountId: "rae" }).success).toBe(
+      false,
+    );
+    expect(confirmAccountSchema.safeParse({}).success).toBe(false);
   });
 });
 

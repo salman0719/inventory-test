@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import type { ReactNode } from "react";
+import { confirmAccount } from "@/app/admin/actions";
 import { formatDay, listAccounts } from "@/lib/admin";
 import { parseAdminSearch } from "@/lib/admin-input";
 import { getSessionUser } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Accounts — Admin — Stk" };
-
 type SearchParams = Record<string, string | string[] | undefined>;
 
 const STATUS_LABEL: Record<string, string> = {
@@ -14,10 +15,28 @@ const STATUS_LABEL: Record<string, string> = {
   rejected: "rejected",
 };
 
+const ERROR_COPY: Record<string, string> = {
+  "not-admin": "That action needs a platform admin account.",
+  missing: "That account no longer exists.",
+  answers:
+    "The registration answers stored on that account are not valid. Nothing was changed.",
+  invalid: "The request could not be read. Reload and try again.",
+  failed: "The confirmation did not save. Try again.",
+};
+
+function single(params: SearchParams, key: string): string {
+  const value = params[key];
+  return typeof value === "string" ? value : "";
+}
+
 /**
  * Everyone with a sign-in, including the accounts that never registered or never
- * confirmed. Read-only: this screen explains who exists and what they belong to, it
- * does not change anything. An account with two businesses appears twice, once per
+ * confirmed, and the one way this screen writes: vouching for an address.
+ *
+ * "Confirmed" here means a reviewer said so, not that the inbox was proved — the email
+ * link is still the normal path. Confirming also files the registration from the
+ * sign-up metadata, because approval needs a request row and nothing else writes one
+ * while confirmation is on. An account with two businesses appears twice, once per
  * membership, which is the honest shape of the data.
  */
 export default async function AccountsPage({
@@ -27,6 +46,9 @@ export default async function AccountsPage({
 }) {
   const params = await searchParams;
   const search = parseAdminSearch(params.q);
+  const done = single(params, "done");
+  const filed = single(params, "filed") === "1";
+  const error = single(params, "error");
 
   const user = await getSessionUser();
   if (!user) return null;
@@ -42,6 +64,23 @@ export default async function AccountsPage({
           {search ? " match this search" : ""}
         </p>
       </header>
+
+      <p className="max-w-[80ch] text-[11.5px] text-ink-faint">
+        An unconfirmed account cannot sign in. Confirming an address vouches for
+        it and files the registration the sign-up form supplied, which is what
+        puts it in the queue. It does not approve anything.
+      </p>
+
+      {done === "confirmed" ? (
+        <Banner tone={filed ? "success" : "warning"}>
+          {filed
+            ? "Address confirmed and the registration filed. It is waiting in Registrations."
+            : "Address confirmed. That account carried no usable registration answers, so nothing was added to the queue."}
+        </Banner>
+      ) : null}
+      {error !== "" ? (
+        <Banner tone="danger">{ERROR_COPY[error] ?? ERROR_COPY.failed}</Banner>
+      ) : null}
 
       <form
         method="get"
@@ -113,17 +152,51 @@ export default async function AccountsPage({
                 ) : (
                   <span className="text-ink-faint">No business</span>
                 )}
-                <span className="ml-auto text-ink-faint">
+                <span className="text-ink-faint">
                   registration{" "}
                   {row.registrationStatus
                     ? STATUS_LABEL[row.registrationStatus]
                     : "never filed"}
                 </span>
+                {row.emailConfirmed ? null : (
+                  <form action={confirmAccount} className="ml-auto">
+                    <input type="hidden" name="accountId" value={row.userId} />
+                    <button
+                      type="submit"
+                      className="min-h-[30px] rounded border border-line bg-surface px-2.5 text-[11.5px] font-medium hover:border-accent hover:text-accent"
+                    >
+                      Confirm address
+                    </button>
+                  </form>
+                )}
               </div>
             </li>
           ))}
         </ul>
       )}
     </div>
+  );
+}
+
+function Banner({
+  tone,
+  children,
+}: {
+  tone: "success" | "warning" | "danger";
+  children: ReactNode;
+}) {
+  const className =
+    tone === "success"
+      ? "border-success-soft bg-success-soft text-success"
+      : tone === "warning"
+        ? "border-warning-soft bg-warning-soft text-warning"
+        : "border-danger-soft bg-danger-soft text-danger";
+  return (
+    <p
+      role="status"
+      className={`rounded border px-3 py-2 text-[12px] ${className}`}
+    >
+      {children}
+    </p>
   );
 }

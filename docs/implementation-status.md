@@ -133,6 +133,38 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-24 — A reviewer can confirm an address, which is the step that was
+  missing for a stalled registration.** `0012_account_confirmation.sql` adds
+  `private.confirm_account(user_id)`: SECURITY DEFINER behind the usual
+  `is_platform_admin()` guard, it sets `auth.users.email_confirmed_at` and files the
+  registration from the sign-up metadata in the same transaction, because approval
+  needs a request row and nothing else writes one while confirmation is on. The
+  metadata is validated in SQL (business type, name length), an existing decision is
+  left alone by `on conflict (user_id) do nothing`, and unusable answers raise `22023`
+  instead of confirming silently. The dev auth shim gained
+  `raw_user_meta_data jsonb` to match hosted Supabase.
+  **Screens:** `/admin/accounts` shows a **Confirm address** button on unconfirmed
+  rows (it is no longer read-only), with a sentence explaining that confirming files
+  the registration and does not approve it, and a banner distinguishing “filed” from
+  “no usable answers”. Failures map to the existing short codes plus the new `answers`.
+  **Gates:** `npm run check` 0 errors (2 pre-existing warnings), `npm run test` 194
+  passed in 30 files, `npm run test:db` 89 passed in 8 files
+  (`tests/db/confirm-account.test.ts` adds 10), `npm run build` exit 0;
+  `npm run db:migrate` applied 1 migration, 13 tracked. `secrets:check` (last run
+  green, `0011`) was not re-run: no dependency or secret changed.
+  **Verified at the database boundary, as `authenticated`:** the address becomes
+  confirmed while the application role cannot write `auth.users`; the filed row is
+  `pending`, carries the email lowercased and the three answers, and appears in
+  `list_signup_requests('pending', …)`; a repeat adds no second row and reports
+  `alreadyConfirmed`; an account with no answers, or a partial set, is confirmed with
+  nothing filed; a rejected decision keeps its status and note; invalid answers, an
+  unknown id, a non-admin and no session are all refused and change nothing.
+  **Not verified in a browser:** the button was not clicked. The local browser session
+  expired during this work and the documented demo password (`owner@cafe.test` /
+  `demo1234`) is rejected by the hosted auth this local app points at, so the panel
+  could not be re-entered. The page typechecks and builds; its rendered state is
+  unverified.
+
 - **2026-11-24 — The panel gained a way out, and its counterpart in the header now
   matches its neighbours.** The **Admin** link added with the reviewer redirect used a
   muted pill that did not measure like the **Sign out** button beside it, so it read as

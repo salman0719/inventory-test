@@ -85,6 +85,13 @@
       "when": 1795498000000,
       "tag": "0011_approval_attach_business",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1795498100000,
+      "tag": "0012_account_confirmation",
+      "breakpoints": true
     }
   ]
 }

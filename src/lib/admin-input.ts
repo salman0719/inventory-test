@@ -88,6 +88,11 @@ export const approvalSchema = z
     message: "Attach a colleague as staff or viewer.",
   });
 
+/** What the accounts screen posts when a reviewer vouches for an address. */
+export const confirmAccountSchema = z.object({
+  accountId: z.uuid("That account is no longer available."),
+});
+
 /** The role label carried back after an attach, for the confirmation banner. */
 export function parseAttachRole(value: string | string[] | undefined) {
   return attachRoleSchema.catch("staff").parse(value);
@@ -102,6 +107,7 @@ export type DecisionError =
   | "missing"
   | "no-business"
   | "role"
+  | "answers"
   | "rejected"
   | "approved"
   | "invalid"
@@ -122,6 +128,7 @@ export function decisionErrorCode(error: unknown): DecisionError {
     if (/was rejected/i.test(text)) return "rejected";
     if (/already approved/i.test(text)) return "approved";
     if (/ownership|role only applies/i.test(text)) return "role";
+    if (/registration answers/i.test(text)) return "answers";
   }
   return "failed";
 }

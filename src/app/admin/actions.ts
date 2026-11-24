@@ -5,6 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { isPlatformAdmin } from "@/lib/admin";
 import {
   approvalSchema,
+  confirmAccountSchema,
   decisionErrorCode,
   decisionSchema,
 } from "@/lib/admin-input";
@@ -73,6 +74,45 @@ export async function approveRegistration(formData: FormData): Promise<void> {
       ? `${target}?done=approved&as=${role}`
       : `${target}?done=approved`,
   );
+}
+
+/**
+ * Vouch for an address the applicant never proved.
+ *
+ * `private.confirm_account` sets `auth.users.email_confirmed_at` and, in the same
+ * transaction, files the registration the sign-up metadata already carries. Filing is
+ * what makes the account approvable: approval needs a request row, and with
+ * confirmation on nothing else writes one. An account with no answers is confirmed
+ * and reports that the queue did not change.
+ */
+export async function confirmAccount(formData: FormData): Promise<void> {
+  const user = await requireAdmin();
+  const parsed = confirmAccountSchema.safeParse({
+    accountId: formData.get("accountId"),
+  });
+  if (!parsed.success) redirect("/admin/accounts?error=invalid");
+
+  let failure: string | null = null;
+  let filed = false;
+  try {
+    filed = await withTenant(user.id, async (client) => {
+      const result = await client.query<{
+        confirmed: { requestFiled: boolean } | null;
+      }>("select private.confirm_account($1) as confirmed", [
+        parsed.data.accountId,
+      ]);
+      return result.rows[0]?.confirmed?.requestFiled === true;
+    });
+  } catch (error) {
+    failure = decisionErrorCode(error);
+  }
+
+  if (failure) redirect(`/admin/accounts?error=${failure}`);
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/accounts");
+  revalidatePath("/admin/registrations");
+  redirect(`/admin/accounts?done=confirmed${filed ? "&filed=1" : ""}`);
 }
 
 export async function rejectRegistration(formData: FormData): Promise<void> {

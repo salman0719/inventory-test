@@ -36,13 +36,16 @@ BEGIN
     EXECUTE format('CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS %L', uid_body);
   END IF;
 
-  -- Hosted Supabase records both of these on auth.users. The admin overview counts
-  -- accounts that registered and never confirmed, and the accounts list shows when
-  -- an account joined, so the shim carries the same two columns.
+  -- Hosted Supabase records these on auth.users. The admin overview counts accounts
+  -- that registered and never confirmed, the accounts list shows when an account
+  -- joined, and the registration answers an approval files live in the user's
+  -- metadata, so the shim carries the same columns.
   ALTER TABLE auth.users
     ADD COLUMN IF NOT EXISTS email_confirmed_at timestamp with time zone;
   ALTER TABLE auth.users
     ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now() NOT NULL;
+  ALTER TABLE auth.users
+    ADD COLUMN IF NOT EXISTS raw_user_meta_data jsonb DEFAULT '{}'::jsonb NOT NULL;
 END
 $$;
 

@@ -192,6 +192,14 @@ Phases:
   by `tests/db/approval-attach.test.ts` (14 cases). Attaching never merges or moves any
   existing data, and nothing records a later removal: member management is still
   unbuilt.
+- **Phase 3.6 — confirming an address, built locally 2026-11-24, not deployed.**
+  `0012` adds `private.confirm_account(user_id)`, and `/admin/accounts` gains the one
+  write that screen has: **Confirm address** on an unconfirmed row. It sets
+  `email_confirmed_at` and files the registration from the sign-up metadata in one
+  transaction, so the account is approvable rather than merely able to sign in; it
+  does not approve anything. This is the manual answer to a lost confirmation email
+  while the mailer is capped (D2); the link stays the normal path
+  (`docs/decisions/0014-admin-confirmation.md`).
 - **Phase 4:** notifications — an email to the admin when a request arrives, and one
   to the applicant when it is decided. This needs a mail provider (a spend decision,
   see §7 D2).
@@ -256,6 +264,11 @@ with a real inbox.
   which is why the attachment is a real `business_members` row rather than a flag.
   Built in `0011` and `docs/decisions/0013-approval-attach-or-create.md`; what is still
   unbuilt is managing members afterwards (invite, change role, remove).
+- **D6 — What an unconfirmed account can do — answered 2026-11-24.** A reviewer can
+  vouch for an address from Accounts, which confirms it and files the registration the
+  sign-up form supplied; approval remains a separate decision. "Confirmed" therefore
+  means "a reviewer vouched", not "the inbox was proved", and resending the link waits
+  for a mail provider (D2).
 - **D5 — Rejection follow-up.** A rejected applicant can read the note and sign out,
   but cannot re-apply from the UI (their row is unique per account). Is one round of
   email correspondence enough for the pre-MVP?
