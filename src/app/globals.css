@@ -68,9 +68,11 @@
 }
 
 /*
- * The phone's detail panel rises from the bottom edge on mount. Closing removes the
- * panel from the grid rather than hiding it, so there is no exit to animate; the
- * keyframes are scoped below 900px so the desktop column never moves.
+ * The phone's detail panel rises from the bottom edge on mount. Everything else can
+ * arrive settled; a sheet that appears already at rest does not read as a sheet.
+ * The exit is the `translate` in `detail-panel.tsx`, not a keyframe, because the
+ * grid has to keep the panel mounted for it. Both are scoped below 900px so the
+ * desktop column never moves, and both are 220ms on the More sheet's curve.
  */
 @keyframes sheet-up {
   from {

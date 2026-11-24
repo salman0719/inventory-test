@@ -127,6 +127,21 @@ function sheet(): HTMLElement {
   return element;
 }
 
+/** jsdom does not implement `inert`; React still writes the attribute. */
+function isInert(element: Element): boolean {
+  return (
+    element.hasAttribute("inert") ||
+    (element as HTMLElement & { inert?: boolean }).inert === true
+  );
+}
+
+/** Longer than the sheet's 220ms slide, so the grid has removed it. */
+async function waitForExit() {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 260));
+  });
+}
+
 describe("the detail panel", () => {
   it("is a modal dialog over the list below 900px", async () => {
     stubCompact(true);
@@ -148,7 +163,7 @@ describe("the detail panel", () => {
     expect(scrim?.getAttribute("tabIndex")).toBe("-1");
   });
 
-  it("closes on Escape and gives focus back to the row", async () => {
+  it("slides out before it leaves, and gives focus back to the row", async () => {
     stubCompact(true);
     await render("/inventory");
     const row = container.querySelector<HTMLAnchorElement>(
@@ -160,6 +175,7 @@ describe("the detail panel", () => {
     // The same render with the row's href is what a click produces.
     await render("/inventory?product=p1");
     expect(sheet()).toBeTruthy();
+    expect(isInert(sheet())).toBe(false);
 
     await act(async () => {
       sheet().dispatchEvent(
@@ -167,9 +183,22 @@ describe("the detail panel", () => {
       );
     });
 
-    expect(container.querySelector(".panel-sheet")).toBeNull();
+    // Closed, but still mounted for the slide: out of reach and out of the
+    // accessibility tree, the same as the closed More sheet.
+    expect(sheet()).toBeTruthy();
+    expect(isInert(sheet())).toBe(true);
+    expect(sheet().getAttribute("aria-hidden")).toBe("true");
+    expect(sheet().className).toContain("translate-y-[105%]");
+    expect(
+      container
+        .querySelector('a[aria-label="Close Stock details"]')
+        ?.className.includes("opacity-0"),
+    ).toBe(true);
     expect(document.activeElement).toBe(row);
     expect(document.body.style.overflow).toBe("");
+
+    await waitForExit();
+    expect(container.querySelector(".panel-sheet")).toBeNull();
   });
 
   it("stays a plain column above 900px", async () => {
@@ -180,7 +209,21 @@ describe("the detail panel", () => {
     expect(sheet().getAttribute("aria-modal")).toBeNull();
     expect(sheet().getAttribute("tabIndex")).toBeNull();
     expect(sheet().className).toContain("min-[900px]:static");
+    expect(sheet().className).toContain("min-[900px]:transition-none");
+    // No sheet on the wide layout, so there is nothing to slide out.
+    expect(sheet().className).not.toContain("translate-y-[105%]");
     expect(container.querySelector('[role="dialog"]')).toBeNull();
     expect(document.body.style.overflow).toBe("");
+  });
+
+  it("takes the column out of the grid in the same frame above 900px", async () => {
+    stubCompact(false);
+    await render("/inventory?product=p1");
+
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>("button")?.click();
+    });
+
+    expect(container.querySelector(".panel-sheet")).toBeNull();
   });
 });

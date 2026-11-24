@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useCompact } from "./use-compact";
 
 /**
  * Panel state for a list screen, held in the URL but not in the route.
@@ -146,7 +147,18 @@ export function PanelProvider({
   );
 }
 
-/** The two-column grid: the panel appears in the second column only while open. */
+/**
+ * The two-column grid: the panel appears in the second column only while open.
+ *
+ * Below 900px `open` is not the same as `mounted`: closing removes the row from
+ * the URL, and the sheet then needs its 220ms to slide out before React may take
+ * it away. `leaving` holds it for exactly that long, which is why the More sheet
+ * keeps its overlay mounted while closed (0009) — there is nothing to animate
+ * once the element is gone. Above 900px the column has no exit, so it leaves at
+ * once and the list takes the full width in the same frame.
+ */
+const SHEET_EXIT_MS = 220;
+
 export function PanelGrid({
   panel,
   label,
@@ -159,6 +171,25 @@ export function PanelGrid({
 }) {
   const { href } = usePanels();
   const open = isPanelOpen(href);
+  const compact = useCompact();
+  const [wasOpen, setWasOpen] = useState(open);
+  const [leaving, setLeaving] = useState(false);
+
+  // Adjusting state during render is React's pattern for a prop that changed:
+  // the panel has to stay rendered in the very commit that closes it, or it is
+  // already gone before the browser can transition it.
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    setLeaving(wasOpen && !open && compact);
+  }
+
+  useEffect(() => {
+    if (!leaving) return;
+    const timer = window.setTimeout(() => setLeaving(false), SHEET_EXIT_MS);
+    return () => window.clearTimeout(timer);
+  }, [leaving]);
+
+  const mounted = open || leaving;
 
   return (
     <div
@@ -176,7 +207,7 @@ export function PanelGrid({
           {open ? `${label} opened` : ""}
         </span>
       ) : null}
-      {open ? panel : null}
+      {mounted ? panel : null}
       {children}
     </div>
   );

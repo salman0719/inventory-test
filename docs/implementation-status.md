@@ -133,6 +133,28 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-24 — The phone's detail sheet slides out the way the More sheet does.**
+  Closing a row used to remove the panel from the grid in the frame it happened,
+  so the sheet rose on open and vanished on close. `PanelGrid` now keeps the panel
+  mounted for the sheet's 220ms and removes it after that; `DetailPanel` reads
+  `open` from the same URL, so a panel on its way out renders the closed state —
+  `translate-y-[105%]` transitioned on the More sheet's `cubic-bezier(.25,.1,.25,1)`
+  with the scrim fading over 180ms — and is `inert` plus `aria-hidden` from the
+  first closed frame, so it is only on screen for the motion. Focus returns to the
+  row when the panel closes rather than when it unmounts, because an inert sheet
+  cannot hold focus. Above 900px nothing changed: the column has no exit and still
+  leaves at once. `useCompact` moved to `src/components/use-compact.ts` so the grid
+  and the panel read the same breakpoint. Verified in jsdom: the closed sheet stays
+  mounted, inert, `aria-hidden` and translated, focus is back on the `/inventory?product=p1`
+  row, the scroll lock is released, and the sheet is gone after 260ms; above 900px
+  it is gone in the frame that closes it. The built stylesheet was checked for the
+  closed `translate`, the `translate` transition property and the 220ms duration;
+  the movement was **not** sampled frame by frame in a browser, and no real-device
+  run was made. Gates: `npm run check` exit 0 (0 errors, the same 2 pre-existing
+  warnings in `src/lib/permissions.ts`), `npm run test` 153/153 in 26 files,
+  `npm run build` exit 0, and `npm run secrets:check` ok. Decision: DF5 in
+  `docs/decisions/0011-mobile-detail-panel.md`.
+
 - **2026-11-23 — The phone's detail panel is the chosen sheet.** Below 900px an
   open row is now the prototype's 86% bottom sheet with a pinned head, a
   scrolling body and pinned actions; from 900px up the panel is the same sticky

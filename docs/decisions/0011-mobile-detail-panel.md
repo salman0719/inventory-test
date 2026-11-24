@@ -52,8 +52,10 @@ filter sheet does (0010).
 Focus is captured before the sheet's own focus effect — the capture hook is
 declared first — so closing returns it to the row link that opened the panel.
 Measured at 390×844: opening puts focus inside the dialog and sets both scroll
-locks; Escape clears the row from the URL, unmounts the sheet and leaves focus on
-`/inventory?product=…`, the row that was clicked.
+locks; Escape clears the row from the URL and leaves focus on
+`/inventory?product=…`, the row that was clicked. Focus goes back as the sheet
+starts leaving, not when it is removed 220ms later (DF5): by then the sheet is
+`inert` and cannot hold focus.
 
 ## DF4 — The sheet covers the tab bar, reversing 0009
 
@@ -70,18 +72,34 @@ Accepted cost: while a row is open, changing tabs is Close (or a scrim tap) and
 then the tab. That is the same number of taps as reaching a bar that is no longer
 visible, and it is the behaviour the chosen frame shows.
 
-## DF5 — It rises when it opens and is simply gone when it closes
+## DF5 — It slides both ways, the way the More sheet does
 
-`.panel-sheet` runs `sheet-up` — 220ms on `cubic-bezier(.25, .1, .25, 1)` — only
-below 900px and not under `prefers-reduced-motion`. Measured: the open sheet's
-`animation-name` is `sheet-up`.
+`.panel-sheet` rises on mount with the `sheet-up` keyframe — 220ms on
+`cubic-bezier(.25, .1, .25, 1)`, only below 900px and not under
+`prefers-reduced-motion` — and now slides back down on close.
 
-Closing is a `replaceState` that removes the row from the URL, and `PanelGrid`
-stops rendering the panel; there is no element left to animate out. The prototype
-slides both ways. Doing the exit here would mean keeping a closed panel mounted
-per screen and delaying the URL change or the unmount, which costs more than the
-motion is worth for a panel whose whole purpose is to get out of the way. Listed
-in `docs/known-limitations.md`.
+The exit needed a decision, because closing is a `replaceState` that removes the
+row from the URL and `PanelGrid` stops rendering the panel: there was no element
+left to animate out. The grid now holds the panel for `SHEET_EXIT_MS` (220ms) and
+removes it after that, which is the same reason the More sheet keeps its overlay
+mounted while closed (0009). Above 900px the column has no motion, so it still
+leaves in the frame that closes it and the list takes the full width at once.
+
+`detail-panel.tsx` reads `open` from the same URL the grid reads, so a panel on
+its way out renders the closed state: `translate-y-[105%]` below 900px
+transitioned on the More sheet's curve, the scrim fading over 180ms, and both
+`inert` and `aria-hidden`, so the leaving sheet is already out of the tab order
+and the accessibility tree. Reopening inside those 220ms transitions it back up
+rather than remounting it.
+
+The movement itself was not sampled frame by frame in a browser this session.
+What was checked: the built stylesheet carries the closed `translate` (105%),
+`transition-transform` covers the `translate` property that Tailwind 4's
+`translate-y-*` sets, `duration-[220ms]` is emitted, and `motion-reduce` plus the
+existing `prefers-reduced-motion` rule remove it; jsdom (`tests/unit/detail-panel.test.ts`)
+shows the closed sheet still mounted, `inert`, `aria-hidden` and translated, with
+focus already back on the row, and gone after 260ms — and, above 900px, gone in
+the frame that closes it.
 
 ## Consequences worth knowing
 
@@ -90,12 +108,15 @@ in `docs/known-limitations.md`.
 - The four panels share one frame, so the pinned layout is fixed in one place
   rather than four.
 - `tests/unit/detail-panel.test.ts` covers the dialog on a compact stub, Escape
-  with focus return, and the desktop column staying a region.
+  with focus return and the 220ms closed state, the desktop column staying a
+  region, and the column leaving the grid at once.
+- `useCompact` lives in `src/components/use-compact.ts` because the grid and the
+  panel both read it: one decides whether there is an exit to wait for, the other
+  whether there is a dialog to animate.
 
 ## Not done here
 
 - A pinned receive footer for purchase orders.
-- An exit animation.
 - Swipe-down to dismiss.
 - A real-device run; the measurements are desktop Chromium at 390×844, 390×520
   and 1280×900 with a zero safe-area inset.
