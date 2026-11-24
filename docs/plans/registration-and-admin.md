@@ -5,8 +5,10 @@ implemented and committed (`db32b9a`), and `0008` is applied to hosted Supabase.
 registration has been walked end to end on the stage (see
 `docs/implementation-status.md`); the emailed link still returns to the Site URL
 instead of `/auth/confirm`, which stays open in `docs/known-limitations.md`. The first
-platform admin exists, so approval from the application is possible and Phase 2 is the
-next build. The admin panel exists as a
+platform admin exists, so approval from the application is possible. Phase 2 is built
+(`0009_admin_panel.sql` plus `/admin`), but its migration and build are local only — the
+stage still has no panel until `npm run db:migrate:hosted` and a deploy ship. The
+admin panel exists as a
 prototype only: `local/prototypes/registration/registration.html` (untracked, one
 self-contained file so the preview can serve it). This plan replaces the earlier
 sign-in plan, which covered a different slice.
@@ -147,10 +149,15 @@ function, because a URL must not be the boundary.
 
 Phases:
 
-- **Phase 2 (next):** `/admin` layout + overview + registrations, calling the two
-  approval functions that already exist. Acceptance: approving in the panel produces
-  the same business and membership the SQL call does; a non-admin gets 404 (not 403,
-  so the route's existence is not advertised); the queue is ordered oldest first.
+- **Phase 2 — built locally 2026-11-24, not deployed.** `/admin` layout (404 for a
+  non-admin), overview, registrations with status filter and search, and a detail
+  screen whose approve/reject forms call the two functions above. Reads come from
+  `private.admin_overview`, `private.list_signup_requests` and
+  `private.get_signup_request`, all admin-guarded in SQL. Acceptance: the queue's
+  ordering and the filters are covered by `tests/db/admin-panel.test.ts`; approving in
+  the panel calls the same function the SQL path does, so it produces the same
+  business and membership, but the button itself has not been clicked in a browser yet
+  (`docs/known-limitations.md`).
 - **Phase 3:** accounts and businesses lists, read-only.
 - **Phase 4:** notifications — an email to the admin when a request arrives, and one
   to the applicant when it is decided. This needs a mail provider (a spend decision,

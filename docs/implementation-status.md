@@ -133,6 +133,45 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-24 — Admin panel Phase 2 built: overview, queue and decisions.**
+  Migration `0009_admin_panel.sql` adds the panel's reads, each a SECURITY DEFINER
+  function with the same guard as `0008` (the owner role is the manual path, any
+  application role must be on `platform_admins`): `admin_overview()` returns the
+  waiting count, new and decided this week, businesses, accounts, how many accounts
+  never confirmed, and the five latest decisions; `list_signup_requests(status,
+search, limit)` returns waiting rows first and oldest first, filtering by status and
+  matching name, email or business; `get_signup_request(id)` returns one row for the
+  detail screen. All three are granted to `authenticated` only. The dev auth shim now
+  carries `email_confirmed_at` (hosted Supabase already has it) so the never-confirmed
+  count works locally.
+  **Routes:** `/admin` sits outside the `(app)` group, because a reviewer owns no
+  business and that layout's gate would send them to `/awaiting-approval`; a
+  signed-in account that is not an admin gets `notFound()`. Overview tiles plus the
+  queue; `/admin/registrations` with status filter and search in the URL, parsed by
+  `parseRegistrationFilter`; `/admin/registrations/[id]` with the applicant's answers
+  and the approve/reject forms, which call `private.approve_signup_request` and
+  `private.reject_signup_request` from server actions — no direct update of
+  `signup_requests`. A decision failure redirects with a short code (`not-admin`,
+  `missing`, `rejected`, `approved`, `invalid`, `failed`) rather than SQL text.
+  **Gates:** `npm run check` 0 errors (2 pre-existing warnings in
+  `src/lib/permissions.ts`), `npm run test` 180 passed in 29 files, `npm run test:db`
+  60 passed in 6 files (`tests/db/admin-panel.test.ts` adds 8), `npm run build` exit 0,
+  `npm run secrets:check` ok. `npm run db:migrate` applied 1 migration locally, 10
+  tracked.
+  **Verified:** made `owner@cafe.test` a local admin (local-only helper), then read the
+  server-rendered HTML of `/admin` (contains “Waiting on you” and the empty-queue
+  copy) and `/admin/registrations/<id>` with a temporary pending row (contains the
+  applicant, the approve button and the reject form, and no error boundary). The
+  temporary registration row was deleted afterwards; the local admin row for
+  `owner@cafe.test` was left in place so `/admin` stays open at localhost. Neither
+  touched hosted.
+  **Not verified:** clicking Approve or Reject in a browser. The preview browser never
+  applied streamed Suspense content in this dev session — the pre-existing dashboard
+  also stayed on “Loading business / Loading page” — so that is an environment fault,
+  not the new routes, and the action wiring is covered only by typecheck plus the
+  function-level database tests. **Not on hosted:** `0009` has not been applied to
+  Supabase, so `/admin` would fail there until the migration and a deploy ship.
+
 - **2026-11-24 — A second stage link fell back to the Site URL, and the cause is
   isolated to `APP_URL`.** Signing up as `codemen.salman+walk5@gmail.com` through the
   stage form at 09:33:43Z rendered the success state and created an unconfirmed user.

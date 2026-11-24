@@ -64,6 +64,13 @@
       "when": 1795495916733,
       "tag": "0008_signup_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795497600000,
+      "tag": "0009_admin_panel",
+      "breakpoints": true
     }
   ]
 }

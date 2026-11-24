@@ -35,6 +35,11 @@ BEGIN
   ) THEN
     EXECUTE format('CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS %L', uid_body);
   END IF;
+
+  -- Hosted Supabase records this on auth.users; the admin overview counts accounts
+  -- that registered and never confirmed, which is the biggest silent drop-off.
+  ALTER TABLE auth.users
+    ADD COLUMN IF NOT EXISTS email_confirmed_at timestamp with time zone;
 END
 $$;
 
