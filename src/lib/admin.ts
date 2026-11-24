@@ -106,6 +106,20 @@ function toRegistration(row: RegistrationRow): Registration {
 }
 
 /**
+ * Where a signed-in account with no business belongs.
+ *
+ * A reviewer owns no business on purpose, so the app's "requires a business" gate
+ * would otherwise park the one person who can approve registrations on the wait
+ * screen — which then offers to register them for a business. Everyone else still
+ * goes to the wait screen.
+ */
+export function noBusinessDestination(
+  isAdmin: boolean,
+): "/admin" | "/awaiting-approval" {
+  return isAdmin ? "/admin" : "/awaiting-approval";
+}
+
+/**
  * Whether this account reviews registrations. The layout asks once per render; every
  * function asks again in SQL, because a URL is not the boundary.
  */

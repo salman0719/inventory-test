@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { signOut } from "@/app/(app)/actions";
 import Link from "next/link";
+import { isPlatformAdmin } from "@/lib/admin";
 import { getSessionUser } from "@/lib/session";
 import { getSignupRequest } from "@/lib/signup";
 
@@ -13,12 +14,17 @@ export const metadata: Metadata = { title: "Awaiting approval — Stk" };
  * `(app)/layout.tsx` sends a user with no membership here, so this is the one place
  * that has to explain the wait. The request row is read through the applicant's own
  * RLS policy; nobody else's registration is visible from here.
+ *
+ * A platform reviewer also has no business — on purpose — but nothing to wait for.
+ * They are given the queue instead of an invitation to register, and the admin check
+ * is only read when there is no request, so an applicant never pays for it.
  */
 export default async function AwaitingApprovalPage() {
   const user = await getSessionUser();
   if (!user) redirect("/sign-in");
 
   const request = await getSignupRequest(user.id);
+  const reviewer = request === null && (await isPlatformAdmin(user.id));
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-panel px-4 py-10">
@@ -31,7 +37,24 @@ export default async function AwaitingApprovalPage() {
         </div>
 
         <div className="rounded border border-line bg-surface p-5">
-          {request?.status === "pending" ? (
+          {reviewer ? (
+            <>
+              <h1 className="text-[14px] font-semibold">
+                This account reviews registrations
+              </h1>
+              <p className="mt-1 text-[12px] text-ink-muted">
+                {user.email} is on the platform admin list, so it has no
+                business of its own. The review queue is where registrations are
+                approved, attached or rejected.
+              </p>
+              <Link
+                href="/admin"
+                className="mt-4 inline-flex min-h-[40px] items-center rounded bg-accent px-3 text-[12px] font-semibold text-on-accent"
+              >
+                Open the review queue
+              </Link>
+            </>
+          ) : request?.status === "pending" ? (
             <>
               <h1 className="text-[14px] font-semibold">
                 Waiting for approval

@@ -162,6 +162,12 @@ the app's layout gate would otherwise send them to `/awaiting-approval`. The pro
 stays the single gate for `signed-in`; the admin check is in the layout and in every
 function, because a URL must not be the boundary.
 
+The gate now knows the difference. A reviewer with no business is redirected to
+`/admin` (`noBusinessDestination` in `src/lib/admin.ts`), the wait screen offers them
+the queue rather than registration, and a reviewer who also owns a business — the
+demo owner locally — gets an **Admin** link in the app header from 600px up. Before
+this, nothing in the product pointed at `/admin`; it had to be typed.
+
 Phases:
 
 - **Phase 2 — built locally 2026-11-24, not deployed.** `/admin` layout (404 for a

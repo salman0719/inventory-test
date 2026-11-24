@@ -133,6 +133,33 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-24 — A reviewer is routed to the queue instead of the wait screen.** The
+  app's "requires a business" gate could not tell a reviewer from an applicant: the
+  one account that can approve registrations owns no business by design, so signing in
+  landed it on `/awaiting-approval`, which then offered to register it for a business.
+  `(app)/layout.tsx` now asks `isPlatformAdmin` only on the no-business path and
+  redirects through the pure `noBusinessDestination` — `/admin` for a reviewer,
+  `/awaiting-approval` for everyone else. The wait screen's "no request" state reads
+  the admin list too (only when there is no request, so an applicant never pays for
+  it) and gives a reviewer “Open the review queue” instead of “Create an account”.
+  A reviewer who _does_ own a business never hits that gate, so the app header shows an
+  **Admin** link from 600px up, inside the existing `UserMenu` Suspense boundary.
+  **Gates:** `npm run check` 0 errors (2 pre-existing warnings), `npm run test` 191
+  passed in 30 files (`tests/unit/admin-destination.test.ts` adds 2), `npm run build`
+  exit 0. `npm run secrets:check` and `npm run test:db` were not re-run: no SQL,
+  dependency or secret changed.
+  **Verified in a browser (local, at 1280px, signed in as `owner@cafe.test`):**
+  `/admin` renders with the panel header (Overview, Registrations, Accounts,
+  Businesses) and its **Review / Queue / Recent decisions** headings;
+  `/awaiting-approval` renders “This account reviews registrations” with an “Open the
+  review queue” link and no “Create an account”. The header's Admin link is present in
+  the served HTML with the breakpoint class resolving to `display: flex`, but the
+  shell's streamed `UserMenu` stayed inside a `[hidden]` streaming container in this
+  browser session — the same Suspense stall recorded for earlier phases — so its
+  rendered appearance is unverified. The redirect for a reviewer with **no** business
+  was not walked in a browser: the only such account has no known password locally; it
+  is covered by the unit test and typecheck.
+
 - **2026-11-24 — Approval can attach to an existing business instead of only creating
   one (decision D4 closed).** `0011_approval_attach_business.sql` replaces
   `approve_signup_request` with a three-argument version whose defaults preserve the old

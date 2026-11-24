@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import type { ReactNode } from "react";
 import { signOut } from "@/app/(app)/actions";
+import { isPlatformAdmin } from "@/lib/admin";
 import { getActiveBusiness } from "@/lib/businesses";
 import { PAGE_CONTENT_ID } from "@/lib/nav";
 import { getSessionUser } from "@/lib/session";
@@ -68,8 +69,22 @@ async function UserMenu() {
   const user = await getSessionUser();
   if (!user) return null;
 
+  // One indexed lookup inside this Suspense boundary, because a reviewer who also
+  // owns a business never hits the gate's redirect and would otherwise have no way
+  // into `/admin`. Desktop only: reviewing is a wide-screen job, and the phone header
+  // has no room for another control between the switcher and Sign out.
+  const admin = await isPlatformAdmin(user.id);
+
   return (
     <div className="flex items-center gap-2">
+      {admin ? (
+        <Link
+          href="/admin"
+          className="hidden min-h-[36px] content-center rounded border border-line bg-surface px-2.5 text-[12px] font-medium text-ink-muted hover:border-accent hover:text-accent min-[600px]:inline-flex"
+        >
+          Admin
+        </Link>
+      ) : null}
       <span className="hidden max-w-[220px] truncate text-[11px] text-ink-muted min-[600px]:inline">
         {user.email}
       </span>
