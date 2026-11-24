@@ -66,11 +66,46 @@ export const decisionSchema = z.object({
 });
 
 /**
+ * What the approve form posts. Two shapes share it: creating a business (no target,
+ * owner) and attaching to one (a target, staff or viewer).
+ *
+ * `owner` on an existing business is refused here as well as in SQL: handing over
+ * someone else's books is not a queue decision, and the form should not send it.
+ */
+export const approvalRoleSchema = z.enum(["owner", "staff", "viewer"]);
+
+/** The roles a reviewer may grant on a business that already exists. */
+export const attachRoleSchema = z.enum(["staff", "viewer"]);
+
+export const approvalSchema = z
+  .object({
+    requestId: z.uuid("That registration is no longer available."),
+    businessId: z.uuid().optional(),
+    role: approvalRoleSchema.catch("owner"),
+  })
+  .refine((value) => value.businessId === undefined || value.role !== "owner", {
+    path: ["role"],
+    message: "Attach a colleague as staff or viewer.",
+  });
+
+/** The role label carried back after an attach, for the confirmation banner. */
+export function parseAttachRole(value: string | string[] | undefined) {
+  return attachRoleSchema.catch("staff").parse(value);
+}
+
+/**
  * A failed decision, as a short code the detail screen turns into a sentence. The
  * PostgreSQL error carries the reason; the browser gets no SQL text.
  */
 export type DecisionError =
-  "not-admin" | "missing" | "rejected" | "approved" | "invalid" | "failed";
+  | "not-admin"
+  | "missing"
+  | "no-business"
+  | "role"
+  | "rejected"
+  | "approved"
+  | "invalid"
+  | "failed";
 
 export function decisionErrorCode(error: unknown): DecisionError {
   if (typeof error !== "object" || error === null) return "failed";
@@ -78,10 +113,15 @@ export function decisionErrorCode(error: unknown): DecisionError {
   const text = typeof message === "string" ? message : "";
 
   if (code === "42501") return "not-admin";
-  if (code === "P0002") return "missing";
+  // P0002 covers two different sentences: a registration that is gone, and a target
+  // business that is gone. The reviewer needs to know which one to reload.
+  if (code === "P0002") {
+    return /business does not exist/i.test(text) ? "no-business" : "missing";
+  }
   if (code === "22023") {
     if (/was rejected/i.test(text)) return "rejected";
     if (/already approved/i.test(text)) return "approved";
+    if (/ownership|role only applies/i.test(text)) return "role";
   }
   return "failed";
 }

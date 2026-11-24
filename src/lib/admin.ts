@@ -66,6 +66,15 @@ export type BusinessSummary = {
   ownerEmail: string | null;
 };
 
+/** The identity-and-counts part of a business: enough to recognise one, never its books. */
+export type BusinessIdentity = Omit<BusinessSummary, "products" | "openOrders">;
+
+/** An existing business whose name resembles an applicant's claim. */
+export type BusinessCandidate = BusinessIdentity & {
+  /** Normalised equality: almost certainly the same business. */
+  exact: boolean;
+};
+
 type RegistrationRow = {
   id: string;
   status: string;
@@ -232,5 +241,60 @@ export async function getRegistration(
     );
     const row = result.rows[0];
     return row ? toRegistration(row) : null;
+  });
+}
+
+type BusinessIdentityRow = {
+  id: string;
+  name: string;
+  business_type: string;
+  created_at: Date;
+  members: number;
+  owner_email: string | null;
+};
+
+type BusinessCandidateRow = BusinessIdentityRow & { exact: boolean };
+
+function toIdentity(row: BusinessIdentityRow): BusinessIdentity {
+  return {
+    id: row.id,
+    name: row.name,
+    businessType: row.business_type as BusinessType,
+    createdAt: row.created_at,
+    members: row.members,
+    ownerEmail: row.owner_email,
+  };
+}
+
+/**
+ * Businesses that look like the one an applicant asked for. The match is a suggestion
+ * the reviewer judges — the function normalises case, punctuation and the words
+ * "the"/"and", so "Bean & Gone" and "Bean and Gone" are one candidate.
+ */
+export async function matchBusinesses(
+  userId: string,
+  businessName: string,
+): Promise<BusinessCandidate[]> {
+  return withTenant(userId, async (client) => {
+    const result = await client.query<BusinessCandidateRow>(
+      "select * from private.match_businesses($1, $2)",
+      [businessName, 5],
+    );
+    return result.rows.map((row) => ({ ...toIdentity(row), exact: row.exact }));
+  });
+}
+
+/** One business by id, for the screen that reports what an approval did. */
+export async function getAdminBusiness(
+  userId: string,
+  id: string,
+): Promise<BusinessIdentity | null> {
+  return withTenant(userId, async (client) => {
+    const result = await client.query<BusinessIdentityRow>(
+      "select * from private.get_admin_business($1)",
+      [id],
+    );
+    const row = result.rows[0];
+    return row ? toIdentity(row) : null;
   });
 }

@@ -2,21 +2,25 @@
 
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
-import type { PoolClient } from "pg";
 import { isPlatformAdmin } from "@/lib/admin";
-import { decisionErrorCode, decisionSchema } from "@/lib/admin-input";
+import {
+  approvalSchema,
+  decisionErrorCode,
+  decisionSchema,
+} from "@/lib/admin-input";
 import { withTenant } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 
 /**
  * Approve and reject, as the signed-in admin.
  *
- * The work is one call to the SECURITY DEFINER function from `0008`: it creates the
- * business and the owner membership in a single transaction, or refuses because the
- * request is already rejected. Repeating an approval returns the business it already
- * made, so a double-submitted form cannot create two.
+ * Approval is one call to the SECURITY DEFINER function from `0011`: with no target it
+ * creates a business and the owner membership, with a target it adds a `staff` or
+ * `viewer` membership instead. Repeating an approval returns the business it already
+ * produced, so a double-submitted form cannot create two.
  *
- * Failures reach the screen as a short code, never as SQL text.
+ * Errors reach the screen as a short code, and only after the transaction rolled back:
+ * `redirect` throws, so it is never called inside the try that catches the decision.
  */
 
 async function requireAdmin() {
@@ -26,34 +30,35 @@ async function requireAdmin() {
   return user;
 }
 
-function readDecision(formData: FormData) {
-  const raw = formData.get("note");
-  const note = typeof raw === "string" ? raw : undefined;
-  return decisionSchema.safeParse({
+function readApproval(formData: FormData) {
+  const businessId = formData.get("businessId");
+  return approvalSchema.safeParse({
     requestId: formData.get("requestId"),
-    note: note && note.trim() !== "" ? note : undefined,
+    businessId:
+      typeof businessId === "string" && businessId.trim() !== ""
+        ? businessId
+        : undefined,
+    role: formData.get("role") ?? undefined,
   });
 }
 
-async function decide(
-  formData: FormData,
-  run: (client: PoolClient, id: string, note: string | null) => Promise<void>,
-  done: "approved" | "rejected",
-): Promise<void> {
+export async function approveRegistration(formData: FormData): Promise<void> {
   const user = await requireAdmin();
-  const parsed = readDecision(formData);
+  const parsed = readApproval(formData);
   if (!parsed.success) redirect("/admin/registrations?error=invalid");
 
-  const id = parsed.data.requestId;
-  const target = `/admin/registrations/${id}`;
+  const { requestId, businessId, role } = parsed.data;
+  const target = `/admin/registrations/${requestId}`;
 
-  // `redirect` throws, so it must not be called inside this try: the catch would
-  // swallow the navigation instead of reporting a decision failure.
   let failure: string | null = null;
   try {
-    await withTenant(user.id, (client) =>
-      run(client, id, parsed.data.note ?? null),
-    );
+    await withTenant(user.id, async (client) => {
+      await client.query("select private.approve_signup_request($1, $2, $3)", [
+        requestId,
+        businessId ?? null,
+        role,
+      ]);
+    });
   } catch (error) {
     failure = decisionErrorCode(error);
   }
@@ -63,28 +68,42 @@ async function decide(
   revalidatePath("/admin");
   revalidatePath("/admin/registrations");
   revalidatePath(target);
-  redirect(`${target}?done=${done}`);
-}
-
-export async function approveRegistration(formData: FormData): Promise<void> {
-  await decide(
-    formData,
-    async (client, id) => {
-      await client.query("select private.approve_signup_request($1)", [id]);
-    },
-    "approved",
+  redirect(
+    businessId
+      ? `${target}?done=approved&as=${role}`
+      : `${target}?done=approved`,
   );
 }
 
 export async function rejectRegistration(formData: FormData): Promise<void> {
-  await decide(
-    formData,
-    async (client, id, note) => {
+  const user = await requireAdmin();
+  const raw = formData.get("note");
+  const note = typeof raw === "string" ? raw : undefined;
+  const parsed = decisionSchema.safeParse({
+    requestId: formData.get("requestId"),
+    note: note && note.trim() !== "" ? note : undefined,
+  });
+  if (!parsed.success) redirect("/admin/registrations?error=invalid");
+
+  const id = parsed.data.requestId;
+  const target = `/admin/registrations/${id}`;
+
+  let failure: string | null = null;
+  try {
+    await withTenant(user.id, async (client) => {
       await client.query("select private.reject_signup_request($1, $2)", [
         id,
-        note,
+        parsed.data.note ?? null,
       ]);
-    },
-    "rejected",
-  );
+    });
+  } catch (error) {
+    failure = decisionErrorCode(error);
+  }
+
+  if (failure) redirect(`${target}?error=${failure}`);
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/registrations");
+  revalidatePath(target);
+  redirect(`${target}?done=rejected`);
 }

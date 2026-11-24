@@ -133,6 +133,41 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-24 — Approval can attach to an existing business instead of only creating
+  one (decision D4 closed).** `0011_approval_attach_business.sql` replaces
+  `approve_signup_request` with a three-argument version whose defaults preserve the old
+  one-argument call: no target still creates the business and the owner membership; a
+  target creates no business and inserts a `staff` or `viewer` membership instead. An
+  existing member keeps their role (`on conflict do nothing`), and a replay returns the
+  recorded business. `owner` on an existing business is refused with `22023` — the
+  queue does not transfer a tenant's data. Two reads support it:
+  `private.normalise_business_name` + `private.match_businesses(name)` suggest
+  businesses whose names resemble the applicant's claim after ignoring case,
+  punctuation and the words "the"/"and", and `private.get_admin_business(id)` names the
+  business an approval landed on. All are SECURITY DEFINER behind the same
+  `is_platform_admin()` guard, and the match projection is identity and counts only.
+  **Screens:** `/admin/registrations/[id]` now shows a warning block above the approve
+  button when candidates exist — each with age, member count and owner email, a
+  `staff`/`viewer` select and an attach button — changes the primary button to "Approve
+  as a new business anyway", adds a search over every business for a target that did
+  not match, and reports the outcome (attached vs created) after the redirect. The
+  role is parsed by `approvalSchema`, which also refuses `owner` for a target, and
+  failures map to new codes `no-business` and `role`.
+  **Gates:** `npm run check` 0 errors (2 pre-existing warnings in
+  `src/lib/permissions.ts`), `npm run test` 189 passed in 29 files, `npm run test:db`
+  79 passed in 7 files (`tests/db/approval-attach.test.ts` adds 14), `npm run build`
+  exit 0, `npm run secrets:check` ok; `npm run db:migrate` applied 1 migration, 12
+  tracked.
+  **Verified:** as `authenticated`, the database tests prove an attach adds one
+  membership and no business, the applicant then sees that business through RLS, a
+  replay does not duplicate the membership, the no-target path still creates a business
+  with an `owner`, and `owner`/unknown-business/non-admin cases are refused with the
+  expected codes and leave the request pending. `match_businesses` finds the same shop
+  through case, punctuation and "the", and returns nothing for an unrelated or
+  punctuation-only name.
+  **Not verified:** no attach was clicked in a browser, and the panel is still undeployed
+  (`0011` is hosted-pending with `0009`/`0010`).
+
 - **2026-11-24 — Admin panel Phase 3 built: accounts and businesses, read-only.**
   Migration `0010_admin_lists.sql` adds two more admin-guarded reads.
   `list_accounts(search)` returns every `auth.users` row with its membership — one row

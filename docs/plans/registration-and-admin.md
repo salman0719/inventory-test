@@ -26,7 +26,7 @@ sign-in plan, which covered a different slice.
 | Business selector                                              | Built                           | `src/lib/active-business.ts` (`pickBusiness`)                     |
 | **Self-service registration**                                  | **Built this slice**            | `/register`, `/auth/confirm`, `src/lib/signup.ts`                 |
 | **Approval before a business exists**                          | **Built this slice**            | `signup_requests`, `(app)/layout.tsx`, `/awaiting-approval`       |
-| **Admin review and the panel**                                 | **Built locally, not deployed** | `0008`–`0010`, `/admin`, `src/lib/admin.ts`                       |
+| **Admin review and the panel**                                 | **Built locally, not deployed** | `0008`–`0011`, `/admin`, `src/lib/admin.ts`                       |
 
 ## 2. Registration, as built
 
@@ -68,12 +68,21 @@ RLS on the new tables:
 | `signup_requests_update` | platform admin only                                                           |
 | `platform_admins_select` | platform admins only                                                          |
 
-Approval is `private.approve_signup_request(request_id)`: SECURITY DEFINER, so it can
-insert a business and a membership that the caller's own RLS would refuse. It locks
-the request, refuses a rejected one, creates the business and the owner membership,
-and marks the request approved — one transaction. Repeating it returns the business
-it already created instead of making a second one. `private.reject_signup_request`
+Approval is `private.approve_signup_request(request_id, business_id, role)`: SECURITY
+DEFINER, so it can insert a business and a membership that the caller's own RLS would
+refuse. It locks the request, refuses a rejected one, and then does one of two things
+— with no business it creates one and makes the applicant its `owner`; with a business
+it creates no business and adds a `staff` or `viewer` membership instead (`0011`,
+`docs/decisions/0013-approval-attach-or-create.md`). Status, `business_id`, the
+decision columns and the membership commit together. Repeating it returns the business
+it already produced instead of making a second one, and someone who is already a
+member keeps the role they hold. `owner` on an existing business is refused: the queue
+lets a colleague in, it does not hand over a tenant. `private.reject_signup_request`
 does the same for a rejection, with an optional note.
+
+To make a duplicate visible before it is created, `private.match_businesses(name)`
+returns existing businesses whose names match after ignoring case, punctuation and the
+words "the"/"and" — identity and counts only. It suggests; the reviewer decides.
 
 ## 3. Approving by hand until the panel exists
 
@@ -87,8 +96,14 @@ select id, created_at, full_name, email, business_name, business_type
  where status = 'pending'
  order by created_at;
 
--- approve one
+-- approve one as a new business, applicant is owner
 select private.approve_signup_request('<request-id>');
+
+-- or let them into a business that already exists, as staff or viewer
+select private.approve_signup_request('<request-id>', '<business-id>', 'staff');
+
+-- which businesses look like the claim? (same matching the panel uses)
+select * from private.match_businesses('Bean & Gone');
 
 -- reject one, with the note the applicant will read
 select private.reject_signup_request('<request-id>', 'We could not verify the business.');
@@ -163,6 +178,14 @@ Phases:
   (active products, open orders, members, owner) read `private.list_accounts` and
   `private.list_businesses`. The business projection is counts only, and a test pins
   the returned column list so no catalogue, price or ledger column can creep in.
+- **Phase 3.5 — attach instead of duplicating, built locally 2026-11-24, not deployed.**
+  `0011` gives approval an optional target and lets a reviewer grant `staff`/`viewer`;
+  the detail screen shows name-matched candidates with a role select and an attach
+  button, changes the primary action to "Approve as a new business anyway" when they
+  exist, and allows searching every business for a target that did not match. Covered
+  by `tests/db/approval-attach.test.ts` (14 cases). Attaching never merges or moves any
+  existing data, and nothing records a later removal: member management is still
+  unbuilt.
 - **Phase 4:** notifications — an email to the admin when a request arrives, and one
   to the applicant when it is decided. This needs a mail provider (a spend decision,
   see §7 D2).
@@ -219,10 +242,14 @@ with a real inbox.
 - **D3 — Password policy — closed 2026-11-24.** The form enforces 8–72 characters and
   Supabase's minimum is now 8, set in the dashboard, so the server no longer refuses
   what the form accepts.
-- **D4 — What approval means.** The functions create a business with the applicant as
-  owner. Should approval instead attach the account to an existing business (for a
-  second staff member), and if so, how does the request say which? Today every
-  registration is a new business.
+- **D4 — What approval means — answered 2026-11-24.** Approval no longer always
+  creates a business. If the requested name resembles an existing business the
+  reviewer is shown the candidates, and if the claim is right the applicant is attached
+  to it as `staff` or `viewer` instead; a new business stays the default and the
+  fallback. Staff members against a business are confirmed as a planned capability,
+  which is why the attachment is a real `business_members` row rather than a flag.
+  Built in `0011` and `docs/decisions/0013-approval-attach-or-create.md`; what is still
+  unbuilt is managing members afterwards (invite, change role, remove).
 - **D5 — Rejection follow-up.** A rejected applicant can read the note and sign out,
   but cannot re-apply from the UI (their row is unique per account). Is one round of
   email correspondence enough for the pre-MVP?

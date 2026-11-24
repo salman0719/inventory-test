@@ -78,6 +78,13 @@
       "when": 1795497700000,
       "tag": "0010_admin_lists",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795498000000,
+      "tag": "0011_approval_attach_business",
+      "breakpoints": true
     }
   ]
 }
