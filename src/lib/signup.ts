@@ -43,6 +43,46 @@ export const registerSchema = z.object({
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 
+/**
+ * What the form should say when Supabase Auth refuses a sign-up.
+ *
+ * The three limits that block registration all return 429 and two of them share
+ * `over_email_send_rate_limit`, so the code alone is not enough: the built-in
+ * mailer allows **two emails an hour for the whole project**, one address can be
+ * asked again only after 60 seconds, and an IP gets its own request limit. Telling
+ * an applicant to "wait a minute" for the hourly cap is what made a working
+ * project look broken — the wait is up to an hour, and the allowance is shared by
+ * every environment pointed at the same Supabase project.
+ *
+ * `email_address_not_authorized` is the other trap: without custom SMTP, Supabase
+ * delivers only to the organisation's own team addresses, so a real applicant's
+ * address is refused outright rather than rate-limited.
+ */
+export function registerErrorMessage(
+  code: string | undefined,
+  message = "",
+): string {
+  switch (code) {
+    case "over_email_send_rate_limit":
+      return /after \d+ seconds/i.test(message)
+        ? "That address was just emailed. Open the link, or wait a minute before asking again."
+        : "No email allowance left this hour — the built-in mailer sends two an hour for the whole project. Try again later, or ask us to add the account by hand.";
+    case "over_request_rate_limit":
+      return "Too many attempts from this network just now. Wait a few minutes and try again.";
+    case "email_address_not_authorized":
+      return "Until a mail provider is connected, this project can only email its own team. Ask us to add the account by hand.";
+    case "weak_password":
+      return "Choose a stronger password and try again.";
+    case "email_address_invalid":
+      return "Enter a valid email address.";
+    case "signup_disabled":
+    case "email_provider_disabled":
+      return "Registration is closed right now. Ask us to create the account instead.";
+    default:
+      return "We could not create the account. Try again in a moment.";
+  }
+}
+
 /** What `register` puts in `signUp`'s `data`, and what the request row is built from. */
 const requestSchema = z.object({
   fullName: z.string().trim().min(1).max(80),

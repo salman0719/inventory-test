@@ -2,7 +2,11 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { ensureSignupRequest, registerSchema } from "@/lib/signup";
+import {
+  ensureSignupRequest,
+  registerErrorMessage,
+  registerSchema,
+} from "@/lib/signup";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type RegisterState = {
@@ -60,30 +64,7 @@ export async function register(
   });
 
   if (error) {
-    if (
-      error.code === "over_email_send_rate_limit" ||
-      error.code === "over_request_rate_limit"
-    ) {
-      return {
-        error: "Too many attempts just now. Wait a minute and try again.",
-      };
-    }
-    if (error.code === "weak_password") {
-      return { error: "Choose a stronger password and try again." };
-    }
-    if (error.code === "email_address_invalid") {
-      return { error: "Enter a valid email address." };
-    }
-    if (
-      error.code === "signup_disabled" ||
-      error.code === "email_provider_disabled"
-    ) {
-      return {
-        error:
-          "Registration is closed right now. Ask us to create the account instead.",
-      };
-    }
-    return { error: "We could not create the account. Try again in a moment." };
+    return { error: registerErrorMessage(error.code, error.message) };
   }
 
   // Supabase answers an existing address with a user that has no identities, so

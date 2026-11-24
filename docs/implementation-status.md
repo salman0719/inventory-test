@@ -133,6 +133,23 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-24 — The registration rate-limit message was wrong, and is fixed.** A
+  single direct probe of `POST /auth/v1/signup` (publishable key, no retries) returned
+  200 and created an unconfirmed user while the register form was still answering "Too
+  many attempts just now. Wait a minute and try again." The form was conflating three
+  limits behind two codes: Supabase's built-in mailer sends two emails an hour for the
+  whole project, so a local attempt spends the stage's allowance; one address may be
+  asked again only after 60 seconds; and an IP has its own request limit. Only the
+  message separates the first two, which the old code discarded.
+  `registerErrorMessage` in `src/lib/signup.ts` now answers each case and adds
+  `email_address_not_authorized` — until custom SMTP is connected, the built-in
+  service refuses every address outside the organisation's team. The action delegates
+  to it instead of matching codes inline. Verified: `npm run check` exit 0,
+  `npm run test` 164/164 in 27 files with five new cases (hourly cap vs per-address
+  wait, per-network limit, team-only mailer, bad password/address, closed sign-up,
+  unknown fallback), `npm run build` exit 0. Recorded in `docs/known-limitations.md`
+  and decision D2.
+
 - **2026-11-24 — Supabase's minimum password length is 8.** The owner set it in the
   dashboard, so the server accepts the whole 8–72 range the register form allows.
   Decision D3 in `docs/plans/registration-and-admin.md` is closed. No code changed and

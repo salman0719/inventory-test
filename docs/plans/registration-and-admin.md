@@ -190,10 +190,15 @@ with a real inbox.
   reviewer the project owner's own account, or a separate ops account? A separate one
   is better for the demo (the reviewer is not also a tenant), and it needs one SQL
   insert.
-- **D2 — Email.** Registration now depends on Supabase's built-in mailer for the
-  confirmation link. It is documented as rate-limited and not for production; the
-  limits for this project are unconfirmed. Notifications in Phase 4 need a provider —
-  a spend decision and a provider choice, not something to assume.
+- **D2 — Email — measured 2026-11-24.** Registration depends on Supabase's built-in
+  mailer, and its limits are now measured rather than assumed: two messages an hour
+  for the whole project, shared by every environment pointed at it, and delivery only
+  to the organisation's own team addresses until custom SMTP is configured. A direct
+  probe of `POST /auth/v1/signup` returned 200 while the form still showed a
+  rate-limit message — which is how the reset was found and the copy was found to be
+  wrong. Custom SMTP (Resend, SES, Postmark) is the fix and starts at 30 an hour; the
+  provider and the bill are still open, and Phase 4 notifications need the same
+  decision.
 - **D3 — Password policy — closed 2026-11-24.** The form enforces 8–72 characters and
   Supabase's minimum is now 8, set in the dashboard, so the server no longer refuses
   what the form accepts.
