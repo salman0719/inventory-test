@@ -172,12 +172,13 @@ Add date, task, verification method, and result.
   CAFE Admin owner@cafe.test Sign out”, the Admin link 58×36 and not inside a hidden
   streaming container — so the earlier “Admin link paints with the user menu” stall was
   an expired session, not the layout.
-  **Demo password reset:** the local demo account `owner@cafe.test` was set back to
-  `demo1234` because `.env.local` sends local sign-in to hosted Supabase Auth, where
-  only a bcrypt hash is stored and the admin API needs a service-role key the project
-  does not hold. `npx tsx local/tmp/set-password.ts <email> <password>` writes the hash
-  as the owner through pgcrypto (found in `extensions` on Supabase). Verified by
-  signing out in the browser and back in with `demo1234`; the sandbox README matches.
+  **Demo passwords reset:** `owner@cafe.test` is `Owca1234` and
+  `codemen.salman+walkthrough2@gmail.com` is `demo1234`. `.env.local` sends local
+  sign-in to hosted Supabase Auth, where only a bcrypt hash is stored and the admin API
+  needs a service-role key the project does not hold, so the hashes were written as the
+  owner: `npx tsx local/tmp/set-password.ts <email> <password>` (pgcrypto in
+  `extensions` on Supabase). Both were verified by signing in through the form in the
+  browser; the sandbox README carries the owner's password.
 
 - **2026-11-24 — The panel gained a way out, and its counterpart in the header now
   matches its neighbours.** The **Admin** link added with the reviewer redirect used a
