@@ -133,6 +133,28 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-24 — A real registration stopped at the local database, and the cause is
+  now known.** `codemen.salman+inventorytest1@gmail.com` (“Kuddus Boyati”, business
+  “ABC”) registered through the form at 15:24Z, confirmed at 15:24:46 and signed in at
+  15:32:13 — all on hosted Auth — but sat on “This account has no business”. The local
+  database had **no** `auth.users` row for it, so the insert that should have filed the
+  registration failed `signup_requests_user_fk`; the dev log carries
+  `auth/confirm: could not record the signup request error: … violates foreign key
+constraint "signup_requests_user_fk"`. The confirm route catches that and continues,
+  which is why the applicant saw the no-request state rather than an error, and why the
+  “Create an account” link on that state appeared to loop: `/register` is a signed-out
+  page and the proxy sends a session back to `/`.
+  **Repair:** `npx tsx local/tmp/link-and-file.ts <email>` copies the hosted user row
+  into the local shim and calls `private.confirm_account`, the same path the panel
+  button uses. For this account it reported `requestFiled: true`, status `pending`.
+  **Verified after the repair:** signing in as that account shows “Waiting for approval”
+  with “We are checking ABC”, and `/admin/registrations` lists one waiting row — ABC,
+  Kuddus Boyati, `codemen.salman+inventorytest1@gmail.com`. No account was created and
+  no gate was re-run: no source changed.
+  **Not a stage defect:** on hosted, auth and data share one database, so this FK is
+  satisfied by construction. The remaining product gap is the silent catch in
+  `/auth/confirm`, recorded in `docs/known-limitations.md`.
+
 - **2026-11-24 — A reviewer can confirm an address, which is the step that was
   missing for a stalled registration.** `0012_account_confirmation.sql` adds
   `private.confirm_account(user_id)`: SECURITY DEFINER behind the usual
