@@ -194,8 +194,9 @@ with a real inbox.
   confirmation link. It is documented as rate-limited and not for production; the
   limits for this project are unconfirmed. Notifications in Phase 4 need a provider —
   a spend decision and a provider choice, not something to assume.
-- **D3 — Password policy.** The form enforces 8–72 characters. Supabase's own minimum
-  must be set to 8 in the dashboard or the app will accept what the server refuses.
+- **D3 — Password policy — closed 2026-11-24.** The form enforces 8–72 characters and
+  Supabase's minimum is now 8, set in the dashboard, so the server no longer refuses
+  what the form accepts.
 - **D4 — What approval means.** The functions create a business with the applicant as
   owner. Should approval instead attach the account to an existing business (for a
   second staff member), and if so, how does the request say which? Today every

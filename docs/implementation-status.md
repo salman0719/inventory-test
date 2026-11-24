@@ -133,6 +133,12 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-24 — Supabase's minimum password length is 8.** The owner set it in the
+  dashboard, so the server accepts the whole 8–72 range the register form allows.
+  Decision D3 in `docs/plans/registration-and-admin.md` is closed. No code changed and
+  no request was made with a short password, so the setting itself is reported, not
+  probed.
+
 - **2026-11-24 — Migration `0008` applied to hosted Supabase.** `npm run
 db:migrate:hosted` switched the transaction pooler URL to session mode (5432),
   skipped the development auth shim, and printed `applied 1 migration(s), 9 tracked in
