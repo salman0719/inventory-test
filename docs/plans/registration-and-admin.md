@@ -1,7 +1,8 @@
 # Registration, approval and the admin panel
 
 Status: draft for review, 2026-11-24. Phase 1 (registration and the approval gate) is
-implemented but uncommitted and not migrated hosted. The admin panel exists as a
+implemented and committed (`db32b9a`), and `0008` is applied to hosted Supabase. A
+registration with a real inbox has not been walked yet. The admin panel exists as a
 prototype only: `local/prototypes/registration/registration.html` (untracked, one
 self-contained file so the preview can serve it). This plan replaces the earlier
 sign-in plan, which covered a different slice.
@@ -205,10 +206,11 @@ with a real inbox.
 
 ## 8. Risks
 
-- **Hosted is not migrated.** `0008_signup_requests.sql` is applied locally only. Until
-  `npm run db:migrate:hosted` runs, the deployed app would break on
-  `/awaiting-approval` and on any registration. This is the first thing to do before
-  the next deploy.
+- **Hosted was not migrated — resolved 2026-11-24.** `0008_signup_requests.sql` ran on
+  the hosted project (`applied 1 migration(s), 9 tracked in total`) and a read-only
+  check found both tables with RLS on, the three `private` functions as SECURITY
+  DEFINER and the four policies. The deploy no longer breaks on `/awaiting-approval`.
+  `platform_admins` is still empty, so nobody can approve from the application yet.
 - **Confirmation is a second inbox.** A registration that never confirms never
   reaches the queue — the biggest silent drop-off, and the reason the funnel is worth
   showing an admin.

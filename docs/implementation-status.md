@@ -133,6 +133,19 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-24 — Migration `0008` applied to hosted Supabase.** `npm run
+db:migrate:hosted` switched the transaction pooler URL to session mode (5432),
+  skipped the development auth shim, and printed `applied 1 migration(s), 9 tracked in
+total`. Read-only post-checks on the hosted project: `signup_requests` and
+  `platform_admins` exist with `relrowsecurity` true; `private.is_platform_admin`,
+  `private.approve_signup_request` and `private.reject_signup_request` exist as
+  SECURITY DEFINER; the four policies (`signup_requests_select`, `_insert`, `_update`,
+  `platform_admins_select`) are present; 9 migrations tracked. Pre-flight counts of the
+  existing data were not taken. Nothing was inserted: `platform_admins` is still empty,
+  so no application role can approve until the first admin is named, and the deployed
+  stage has not been exercised against the new tables — that waits for the real-inbox
+  walk.
+
 - **2026-11-24 — Registration with manual approval (uncommitted).**
   `/register` collects a name, business name, type, email and password; Supabase Auth
   sends the confirmation link, `/auth/confirm` accepts either a PKCE `code` or a
@@ -160,8 +173,8 @@ Add date, task, verification method, and result.
   `src/lib/permissions.ts`, `npm run build` exit 0, `npm run secrets:check` ok.
   **Not verified:** no confirmation email was opened, so the inbox round trip, a real
   registration against the hosted project, and `/awaiting-approval` for a real
-  unapproved account were not exercised; `0008` is applied locally only and **must be
-  run hosted before the next deployment**; the five files' format was fixed with
+  unapproved account were not exercised; `0008` was applied locally only at the time
+  of writing (hosted on 2026-11-24, see above); the five files' format was fixed with
   Prettier before the gate run.
 
 - **2026-11-24 — Sign-in plan was superseded by registration.** The earlier plan and
