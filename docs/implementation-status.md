@@ -168,8 +168,16 @@ Add date, task, verification method, and result.
   “waiting”. `/admin/registrations` then read “1 registration · 1 waiting” with
   “Confirm Walk Cafe — Casey Confirm · panel-confirm-…@example.invalid”. The seeded
   account and its request were deleted afterwards, so the local queue is empty again.
-  An earlier attempt failed because the documented demo password was stale; the local
-  demo password is `Owca1234` (the sandbox README is corrected).
+  The app header was seen rendered at the same time — “BUSINESS Demo Cafe Demo Retail
+  CAFE Admin owner@cafe.test Sign out”, the Admin link 58×36 and not inside a hidden
+  streaming container — so the earlier “Admin link paints with the user menu” stall was
+  an expired session, not the layout.
+  **Demo password reset:** the local demo account `owner@cafe.test` was set back to
+  `demo1234` because `.env.local` sends local sign-in to hosted Supabase Auth, where
+  only a bcrypt hash is stored and the admin API needs a service-role key the project
+  does not hold. `npx tsx local/tmp/set-password.ts <email> <password>` writes the hash
+  as the owner through pgcrypto (found in `extensions` on Supabase). Verified by
+  signing out in the browser and back in with `demo1234`; the sandbox README matches.
 
 - **2026-11-24 — The panel gained a way out, and its counterpart in the header now
   matches its neighbours.** The **Admin** link added with the reviewer redirect used a
