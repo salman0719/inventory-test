@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { resolveAppOrigin } from "@/lib/app-origin";
 import {
   ensureSignupRequest,
   registerErrorMessage,
@@ -16,18 +17,19 @@ export type RegisterState = {
 };
 
 /**
- * Where the confirmation link may return to. `APP_URL` is the deployed origin and
- * the Supabase Site URL; the request origin is only a development fallback, because
- * Supabase rejects a redirect that is not on its allowlist either way.
+ * Where the confirmation link may return to. The request's own origin is what the
+ * visitor is on and what Supabase has allowlisted; `APP_URL` is only a fallback for
+ * a caller without request headers, and it is validated because a malformed value
+ * makes GoTrue substitute the Site URL instead of failing loudly.
  */
 async function appOrigin(): Promise<string> {
-  const configured = process.env.APP_URL;
-  if (configured) return configured.replace(/\/+$/, "");
-
   const store = await headers();
-  const host = store.get("x-forwarded-host") ?? store.get("host");
-  const protocol = store.get("x-forwarded-proto") ?? "http";
-  return host ? `${protocol}://${host}` : "http://localhost:3000";
+  return resolveAppOrigin({
+    forwardedHost: store.get("x-forwarded-host"),
+    host: store.get("host"),
+    protocol: store.get("x-forwarded-proto"),
+    configured: process.env.APP_URL,
+  });
 }
 
 export async function register(

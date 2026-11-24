@@ -1,8 +1,12 @@
 # Registration, approval and the admin panel
 
 Status: draft for review, 2026-11-24. Phase 1 (registration and the approval gate) is
-implemented and committed (`db32b9a`), and `0008` is applied to hosted Supabase. A
-registration with a real inbox has not been walked yet. The admin panel exists as a
+implemented and committed (`db32b9a`), and `0008` is applied to hosted Supabase. One
+registration has been walked end to end on the stage (see
+`docs/implementation-status.md`); the emailed link still returns to the Site URL
+instead of `/auth/confirm`, which stays open in `docs/known-limitations.md`. The first
+platform admin exists, so approval from the application is possible and Phase 2 is the
+next build. The admin panel exists as a
 prototype only: `local/prototypes/registration/registration.html` (untracked, one
 self-contained file so the preview can serve it). This plan replaces the earlier
 sign-in plan, which covered a different slice.
@@ -186,10 +190,12 @@ with a real inbox.
 
 ## 7. Decisions needed
 
-- **D1 — Who is an admin?** `platform_admins` is a hand-maintained list. Is the
-  reviewer the project owner's own account, or a separate ops account? A separate one
-  is better for the demo (the reviewer is not also a tenant), and it needs one SQL
-  insert.
+- **D1 — Who is an admin? — closed 2026-11-24.** The reviewer is a separate ops
+  account, `codemen.salman+stkadmin@gmail.com`, so the reviewer is not also a tenant.
+  The address had no `auth.users` row, so the account was created in the dashboard
+  first (no email sent, no sign-up request filed) and the row inserted at 09:19Z. The
+  guard was checked as that identity, not just by reading the table: true for the
+  admin, false for an applicant. `platform_admins` remains hand-maintained by design.
 - **D2 — Email — measured 2026-11-24.** Registration depends on Supabase's built-in
   mailer, and its limits are now measured rather than assumed: two messages an hour
   for the whole project, shared by every environment pointed at it, and delivery only
@@ -216,13 +222,16 @@ with a real inbox.
   the hosted project (`applied 1 migration(s), 9 tracked in total`) and a read-only
   check found both tables with RLS on, the three `private` functions as SECURITY
   DEFINER and the four policies. The deploy no longer breaks on `/awaiting-approval`.
-  `platform_admins` is still empty, so nobody can approve from the application yet.
+  `platform_admins` now holds the reviewer account, so an application role can approve.
 - **Confirmation is a second inbox.** A registration that never confirms never
   reaches the queue — the biggest silent drop-off, and the reason the funnel is worth
   showing an admin.
 - **The redirect allowlist.** `/auth/confirm` is under the already-confirmed origins
   (`localhost:25000/**`, `inventory-stage.vercel.app/**`), so no new entry is needed;
-  add one for any new origin or the link lands on Supabase's error page.
+  add one for any new origin or the link lands on Supabase's error page. Both entries
+  are present yet a stage link still returned to the Site URL on 2026-11-24, so the
+  remaining variable is `APP_URL` on Vercel: it must be the production alias exactly,
+  because Supabase substitutes the Site URL for any redirect it will not allow.
 - **No audit trail.** `decided_by` and `decided_at` are recorded, but nothing records
   a reversal or an admin's other actions.
 - **The gate adds a query to every app render.** `(app)/layout.tsx` now awaits

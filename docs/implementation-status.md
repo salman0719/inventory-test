@@ -133,6 +133,86 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-24 — A second stage link fell back to the Site URL, and the cause is
+  isolated to `APP_URL`.** Signing up as `codemen.salman+walk5@gmail.com` through the
+  stage form at 09:33:43Z rendered the success state and created an unconfirmed user.
+  The delivered link
+  (`…/auth/v1/verify?token=pkce_…&type=signup&redirect_to=https://inventory-stage.vercel.app/`)
+  again carried the bare origin, although the action asks for `${origin}/auth/confirm`.
+  The allowlist was then tested directly rather than inferred: `GET
+/auth/v1/verify?token=pkce_deadbeef…&type=signup` with three different `redirect_to`
+  values returned `303` to each of them —
+  `https://inventory-stage.vercel.app/auth/confirm`,
+  `https://inventory-stage.vercel.app/` and
+  `http://localhost:25000/auth/confirm` — with `error=otp_expired` in the query only
+  because the token was fake. So GoTrue honours all three URLs and the composed email
+  never carried ours; the only remaining input is Vercel's `APP_URL`, since the
+  deployment is current (`ad7f251`'s rate-limit copy is live) and an unset `APP_URL`
+  would have fallen back to the same alias in `x-forwarded-host`. A malformed value —
+  no scheme, a stray newline, or a full URL with a path — is enough for GoTrue to
+  substitute the Site URL silently instead of failing the sign-up.
+  **Changed:** `src/lib/app-origin.ts` (`resolveAppOrigin`) now prefers the request's
+  own origin (`x-forwarded-host` + `x-forwarded-proto`), treats `APP_URL` as a
+  validated fallback that must parse as a bare http(s) origin, and keeps
+  `localhost:25000` on http. `src/app/(auth)/register/actions.ts` calls it instead of
+  reading the variable directly. Seven cases in `tests/unit/app-origin.test.ts` cover
+  the order, a trimmed trailing slash, a missing scheme, a value carrying a path and a
+  non-host `x-forwarded-host`. **Walk completed the documented way:** redeeming the
+  same token with `redirect_to=…/auth/confirm` returned
+  `303 …/auth/confirm?code=73b7969a-…`; opening that in the same incognito tab (the
+  PKCE verifier lives there) exchanged the code, sent the account to
+  `/awaiting-approval` showing “In review” for Stage Redirect Check Cafe, and filed a
+  `pending` row at 09:37:05Z. `+walk5` is now `confirmed=true` and queued. Gates on the
+  change: `npm run check` 0 errors (2 pre-existing warnings in
+  `src/lib/permissions.ts`), `npm run test` 171 passed in 28 files, `npm run build`
+  exit 0, `npm run secrets:check` ok. Not deployed: the stage still sends the broken
+  redirect until `APP_URL` is corrected or this build ships.
+
+- **2026-11-24 — The first platform admin exists, verified from the application's role.**
+  `codemen.salman+stkadmin@gmail.com` had no `auth.users` row, and
+  `platform_admins.user_id` is a foreign key to it, so the account was created first in
+  the Supabase dashboard (no email sent, no `signup_requests` row), then
+  `npx tsx local/tmp/make-admin.ts` inserted the admin row at 09:19Z
+  (`75078ee3-05c2-4d27-9cd7-61092c74807e`). Verified with `local/tmp/check-admin.ts`,
+  which resolves the ids as the owner, switches to `authenticated` and sets
+  `request.jwt.claims` to the account's `sub`: `private.is_platform_admin()` returned
+  `true` and `has_function_privilege('private.approve_signup_request(uuid)','execute')`
+  returned `true`; the same transaction with the walk3 applicant's claim returned
+  `false`. With the admin claim, `select … from public.signup_requests` returned the one
+  `approved` row rather than only an own row, so the admin-select policy resolves too.
+  Until now `platform_admins` was empty, so no application role could approve. No code
+  changed, so the gates were not re-run for this entry.
+
+- **2026-11-24 — One registration walked end to end on the stage.** Signing up as
+  `codemen.salman+walk3@gmail.com` through `/register` at 08:10Z returned the form's
+  success state and created an unconfirmed `auth.users` row; the confirmation email
+  arrived (the built-in mailer's hourly allowance had reset), and redeeming its code at
+  `/auth/confirm` with the PKCE verifier cookie from the same browser signed the account
+  in. The gate sent it to `/awaiting-approval`, which showed “In review” with the
+  request date, address and status, and `signup_requests` held one `pending` row
+  (08:15Z, “Stage Walkthrough Cafe”). `select private.approve_signup_request('<id>')`
+  as the database owner returned `{businessId: 2cad023d-…, businessName: "Stage
+Walkthrough Cafe", alreadyApproved: false}` and created the business plus an `owner`
+  membership; the awaiting screen then showed “You are approved” and `/` rendered the
+  dashboard for that business with its empty states. That path is the owner role, which
+  the guard deliberately allows; no application role can approve until
+  `platform_admins` has a row. **Found:** the emailed link carried
+  `redirect_to=https://inventory-stage.vercel.app/` although the action requests
+  `${APP_URL}/auth/confirm`, so Supabase substituted the Site URL. The wildcard entry in place,
+  `https://inventory-stage-*.vercel.app/**`, covers preview hosts but cannot match
+  `inventory-stage.vercel.app`: `*` matches only non-separator characters (`.` and `/`
+  are separators) and the pattern carries a literal `-` before `.vercel.app`, where
+  the alias has a `.`. The owner also reports `https://inventory-stage.vercel.app/**`
+  as present, which would match, so the remaining candidates are a stale `APP_URL` in
+  Vercel (local `.env.local` carries `http://localhost:25000`, and Vercel's copy must
+  be the production alias) or an entry that does not match exactly. The retest at
+  08:31Z was refused by the hourly mail cap, so the cause is unconfirmed. A real applicant who
+  clicks it lands on `/` with an unused `?code=`, is redirected to sign-in, and their
+  request row is never written. The walk only completed because the redirect was read
+  with `curl -D` and the code redeemed at the right path; the fix is one redirect
+  entry in Supabase, recorded in `docs/known-limitations.md`. No code changed, so the
+  gates were not re-run for this entry.
+
 - **2026-11-24 — The registration rate-limit message was wrong, and is fixed.** A
   single direct probe of `POST /auth/v1/signup` (publishable key, no retries) returned
   200 and created an unconfirmed user while the register form was still answering "Too
