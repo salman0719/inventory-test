@@ -15,9 +15,10 @@ Keep this file current. Do not report a task as complete until it has been verif
   supplier, stock and purchase-order journeys were walked in the browser on
   2026-11-22: defects D1–D3 are fixed (`0ef1b41`, `b368be9`, `1219908`)
 - Current deployment: Vercel stage at `https://inventory-stage.vercel.app`
-  (public, no deployment protection; serves `main` through `e50688a`, with the
-  hosted Supabase database seeded through `db:seed:hosted`)
-- Last updated: 2026-11-23
+  (public, no deployment protection; serves `main` through `e460b66`, with the
+  hosted Supabase database seeded through `db:seed:hosted` and migrated through
+  `0012` — 13 tracked)
+- Last updated: 2026-11-25
 
 ## Phase checklist
 
@@ -132,6 +133,24 @@ Keep this file current. Do not report a task as complete until it has been verif
 ## Recently completed
 
 Add date, task, verification method, and result.
+
+- **2026-11-25 — The stage caught up: migrations `0009`–`0012` applied and `main`
+  deployed.** `npm run db:migrate:hosted` applied 4 migrations (9 → 13 tracked)
+  **before** the code shipped, so no request could reach a half-migrated database. A
+  read-only post-check against the hosted project found all ten panel and
+  confirmation functions present as `SECURITY DEFINER`, 8 of 8 `authenticated`
+  execute grants, 1 platform admin and 2 registration rows; it writes nothing
+  (`local/tmp/hosted-postcheck.ts`). `git push origin main` moved `ad7f251..e460b66`
+  (14 commits: registration, the admin panel, approval attach, address confirmation,
+  the request-origin fix and the local auth shim). **Verified on the stage after
+  deploy:** `/admin` answers `307 → /sign-in?next=%2Fadmin` — that route exists only
+  from `3fd4ba7`, so the alias is serving this build — `/sign-in` returns 200 and `/`
+  redirects a signed-out visitor to sign-in (all read at 2026-11-25, signed out).
+  **Gates on `e460b66`:** `npm run check` exit 0 (0 errors, the same 2 pre-existing
+  `src/lib/permissions.ts` warnings), `npm run test` 200 passed in 31 files,
+  `npm run build` exit 0, `npm run secrets:check` ok. **Not verified:** no signed-in
+  walk of `/admin` or of an approve/attach/confirm action on the stage; the admin
+  account's password is not held here, so those paths rest on the database tests.
 
 - **2026-11-24 — A real registration stopped at the local database, and the cause is
   now known.** `codemen.salman+inventorytest1@gmail.com` (“Kuddus Boyati”, business
