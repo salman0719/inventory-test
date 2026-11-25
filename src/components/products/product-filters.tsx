@@ -147,7 +147,7 @@ export function ProductFilters({
         filtered={filtered}
         q={q}
         searchLabel="Search products"
-                      searchPlaceholder="Name, SKU or barcode"
+        searchPlaceholder="Name, SKU or barcode"
         chips={chips}
       >
         {fields}
