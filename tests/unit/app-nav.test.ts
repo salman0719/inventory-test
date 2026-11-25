@@ -150,7 +150,7 @@ describe("the phone navigation", () => {
     ]);
     expect(tabBar().textContent).toContain("Dash");
     expect(tabBar().textContent).toContain("Stock");
-    // The four sheet screens stay out of the bar; that is why More exists.
+    // The sheet screens stay out of the bar; that is why More exists.
     expect(tabBar().textContent).not.toContain("Purchase orders");
     expect(tabBar().textContent).not.toContain("Settings");
     // Each tab keeps its full name for a screen reader, whatever the label says.
@@ -213,6 +213,7 @@ describe("the phone navigation", () => {
         link.getAttribute("href"),
       ),
     ).toEqual([
+      "/stocktake",
       "/suppliers",
       "/purchase-orders",
       "/reports",

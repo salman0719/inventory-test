@@ -68,6 +68,19 @@ const ITEMS: Item[] = [
     ),
   },
   {
+    href: "/stocktake",
+    label: "Stocktake",
+    short: "Count",
+    tab: "Count",
+    icon: (
+      <svg {...iconProps}>
+        <rect x="5" y="4" width="14" height="17" rx="1.5" />
+        <path d="M9 3h6v3H9z" />
+        <path d="M9 13l2 2 4-4" />
+      </svg>
+    ),
+  },
+  {
     href: "/suppliers",
     label: "Suppliers",
     short: "Supp",
