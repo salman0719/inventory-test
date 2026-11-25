@@ -240,6 +240,11 @@ export const stockMovements = pgTable(
       sql`${t.movementType} in ('opening', 'received', 'stock_in', 'stock_out', 'adjustment')`,
     ),
     check("stock_movements_delta_check", sql`${t.quantityDelta} <> 0`),
+    // One adjustment per product per stocktake: the second lock behind the
+    // session's status check, at the ledger itself.
+    uniqueIndex("stock_movements_stocktake_line_key")
+      .on(t.businessId, t.referenceId, t.productId)
+      .where(sql`${t.referenceType} = 'stocktake'`),
     foreignKey({
       name: "stock_movements_product_fk",
       columns: [t.businessId, t.productId],
@@ -431,6 +436,100 @@ export const purchaseReceiptLines = pgTable(
       name: "purchase_receipt_lines_order_line_fk",
       columns: [t.businessId, t.purchaseOrderLineId],
       foreignColumns: [purchaseOrderLines.businessId, purchaseOrderLines.id],
+    }),
+  ],
+);
+
+/**
+ * A counted sheet: the filters used to build its lines, and a snapshot of on-hand
+ * per line. Completing it posts one ledger adjustment per product whose count
+ * differs from the live sum, so the delta is `counted - current`, never
+ * `counted - expected`.
+ *
+ * Writes go through `private.create_stocktake`, `private.save_stocktake_counts`
+ * and `private.complete_stocktake`; the application role reads the tables only.
+ */
+export const stocktakeSessions = pgTable(
+  "stocktake_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id, { onDelete: "cascade" }),
+    reference: text("reference").notNull(),
+    status: text("status").notNull().default("draft"),
+    scope: jsonb("scope").notNull().default({}),
+    /** FK to auth.users is added by the migration, as elsewhere in this file. */
+    startedBy: uuid("started_by").notNull(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("stocktake_sessions_business_reference_key").on(
+      t.businessId,
+      t.reference,
+    ),
+    uniqueIndex("stocktake_sessions_business_id_key").on(t.businessId, t.id),
+    index("stocktake_sessions_business_created_idx").on(
+      t.businessId,
+      t.createdAt,
+    ),
+    check(
+      "stocktake_sessions_status_check",
+      sql`${t.status} in ('draft', 'completed', 'cancelled')`,
+    ),
+    check(
+      "stocktake_sessions_reference_check",
+      sql`${t.reference} ~ '^ST-[0-9]{4,}$'`,
+    ),
+    check(
+      "stocktake_sessions_completed_check",
+      sql`(${t.status} = 'completed') = (${t.completedAt} is not null)`,
+    ),
+  ],
+);
+
+export const stocktakeLines = pgTable(
+  "stocktake_lines",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
+    sessionId: uuid("session_id").notNull(),
+    productId: uuid("product_id").notNull(),
+    /** On hand when the line was created: the audit baseline, not the delta's input. */
+    expectedQuantity: numeric("expected_quantity", {
+      precision: 12,
+      scale: 3,
+    }).notNull(),
+    countedQuantity: numeric("counted_quantity", { precision: 12, scale: 3 }),
+    /** Filled at finalise: the live ledger sum then, and what it received. */
+    onHandBefore: numeric("on_hand_before", { precision: 12, scale: 3 }),
+    appliedDelta: numeric("applied_delta", { precision: 12, scale: 3 }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("stocktake_lines_session_product_key").on(
+      t.businessId,
+      t.sessionId,
+      t.productId,
+    ),
+    check(
+      "stocktake_lines_quantities_check",
+      sql`${t.expectedQuantity} >= 0 and (${t.countedQuantity} is null or ${t.countedQuantity} >= 0)`,
+    ),
+    foreignKey({
+      name: "stocktake_lines_session_fk",
+      columns: [t.businessId, t.sessionId],
+      foreignColumns: [stocktakeSessions.businessId, stocktakeSessions.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "stocktake_lines_product_fk",
+      columns: [t.businessId, t.productId],
+      foreignColumns: [products.businessId, products.id],
     }),
   ],
 );
