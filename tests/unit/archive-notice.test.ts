@@ -108,6 +108,7 @@ function renderProductPanel(isArchived: boolean) {
         product: { ...product, isArchived },
         categories: [],
         suppliers: [],
+        price: { lastPaid: null, entries: [] },
         currency: "AUD",
         saved: true,
         closeHref: "/products",

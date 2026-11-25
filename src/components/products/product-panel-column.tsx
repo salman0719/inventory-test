@@ -47,6 +47,7 @@ export function ProductPanelColumn() {
               product={data.product}
               categories={data.categories}
               suppliers={data.suppliers}
+              price={data.price}
               currency={data.currency}
               saved={data.saved}
               closeHref={closeHref}

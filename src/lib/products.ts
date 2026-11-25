@@ -36,6 +36,26 @@ export type CategoryOption = {
 
 export type SupplierOption = { id: string; name: string };
 
+/** One receipt line, as the product panel reads it: what was paid, when, to whom. */
+export type PricePaid = {
+  unitCost: string;
+  receivedAt: string;
+  supplierId: string;
+  supplierName: string;
+};
+
+export type ProductPriceHistory = {
+  /** The most recent receipt, or null when nothing has been received. */
+  lastPaid: PricePaid | null;
+  /** Up to five receipts, newest first. */
+  entries: PricePaid[];
+};
+
+export const NO_PRICE_HISTORY: ProductPriceHistory = {
+  lastPaid: null,
+  entries: [],
+};
+
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -219,6 +239,7 @@ export async function getProductPanel(
   product: ProductSummary | null;
   categories: CategoryOption[];
   suppliers: SupplierOption[];
+  price: ProductPriceHistory;
 }> {
   return withTenant(userId, async (client) => {
     const [product, categories, suppliers] = await Promise.all([
@@ -232,7 +253,66 @@ export async function getProductPanel(
         ? []
         : listSuppliers(userId, businessId, client),
     ]);
-    return { product, categories, suppliers };
+    const price =
+      request.mode === "detail" && product !== null
+        ? await getProductPriceHistory(
+            userId,
+            businessId,
+            request.productId,
+            client,
+          )
+        : NO_PRICE_HISTORY;
+    return { product, categories, suppliers, price };
+  });
+}
+
+const PRICE_HISTORY_LIMIT = 5;
+
+/**
+ * What was paid for this product, newest first, from the receipts that already
+ * exist. `cost_price` is untouched: this is evidence, not valuation.
+ */
+export async function getProductPriceHistory(
+  userId: string,
+  businessId: string,
+  productId: string,
+  client?: PoolClient,
+): Promise<ProductPriceHistory> {
+  if (!UUID_PATTERN.test(productId)) return NO_PRICE_HISTORY;
+
+  return runInTenant(userId, client, async (client) => {
+    const result = await client.query<{
+      unit_cost: string;
+      received_at: Date;
+      supplier_id: string;
+      supplier_name: string;
+    }>(
+      `select rl.unit_cost::text as unit_cost, r.received_at,
+              po.supplier_id, s.name as supplier_name
+         from purchase_receipt_lines rl
+         join purchase_receipts r
+           on r.business_id = rl.business_id and r.id = rl.receipt_id
+         join purchase_order_lines pol
+           on pol.business_id = rl.business_id
+          and pol.id = rl.purchase_order_line_id
+         join purchase_orders po
+           on po.business_id = pol.business_id
+          and po.id = pol.purchase_order_id
+         join suppliers s
+           on s.business_id = po.business_id and s.id = po.supplier_id
+        where rl.business_id = $1 and pol.product_id = $2
+          and rl.unit_cost is not null
+        order by r.received_at desc, rl.id desc
+        limit $3`,
+      [businessId, productId, PRICE_HISTORY_LIMIT],
+    );
+    const entries = result.rows.map((row) => ({
+      unitCost: row.unit_cost,
+      receivedAt: row.received_at.toISOString(),
+      supplierId: row.supplier_id,
+      supplierName: row.supplier_name,
+    }));
+    return { lastPaid: entries[0] ?? null, entries };
   });
 }
 

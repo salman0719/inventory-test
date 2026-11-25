@@ -1,6 +1,7 @@
 import type { PanelRequest } from "./panel";
 import type {
   CategoryOption,
+  ProductPriceHistory,
   ProductSummary,
   SupplierOption,
 } from "./products";
@@ -23,6 +24,8 @@ export type ProductPanelPayload = {
   product: ProductSummary | null;
   categories: CategoryOption[];
   suppliers: SupplierOption[];
+  /** What was paid, from receipts; empty for a create form or a viewer. */
+  price: ProductPriceHistory;
   currency: string;
   canViewValues: boolean;
   saved: boolean;

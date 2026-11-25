@@ -8,6 +8,7 @@ import { EMPTY_PRODUCT } from "@/lib/product-defaults";
 import { formatMoney, formatQuantity, stockStatus } from "@/lib/product-input";
 import type {
   CategoryOption,
+  ProductPriceHistory,
   ProductSummary,
   SupplierOption,
 } from "@/lib/products";
@@ -17,6 +18,12 @@ import { StatusLabel } from "./status-label";
 
 const BUTTON =
   "inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-2.5 text-[12px] font-medium hover:border-accent hover:text-accent";
+
+function formatDay(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-AU", { dateStyle: "medium" }).format(date);
+}
 
 /**
  * Direction C keeps details beside the list rather than on another page, so
@@ -31,6 +38,7 @@ export function ProductPanel({
   product,
   categories,
   suppliers,
+  price,
   currency,
   saved,
   closeHref,
@@ -41,6 +49,7 @@ export function ProductPanel({
   product: ProductSummary | null;
   categories: CategoryOption[];
   suppliers: SupplierOption[];
+  price: ProductPriceHistory;
   currency: string;
   saved: boolean;
   closeHref: string;
@@ -107,6 +116,7 @@ export function ProductPanel({
       ) : product ? (
         <ProductBody
           product={product}
+          price={price}
           currency={currency}
           saved={saved}
           canViewValues={canViewValues}
@@ -118,11 +128,13 @@ export function ProductPanel({
 
 function ProductBody({
   product,
+  price,
   currency,
   saved,
   canViewValues,
 }: {
   product: ProductSummary;
+  price: ProductPriceHistory;
   currency: string;
   saved: boolean;
   canViewValues: boolean;
@@ -176,6 +188,53 @@ function ProductBody({
           </Value>
         ) : null}
       </dl>
+
+      {canViewValues ? (
+        <div className="border-t border-line px-3 py-2">
+          <h3 className="text-[10px] uppercase tracking-[0.07em] text-ink-muted">
+            Purchase price
+          </h3>
+          {price.lastPaid ? (
+            <>
+              <p className="mt-1 text-[12px]">
+                Last paid{" "}
+                <span className="font-mono">
+                  {formatMoney(price.lastPaid.unitCost, currency)}
+                </span>{" "}
+                per {product.unitOfMeasure} on{" "}
+                {formatDay(price.lastPaid.receivedAt)} from{" "}
+                {price.lastPaid.supplierName}.
+              </p>
+              <p className="mt-0.5 text-[11px] text-ink-faint">
+                Cost above is the catalogue price; this is what the last
+                delivery cost.
+              </p>
+              {price.entries.length > 1 ? (
+                <ul className="mt-1.5 flex flex-col gap-0.5">
+                  {price.entries.map((entry, index) => (
+                    <li
+                      key={`${entry.receivedAt}-${index}`}
+                      className="flex items-baseline gap-2 text-[11.5px] text-ink-muted"
+                    >
+                      <span className="font-mono text-ink">
+                        {formatMoney(entry.unitCost, currency)}
+                      </span>
+                      <span className="truncate">{entry.supplierName}</span>
+                      <span className="ml-auto shrink-0">
+                        {formatDay(entry.receivedAt)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </>
+          ) : (
+            <p className="mt-1 text-[12px] text-ink-muted">
+              No deliveries received yet, so there is no last paid price.
+            </p>
+          )}
+        </div>
+      ) : null}
 
       {product.description ? (
         <p className="border-t border-line px-3 py-2 text-[12px] text-ink-muted">

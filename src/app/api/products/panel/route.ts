@@ -45,7 +45,7 @@ export async function GET(request: Request) {
   const { mode, id: productId, saved } = parsed.data;
   const canViewValues = active.role !== "viewer";
 
-  const { product, categories, suppliers } = await getProductPanel(
+  const { product, categories, suppliers, price } = await getProductPanel(
     user.id,
     active.id,
     { mode, productId },
@@ -56,6 +56,7 @@ export async function GET(request: Request) {
     product,
     categories,
     suppliers,
+    price: canViewValues ? price : { lastPaid: null, entries: [] },
     currency: active.currencyCode,
     canViewValues,
     saved: saved && mode !== "edit",
