@@ -202,6 +202,40 @@ constraint "signup_requests_user_fk"`. The confirm route catches that and contin
   `extensions` on Supabase). Both were verified by signing in through the form in the
   browser; the sandbox README carries the owner's password.
 
+- **2026-11-24 — A new local registration files itself, and the wait screen's dead
+  link is gone.** Local development signs in through hosted GoTrue while the app reads
+  a local Postgres whose `auth.users` is a shim, so an account created by the
+  confirmation link had no local row: `signup_requests` failed
+  `signup_requests_user_fk`, the request was never written, and the applicant sat on
+  “This account has no business”, whose “Create an account” link the proxy bounced
+  straight back — a loop with no way out. `src/lib/auth-shim.ts` now holds the one write
+  rule: `writeAuthIdentity` upserts `id`, `email`, `email_confirmed_at`, `created_at`
+  and `raw_user_meta_data`, moving confirmation forward and never back. `/auth/confirm`
+  calls `syncDevAuthUser` with the account it just verified, before it files the
+  registration. It is development-only twice over — it runs only when `DATABASE_URL` is
+  loopback (`needsAuthShim`, the rule the migrations use) and connects with the compose
+  owner role, which no deployed environment has — and a failure is logged rather than
+  blocking the redirect. `db:link-user` now copies the hosted row through
+  `db/hosted-auth.ts` instead of writing `(id, email)`, which had made a working account
+  look unconfirmed and newly joined in the panel; `npm run db:sync-auth -- <email|uuid>`
+  (or no argument, for every hosted account) re-links anything registered elsewhere or
+  lost to a recreated database. The wait screen's link is now a `signOutAndRegister`
+  form button, so re-registering starts by ending the session `/register` objects to.
+  **Verified:** `local/tmp/shim-write-check.ts` ran the upsert against compose with a
+  throwaway id — the first write inserted, the second (carrying a null confirmation)
+  updated without clearing `email_confirmed_at`, and `created_at` and metadata came
+  from the payload — then deleted the row. `db:sync-auth -- <walkthrough2>` read the
+  hosted row and corrected the local one: “joined” moved from
+  2026-11-24T10:14:30.775Z (the moment it was linked) to the hosted
+  2026-11-24T06:03:35.087Z, confirmed 06:06:36.035Z. `db:link-user` was not run: it
+  shares those two functions. **Not verified:** no confirmation email was spent, so the
+  route's call has not been watched from a real link, and the sign-out button was not
+  clicked in a browser.
+  **Gates:** `npm run check` 0 errors (2 pre-existing warnings in
+  `src/lib/permissions.ts`), `npm run test` 200 passed in 31 files
+  (`tests/unit/auth-shim.test.ts` adds 6), `npm run build` exit 0. `npm run test:db` and
+  `npm run secrets:check` were not run: no SQL migration, dependency or secret changed.
+
 - **2026-11-24 — The panel gained a way out, and its counterpart in the header now
   matches its neighbours.** The **Admin** link added with the reviewer redirect used a
   muted pill that did not measure like the **Sign out** button beside it, so it read as

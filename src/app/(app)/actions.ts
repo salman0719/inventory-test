@@ -42,3 +42,17 @@ export async function signOut(): Promise<void> {
   await supabase.auth.signOut();
   redirect("/sign-in");
 }
+
+/**
+ * Leave this session and open the registration form.
+ *
+ * `/register` is closed to a signed-in visitor — the proxy sends them to `/` — so the
+ * wait screen's "no registration" state could only offer a link back into a
+ * redirect loop. Signing out first is the one button that makes the form reachable
+ * again, which is what an applicant whose registration never filed needs.
+ */
+export async function signOutAndRegister(): Promise<void> {
+  const supabase = await createSupabaseServerClient();
+  await supabase.auth.signOut();
+  redirect("/register");
+}

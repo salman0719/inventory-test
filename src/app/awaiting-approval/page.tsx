@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { signOut } from "@/app/(app)/actions";
+import { signOut, signOutAndRegister } from "@/app/(app)/actions";
 import Link from "next/link";
 import { isPlatformAdmin } from "@/lib/admin";
 import { getSessionUser } from "@/lib/session";
@@ -140,12 +140,18 @@ export default async function AwaitingApprovalPage() {
                 there is no registration waiting for review. If you registered
                 with a different address, sign in with that one.
               </p>
-              <Link
-                href="/register"
-                className="mt-4 inline-flex min-h-[40px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
-              >
-                Create an account
-              </Link>
+              <p className="mt-3 text-[11px] text-ink-faint">
+                The registration form is closed while an account is signed in,
+                so registering this address starts by signing out.
+              </p>
+              <form action={signOutAndRegister}>
+                <button
+                  type="submit"
+                  className="mt-2 inline-flex min-h-[40px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
+                >
+                  Sign out and register
+                </button>
+              </form>
             </>
           )}
 
