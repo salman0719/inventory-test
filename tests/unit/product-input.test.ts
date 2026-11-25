@@ -9,6 +9,7 @@ import {
 const valid = {
   name: "Tomatoes, truss",
   sku: "caf-0001",
+  supplierSku: "",
   categoryId: "",
   supplierId: "",
   unitOfMeasure: "kg",
@@ -55,6 +56,14 @@ describe("product input", () => {
   it("treats a zero reorder level as valid and a non-numeric one as invalid", () => {
     expect(parse({ reorderLevel: "0" }).success).toBe(true);
     expect(parse({ reorderLevel: "low" }).success).toBe(false);
+  });
+
+  it("keeps the supplier code as typed, or null when blank", () => {
+    expect(parse({}).data?.supplierSku).toBeNull();
+    expect(parse({ supplierSku: "  FF/100-A " }).data?.supplierSku).toBe(
+      "FF/100-A",
+    );
+    expect(parse({ supplierSku: "x".repeat(61) }).success).toBe(false);
   });
 });
 

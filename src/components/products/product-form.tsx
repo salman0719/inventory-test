@@ -37,6 +37,7 @@ function toField(value: string | null): string {
 type Fields = {
   name: string;
   sku: string;
+  supplierSku: string;
   unitOfMeasure: string;
   categoryId: string;
   supplierId: string;
@@ -50,6 +51,7 @@ function initialFields(defaults: ProductDefaults): Fields {
   return {
     name: defaults.name,
     sku: defaults.sku,
+    supplierSku: toField(defaults.supplierSku),
     unitOfMeasure: defaults.unitOfMeasure,
     categoryId: defaults.categoryId ?? "",
     supplierId: defaults.supplierId ?? "",
@@ -161,6 +163,16 @@ export function ProductForm({
             Supplier records arrive with the suppliers slice.
           </span>
         ) : null}
+      </label>
+
+      <label className="flex flex-col gap-1">
+        <span className={LABEL}>Supplier code</span>
+        <input
+          {...bind("supplierSku")}
+          maxLength={60}
+          placeholder="optional — the code on their invoice"
+          className={`${INPUT} font-mono`}
+        />
       </label>
 
       <div className="grid grid-cols-3 gap-2">

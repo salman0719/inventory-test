@@ -72,6 +72,12 @@ export const productInputSchema = z.object({
     .transform((value) => value.toUpperCase()),
   categoryId: optionalUuid("category"),
   supplierId: optionalUuid("supplier"),
+  /** The supplier's own catalogue code; free text, often with a slash. */
+  supplierSku: z
+    .string()
+    .trim()
+    .max(60, "Keep the supplier code to 60 characters or fewer.")
+    .transform((value) => (value === "" ? null : value)),
   unitOfMeasure: z
     .string()
     .trim()

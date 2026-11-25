@@ -14,6 +14,7 @@ export type ProductSummary = {
   id: string;
   name: string;
   sku: string;
+  supplierSku: string | null;
   unitOfMeasure: string;
   categoryId: string | null;
   categoryName: string | null;
@@ -39,7 +40,7 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const SELECT_PRODUCT = `
-  select p.id, p.name, p.sku, p.unit_of_measure, p.category_id,
+  select p.id, p.name, p.sku, p.supplier_sku, p.unit_of_measure, p.category_id,
          c.name as category_name, p.supplier_id, s.name as supplier_name,
          p.cost_price, p.selling_price, p.reorder_level, p.description,
          p.is_archived, coalesce(st.on_hand, 0)::text as on_hand
@@ -61,6 +62,7 @@ type Row = {
   id: string;
   name: string;
   sku: string;
+  supplier_sku: string | null;
   unit_of_measure: string;
   category_id: string | null;
   category_name: string | null;
@@ -79,6 +81,7 @@ function toSummary(row: Row): ProductSummary {
     id: row.id,
     name: row.name,
     sku: row.sku,
+    supplierSku: row.supplier_sku,
     unitOfMeasure: row.unit_of_measure,
     categoryId: row.category_id,
     categoryName: row.category_name,
@@ -283,8 +286,8 @@ export async function createProduct(
     const result = await client.query<{ id: string }>(
       `insert into products
          (business_id, name, sku, description, category_id, supplier_id,
-          unit_of_measure, cost_price, selling_price, reorder_level)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          supplier_sku, unit_of_measure, cost_price, selling_price, reorder_level)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        returning id`,
       [
         businessId,
@@ -293,6 +296,7 @@ export async function createProduct(
         input.description,
         input.categoryId,
         input.supplierId,
+        input.supplierSku,
         input.unitOfMeasure,
         input.costPrice,
         input.sellingPrice,
@@ -316,8 +320,9 @@ export async function updateProduct(
     const result = await client.query(
       `update products
           set name = $3, sku = $4, description = $5, category_id = $6,
-              supplier_id = $7, unit_of_measure = $8, cost_price = $9,
-              selling_price = $10, reorder_level = $11, updated_at = now()
+              supplier_id = $7, supplier_sku = $8, unit_of_measure = $9,
+              cost_price = $10, selling_price = $11, reorder_level = $12,
+              updated_at = now()
         where business_id = $1 and id = $2`,
       [
         businessId,
@@ -327,6 +332,7 @@ export async function updateProduct(
         input.description,
         input.categoryId,
         input.supplierId,
+        input.supplierSku,
         input.unitOfMeasure,
         input.costPrice,
         input.sellingPrice,

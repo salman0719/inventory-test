@@ -44,6 +44,7 @@ export async function saveProduct(
   const parsed = productInputSchema.safeParse({
     name: formValue(formData, "name"),
     sku: formValue(formData, "sku"),
+    supplierSku: formValue(formData, "supplierSku"),
     categoryId: formValue(formData, "categoryId"),
     supplierId: formValue(formData, "supplierId"),
     unitOfMeasure: formValue(formData, "unitOfMeasure"),
@@ -71,6 +72,13 @@ export async function saveProduct(
     }
   } catch (error) {
     if (isUniqueViolation(error)) {
+      const constraint = (error as { constraint?: string } | null)?.constraint;
+      if (constraint === "products_business_supplier_code_key") {
+        return {
+          error:
+            "That supplier code is already used by another product from this supplier.",
+        };
+      }
       return { error: "That SKU is already used in this business." };
     }
     throw error;

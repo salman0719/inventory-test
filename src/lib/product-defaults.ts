@@ -6,6 +6,7 @@ export type ProductDefaults = {
   id: string;
   name: string;
   sku: string;
+  supplierSku: string | null;
   unitOfMeasure: string;
   costPrice: string;
   sellingPrice: string | null;
@@ -19,6 +20,7 @@ export const EMPTY_PRODUCT: ProductDefaults = {
   id: "",
   name: "",
   sku: "",
+  supplierSku: "",
   unitOfMeasure: "ea",
   costPrice: "0.00",
   sellingPrice: "",
