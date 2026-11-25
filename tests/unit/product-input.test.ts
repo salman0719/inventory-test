@@ -12,6 +12,7 @@ const SUPPLIER = "11111111-1111-4111-8111-111111111111";
 const valid = {
   name: "Tomatoes, truss",
   sku: "caf-0001",
+  barcode: "",
   supplierSku: "",
   categoryId: "",
   supplierId: SUPPLIER,
@@ -34,6 +35,7 @@ describe("product input", () => {
     expect(result.data?.sellingPrice).toBeNull();
     expect(result.data?.categoryId).toBeNull();
     expect(result.data?.description).toBeNull();
+    expect(result.data?.barcode).toBeNull();
   });
 
   it("keeps money as a numeric string so nothing rounds before Postgres", () => {
@@ -59,6 +61,13 @@ describe("product input", () => {
   it("treats a zero reorder level as valid and a non-numeric one as invalid", () => {
     expect(parse({ reorderLevel: "0" }).success).toBe(true);
     expect(parse({ reorderLevel: "low" }).success).toBe(false);
+  });
+
+  it("keeps a barcode as typed, or null when blank", () => {
+    expect(parse({ barcode: " 9300675024235 " }).data?.barcode).toBe(
+      "9300675024235",
+    );
+    expect(parse({ barcode: "x".repeat(81) }).success).toBe(false);
   });
 
   it("keeps the supplier code as typed, or null when blank", () => {

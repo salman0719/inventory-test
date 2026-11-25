@@ -149,6 +149,8 @@ export const products = pgTable(
     categoryId: uuid("category_id"),
     name: text("name").notNull(),
     sku: text("sku").notNull(),
+    /** A manufacturer barcode; not unique because pack sizes can share one. */
+    barcode: text("barcode"),
     description: text("description"),
     unitOfMeasure: text("unit_of_measure").notNull().default("ea"),
     costPrice: numeric("cost_price", { precision: 12, scale: 2 })
@@ -175,6 +177,9 @@ export const products = pgTable(
   (t) => [
     uniqueIndex("products_business_sku_key").on(t.businessId, t.sku),
     uniqueIndex("products_business_id_key").on(t.businessId, t.id),
+    index("products_business_barcode_idx")
+      .on(t.businessId, t.barcode)
+      .where(sql`${t.barcode} is not null`),
     index("products_business_archived_name_idx").on(
       t.businessId,
       t.isArchived,

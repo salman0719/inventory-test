@@ -62,6 +62,7 @@ export async function saveProduct(
   const parsed = productInputSchema.safeParse({
     name: formValue(formData, "name"),
     sku: formValue(formData, "sku"),
+    barcode: formValue(formData, "barcode"),
     supplierSku: formValue(formData, "supplierSku"),
     categoryId: formValue(formData, "categoryId"),
     supplierId: formValue(formData, "supplierId"),

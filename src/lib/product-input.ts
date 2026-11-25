@@ -77,6 +77,13 @@ export const productInputSchema = z.object({
     .trim()
     .min(1, "Enter a product name.")
     .max(120, "Keep the name to 120 characters or fewer."),
+  /** The manufacturer barcode scanned at the shelf; free text, often digits. */
+  barcode: z
+    .string()
+    .trim()
+    .max(80, "Keep the barcode to 80 characters or fewer.")
+    .default("")
+    .transform((value) => (value === "" ? null : value)),
   sku: z
     .string()
     .trim()

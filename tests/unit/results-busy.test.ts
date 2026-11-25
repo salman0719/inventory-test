@@ -50,6 +50,7 @@ function tomato() {
     id: "p1",
     name: "Tomatoes",
     sku: "CAF-001",
+    barcode: null,
     unitOfMeasure: "kg",
     categoryId: null,
     categoryName: null,

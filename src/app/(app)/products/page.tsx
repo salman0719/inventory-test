@@ -160,7 +160,7 @@ export default async function ProductsPage({
                 </p>
                 <p className="mx-auto mt-1 max-w-[46ch] text-[12px] text-ink-muted">
                   {filtered
-                    ? "Clear the filters, or search for a different name or SKU."
+                    ? "Clear the filters, or search for a different name, SKU or barcode."
                     : "Add the first product to start the catalogue, or seed the demo data with npm run db:seed."}
                 </p>
                 {filtered ? (

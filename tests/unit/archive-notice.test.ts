@@ -57,6 +57,7 @@ const product: ProductSummary = {
   id: "p1",
   name: "Journey Apples",
   sku: "JRN-001",
+  barcode: null,
   unitOfMeasure: "kg",
   categoryId: null,
   categoryName: null,

@@ -199,6 +199,14 @@ function ProductBody({
           </>
         ) : null}
         <Value label="Category">{product.categoryName ?? "—"}</Value>
+        {product.barcode ? (
+          <div className="col-span-2 min-w-0">
+            <dt className="text-[10px] uppercase tracking-[0.07em] text-ink-muted">
+              Barcode
+            </dt>
+            <dd className="font-mono text-[13px] break-all">{product.barcode}</dd>
+          </div>
+        ) : null}
       </dl>
 
       <ProductSuppliers

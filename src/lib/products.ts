@@ -15,6 +15,8 @@ export type ProductSummary = {
   id: string;
   name: string;
   sku: string;
+  /** A manufacturer barcode; several products may share one. */
+  barcode: string | null;
   unitOfMeasure: string;
   categoryId: string | null;
   categoryName: string | null;
@@ -72,7 +74,7 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const SELECT_PRODUCT = `
-  select p.id, p.name, p.sku, p.unit_of_measure,
+  select p.id, p.name, p.sku, p.barcode, p.unit_of_measure,
          p.category_id, c.name as category_name,
          p.cost_price, p.selling_price,
          p.reorder_level, p.target_stock_level, p.description, p.is_archived,
@@ -94,6 +96,7 @@ type Row = {
   id: string;
   name: string;
   sku: string;
+  barcode: string | null;
   unit_of_measure: string;
   category_id: string | null;
   category_name: string | null;
@@ -111,6 +114,7 @@ function toSummary(row: Row): ProductSummary {
     id: row.id,
     name: row.name,
     sku: row.sku,
+    barcode: row.barcode,
     unitOfMeasure: row.unit_of_measure,
     categoryId: row.category_id,
     categoryName: row.category_name,
@@ -158,7 +162,8 @@ export async function listProducts(
   return runInTenant(userId, client, async (client) => {
     const filters = `
       where p.business_id = $1
-        and ($2::text is null or p.name ilike $2 or p.sku ilike $2)
+        and ($2::text is null
+             or p.name ilike $2 or p.sku ilike $2 or p.barcode ilike $2)
         and ($3::uuid is null or p.category_id = $3)
         and ($4::boolean or p.is_archived = false)
     `;
@@ -482,14 +487,16 @@ export async function createProduct(
   return withTenant(userId, async (client) => {
     const result = await client.query<{ id: string }>(
       `insert into products
-         (business_id, name, sku, description, category_id, unit_of_measure,
-          cost_price, selling_price, reorder_level, target_stock_level)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         (business_id, name, sku, barcode, description, category_id,
+          unit_of_measure, cost_price, selling_price, reorder_level,
+          target_stock_level)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        returning id`,
       [
         businessId,
         input.name,
         input.sku,
+        input.barcode,
         input.description,
         input.categoryId,
         input.unitOfMeasure,
@@ -533,9 +540,10 @@ export async function updateProduct(
   return withTenant(userId, async (client) => {
     const result = await client.query(
       `update products
-          set name = $3, sku = $4, description = $5, category_id = $6,
-              unit_of_measure = $7, cost_price = $8, selling_price = $9,
-              reorder_level = $10, target_stock_level = $11, updated_at = now()
+          set name = $3, sku = $4, barcode = $5, description = $6,
+              category_id = $7, unit_of_measure = $8, cost_price = $9,
+              selling_price = $10, reorder_level = $11,
+              target_stock_level = $12, updated_at = now()
         where business_id = $1 and id = $2
         returning id`,
       [
@@ -543,6 +551,7 @@ export async function updateProduct(
         productId,
         input.name,
         input.sku,
+        input.barcode,
         input.description,
         input.categoryId,
         input.unitOfMeasure,

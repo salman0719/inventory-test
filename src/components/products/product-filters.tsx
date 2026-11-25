@@ -134,7 +134,7 @@ export function ProductFilters({
             </span>
             <FilterSearch
               value={q}
-              placeholder="Name or SKU"
+              placeholder="Name, SKU or barcode"
               className="h-9 w-[190px] rounded border border-line bg-surface px-2.5 text-[13px]"
             />
           </label>
@@ -147,7 +147,7 @@ export function ProductFilters({
         filtered={filtered}
         q={q}
         searchLabel="Search products"
-        searchPlaceholder="Name or SKU"
+                      searchPlaceholder="Name, SKU or barcode"
         chips={chips}
       >
         {fields}

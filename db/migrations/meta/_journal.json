@@ -141,6 +141,13 @@
       "when": 1796102400000,
       "tag": "0019_product_suppliers",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1796188800000,
+      "tag": "0020_product_barcode",
+      "breakpoints": true
     }
   ]
 }

@@ -41,6 +41,7 @@ function toField(value: string | null): string {
 type Fields = {
   name: string;
   sku: string;
+  barcode: string;
   supplierSku: string;
   unitOfMeasure: string;
   categoryId: string;
@@ -60,6 +61,7 @@ function initialFields(
   return {
     name: defaults.name,
     sku: defaults.sku,
+    barcode: toField(defaults.barcode),
     supplierSku: toField(defaultLink?.supplierSku ?? null),
     unitOfMeasure: defaults.unitOfMeasure,
     categoryId: defaults.categoryId ?? "",
@@ -157,6 +159,19 @@ export function ProductForm({
           </datalist>
         </label>
       </div>
+
+      <label className="flex flex-col gap-1">
+        <span className={LABEL}>Barcode</span>
+        <input
+          {...bind("barcode")}
+          maxLength={80}
+          placeholder="optional — the manufacturer's barcode"
+          className={`${INPUT} font-mono`}
+        />
+        <span className="text-[11px] text-ink-faint">
+          Used by the scanner. Leave it blank when the product has no barcode.
+        </span>
+      </label>
 
       <label className="flex flex-col gap-1">
         <span className={LABEL}>Category</span>
