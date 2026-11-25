@@ -5,6 +5,7 @@ import type {
   PurchaseOrderInput,
   ReceiptInput,
 } from "./purchase-order-input";
+import { arrivedQuantity } from "./purchase-order-input";
 
 /**
  * Purchase order data access.
@@ -26,6 +27,9 @@ export type PurchaseOrderSummary = {
   orderedAt: string | null;
   notes: string | null;
   createdAt: string;
+  /** Set when the balance of a partly received order was written off. */
+  closedShortAt: string | null;
+  closeReason: string | null;
   lineCount: number;
   receivedLines: number;
   totalValue: string;
@@ -47,7 +51,11 @@ export type PurchaseReceipt = {
   id: string;
   receivedAt: string;
   lineCount: number;
+  /** What arrived, across the lines. */
   quantity: string;
+  accepted: string;
+  damaged: string;
+  rejected: string;
 };
 
 export type PurchaseOrderDetail = {
@@ -88,6 +96,7 @@ const SELECT_SUMMARY = `
   select po.id, po.order_number, po.status, po.supplier_id,
          s.name as supplier_name, po.expected_delivery_at::text as expected_delivery_at,
          po.ordered_at, po.notes, po.created_at,
+         po.closed_short_at, po.close_reason,
          count(l.id)::int as line_count,
          count(l.id) filter (
            where l.received_quantity >= l.quantity_ordered
@@ -110,6 +119,8 @@ type SummaryRow = {
   ordered_at: Date | null;
   notes: string | null;
   created_at: Date;
+  closed_short_at: Date | null;
+  close_reason: string | null;
   line_count: number;
   received_lines: number;
   total_value: string;
@@ -126,6 +137,8 @@ function toSummary(row: SummaryRow): PurchaseOrderSummary {
     orderedAt: row.ordered_at?.toISOString() ?? null,
     notes: row.notes,
     createdAt: row.created_at.toISOString(),
+    closedShortAt: row.closed_short_at?.toISOString() ?? null,
+    closeReason: row.close_reason,
     lineCount: row.line_count,
     receivedLines: row.received_lines,
     totalValue: row.total_value,
@@ -304,9 +317,15 @@ export async function getPurchaseOrder(
       received_at: Date;
       line_count: number;
       quantity: string;
+      accepted: string;
+      damaged: string;
+      rejected: string;
     }>(
       `select r.id, r.received_at, count(rl.id)::int as line_count,
-              coalesce(sum(rl.quantity_received), 0)::text as quantity
+              coalesce(sum(rl.quantity_received), 0)::text as quantity,
+              coalesce(sum(rl.quantity_accepted), 0)::text as accepted,
+              coalesce(sum(rl.quantity_damaged), 0)::text as damaged,
+              coalesce(sum(rl.quantity_rejected), 0)::text as rejected
          from purchase_receipts r
          left join purchase_receipt_lines rl
            on rl.business_id = r.business_id and rl.receipt_id = r.id
@@ -335,6 +354,9 @@ export async function getPurchaseOrder(
         receivedAt: row.received_at.toISOString(),
         lineCount: row.line_count,
         quantity: row.quantity,
+        accepted: row.accepted,
+        damaged: row.damaged,
+        rejected: row.rejected,
       })),
     };
   });
@@ -542,9 +564,49 @@ export async function setPurchaseOrderStatus(
 }
 
 /**
+ * Close the balance of a partly received order. The lines keep the quantities that
+ * actually arrived, and the reason stays with the order so the shortfall has an
+ * explanation later.
+ */
+export async function closePurchaseOrderShort(
+  userId: string,
+  businessId: string,
+  orderId: string,
+  reason: string,
+): Promise<OrderActionResult> {
+  if (!UUID_PATTERN.test(orderId)) {
+    return { ok: false, error: "That order is not in this business." };
+  }
+
+  try {
+    return await withTenant(userId, async (client) => {
+      // Scope the id to this business first; the function re-derives it.
+      const owned = await client.query(
+        "select id from purchase_orders where business_id = $1 and id = $2",
+        [businessId, orderId],
+      );
+      if (owned.rowCount !== 1) {
+        return {
+          ok: false as const,
+          error: "That order is not in this business.",
+        };
+      }
+
+      await client.query("select private.close_purchase_order_short($1, $2)", [
+        orderId,
+        reason,
+      ]);
+      return { ok: true as const };
+    });
+  } catch (error) {
+    return describeActionError(error);
+  }
+}
+
+/**
  * Receive one delivery. The payload is one entry per line; the database locks the
  * order, refuses over-receipt, writes the receipt, its lines and one stock movement
- * per line, then moves the status.
+ * per accepted quantity, then moves the status.
  */
 export async function receiveDelivery(
   userId: string,
@@ -554,7 +616,11 @@ export async function receiveDelivery(
   const payload = JSON.stringify(
     input.lines.map((line) => ({
       purchase_order_line_id: line.lineId,
-      quantity: line.quantity,
+      received: arrivedQuantity(line),
+      accepted: line.accepted,
+      damaged: line.damaged,
+      rejected: line.rejected,
+      reason: line.reason,
     })),
   );
 

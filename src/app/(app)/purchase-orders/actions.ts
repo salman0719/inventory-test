@@ -4,10 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getActiveBusiness } from "@/lib/businesses";
 import {
+  closeShortSchema,
+  isEmptyDeliveryLine,
   purchaseOrderInputSchema,
   receiptSchema,
 } from "@/lib/purchase-order-input";
 import {
+  closePurchaseOrderShort,
   createPurchaseOrder,
   receiveDelivery as recordDelivery,
   setPurchaseOrderStatus,
@@ -153,13 +156,20 @@ export async function recordReceipt(
   if (!active) return { error: "No business is available." };
 
   const lineIds = formValues(formData, "lineId");
-  const quantities = formValues(formData, "quantity");
+  const accepted = formValues(formData, "accepted");
+  const damaged = formValues(formData, "damaged");
+  const rejected = formValues(formData, "rejected");
+  const reasons = formValues(formData, "reason");
+  // A line the operator left at zero arrived nowhere and stays off the receipt.
   const lines = lineIds
     .map((lineId, index) => ({
       lineId,
-      quantity: quantities[index] ?? "",
+      accepted: accepted[index] ?? "",
+      damaged: damaged[index] ?? "",
+      rejected: rejected[index] ?? "",
+      reason: reasons[index] ?? "",
     }))
-    .filter((line) => line.quantity.trim() !== "");
+    .filter((line) => !isEmptyDeliveryLine(line));
 
   const parsed = receiptSchema.safeParse({
     orderId: formValue(formData, "orderId"),
@@ -181,4 +191,41 @@ export async function recordReceipt(
   redirect(
     `/purchase-orders?order=${parsed.data.orderId}&saved=${result.status}`,
   );
+}
+
+/**
+ * Writes off what is still outstanding on a partly received order. The delivered
+ * quantities stay as they were; only the status and the reason change.
+ */
+export async function closeShortOrder(
+  _previous: OrderActionState,
+  formData: FormData,
+): Promise<OrderActionState> {
+  const user = await getSessionUser();
+  if (!user) redirect("/sign-in");
+
+  const { active } = await getActiveBusiness(user.id);
+  if (!active) return { error: "No business is available." };
+
+  const parsed = closeShortSchema.safeParse({
+    orderId: formValue(formData, "id"),
+    reason: formValue(formData, "reason"),
+  });
+  if (!parsed.success) {
+    return {
+      error:
+        parsed.error.issues[0]?.message ?? "Check the order and try again.",
+    };
+  }
+
+  const result = await closePurchaseOrderShort(
+    user.id,
+    active.id,
+    parsed.data.orderId,
+    parsed.data.reason,
+  );
+  if (!result.ok) return { error: result.error };
+
+  revalidatePath("/purchase-orders");
+  redirect(`/purchase-orders?order=${parsed.data.orderId}&saved=closed_short`);
 }

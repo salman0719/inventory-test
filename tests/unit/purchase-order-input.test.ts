@@ -4,6 +4,8 @@ import {
   outstandingQuantity,
   parseOrderFilter,
   purchaseOrderInputSchema,
+  arrivedQuantity,
+  isEmptyDeliveryLine,
   quantityField,
   receiptSchema,
   suggestedDeliveryDate,
@@ -122,17 +124,58 @@ describe("purchaseOrderInputSchema", () => {
 });
 
 describe("receiptSchema", () => {
-  it("accepts one line with an idempotency key", () => {
+  it("accepts a split line with an idempotency key", () => {
     const parsed = receiptSchema.parse({
       orderId: ORDER,
       idempotencyKey: KEY,
-      lines: [{ lineId: PRODUCT_A, quantity: "2.5" }],
+      lines: [
+        {
+          lineId: PRODUCT_A,
+          accepted: "2",
+          damaged: "0.5",
+          rejected: "0",
+          reason: "One bag split",
+        },
+      ],
     });
 
     expect(parsed.lines).toHaveLength(1);
   });
 
-  it("requires at least one quantity and a key", () => {
+  it("asks for a note when stock arrived damaged or was rejected", () => {
+    const bare = receiptSchema.safeParse({
+      orderId: ORDER,
+      idempotencyKey: KEY,
+      lines: [
+        {
+          lineId: PRODUCT_A,
+          accepted: "2",
+          damaged: "1",
+          rejected: "0",
+          reason: "",
+        },
+      ],
+    });
+    const noted = receiptSchema.safeParse({
+      orderId: ORDER,
+      idempotencyKey: KEY,
+      lines: [
+        {
+          lineId: PRODUCT_A,
+          accepted: "2",
+          damaged: "1",
+          rejected: "0",
+          reason: "One bag split",
+        },
+      ],
+    });
+
+    expect(bare.success).toBe(false);
+    expect(bare.error?.issues[0]?.message).toContain("what was wrong");
+    expect(noted.success).toBe(true);
+  });
+
+  it("requires at least one line and a key", () => {
     const empty = receiptSchema.safeParse({
       orderId: ORDER,
       idempotencyKey: KEY,
@@ -141,11 +184,42 @@ describe("receiptSchema", () => {
     const key = receiptSchema.safeParse({
       orderId: ORDER,
       idempotencyKey: "not-a-key",
-      lines: [{ lineId: PRODUCT_A, quantity: "1" }],
+      lines: [
+        {
+          lineId: PRODUCT_A,
+          accepted: "1",
+          damaged: "0",
+          rejected: "0",
+          reason: "",
+        },
+      ],
     });
 
     expect(empty.success).toBe(false);
     expect(key.success).toBe(false);
+  });
+});
+
+describe("delivery quantities", () => {
+  it("adds the three parts without float drift", () => {
+    expect(
+      arrivedQuantity({ accepted: "0.1", damaged: "0.2", rejected: "0" }),
+    ).toBe("0.3");
+    expect(
+      arrivedQuantity({ accepted: "7", damaged: "1", rejected: "0" }),
+    ).toBe("8");
+    expect(
+      arrivedQuantity({ accepted: "0", damaged: "0", rejected: "0" }),
+    ).toBe("0");
+  });
+
+  it("treats an all-zero line as an untouched row", () => {
+    expect(
+      isEmptyDeliveryLine({ accepted: "", damaged: "", rejected: "" }),
+    ).toBe(true);
+    expect(
+      isEmptyDeliveryLine({ accepted: "0", damaged: "0", rejected: "1" }),
+    ).toBe(false);
   });
 });
 

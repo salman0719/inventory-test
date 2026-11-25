@@ -140,24 +140,54 @@ export const purchaseOrderInputSchema = z
 
 export type PurchaseOrderInput = z.infer<typeof purchaseOrderInputSchema>;
 
-/** One line of a delivery, as the receiving form posts it. */
-export const receiptLineSchema = z.object({
-  lineId: z
-    .string()
-    .trim()
-    .refine(
-      (value) => z.uuid().safeParse(value).success,
-      "Choose an order line to receive.",
-    ),
-  quantity: z
+/** A quantity in a delivery split. Unlike an order quantity, zero is a real answer. */
+function splitQuantity(label: string) {
+  return z
     .string()
     .trim()
     .regex(
       QUANTITY_PATTERN,
-      "Enter the quantity as a number, for example 6 or 2.5.",
-    )
-    .refine((value) => Number(value) > 0, "Enter a quantity above zero."),
-});
+      `Enter ${label} as a number, for example 6 or 2.5.`,
+    );
+}
+
+/**
+ * One line of a delivery, as the receiving form posts it.
+ *
+ * The operator gives the three parts; what arrived is their sum, computed here and
+ * again in the database. The browser never gets to say how much stock it added.
+ */
+export const receiptLineSchema = z
+  .object({
+    lineId: z
+      .string()
+      .trim()
+      .refine(
+        (value) => z.uuid().safeParse(value).success,
+        "Choose an order line to receive.",
+      ),
+    accepted: splitQuantity("what was accepted"),
+    damaged: splitQuantity("what was damaged"),
+    rejected: splitQuantity("what was rejected"),
+    reason: z
+      .string()
+      .trim()
+      .max(500, "Keep the note to 500 characters or fewer.")
+      .transform((value) => (value === "" ? null : value)),
+  })
+  .superRefine((line, context) => {
+    // A discrepancy without a sentence is the part nobody can act on later.
+    if (
+      Number(line.damaged) + Number(line.rejected) > 0 &&
+      line.reason === null
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["reason"],
+        message: "Say what was wrong with the delivery.",
+      });
+    }
+  });
 
 export const receiptSchema = z.object({
   orderId: z
@@ -178,6 +208,47 @@ export const receiptSchema = z.object({
 });
 
 export type ReceiptInput = z.infer<typeof receiptSchema>;
+
+/**
+ * What arrived on a line: accepted + damaged + rejected.
+ *
+ * Added in thousandths because quantities carry three decimals, so 0.1 + 0.2 must
+ * read as 0.3 rather than 0.30000000000000004.
+ */
+export function arrivedQuantity(line: {
+  accepted: string;
+  damaged: string;
+  rejected: string;
+}): string {
+  const total =
+    Math.round(Number(line.accepted) * 1000) +
+    Math.round(Number(line.damaged) * 1000) +
+    Math.round(Number(line.rejected) * 1000);
+  return Number.isFinite(total) ? String(total / 1000) : "0";
+}
+
+/** A line where nothing arrived is an untouched row, not a delivery line. */
+export function isEmptyDeliveryLine(line: {
+  accepted: string;
+  damaged: string;
+  rejected: string;
+}): boolean {
+  return arrivedQuantity(line) === "0";
+}
+
+export const closeShortSchema = z.object({
+  orderId: z
+    .string()
+    .trim()
+    .refine((value) => z.uuid().safeParse(value).success, "Open an order."),
+  reason: z
+    .string()
+    .trim()
+    .min(1, "Say why the order is closing short.")
+    .max(500, "Keep the note to 500 characters or fewer."),
+});
+
+export type CloseShortInput = z.infer<typeof closeShortSchema>;
 
 /** "6.000" reads as "6" in an input; a stored quantity is not a form value. */
 export function quantityField(value: string | number): string {
