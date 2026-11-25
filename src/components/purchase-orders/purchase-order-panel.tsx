@@ -6,6 +6,7 @@ import { PanelLink } from "@/components/panel-link";
 import { formatMoney, formatQuantity } from "@/lib/product-input";
 import { canReceive, outstandingQuantity } from "@/lib/purchase-order-input";
 import type { PurchaseOrderDetail } from "@/lib/purchase-orders";
+import { CloseShortForm } from "./close-short-form";
 import { OrderActions } from "./order-actions";
 import { OrderStatusLabel } from "./order-status-label";
 import { ReceiveForm, type ReceivableLine } from "./receive-form";
@@ -20,6 +21,8 @@ const SAVED_MESSAGES: Record<string, string> = {
   cancelled: "Order cancelled.",
   partially_received: "Part received. The rest stays outstanding.",
   received: "Delivery received. Stock and the order are updated.",
+  closed_short:
+    "Order closed short. The outstanding quantity will not be received.",
 };
 
 function formatMoment(iso: string | null): string {
@@ -139,6 +142,19 @@ export function PurchaseOrderPanel({
             <dd className="whitespace-pre-wrap text-[12px]">{order.notes}</dd>
           </div>
         ) : null}
+        {order.closedShortAt ? (
+          <div className="col-span-2 min-w-0">
+            <dt className="text-[10px] uppercase tracking-[0.07em] text-ink-muted">
+              Closed short
+            </dt>
+            <dd className="text-[12px]">
+              {order.closeReason}
+              <span className="mt-0.5 block text-[10.5px] text-ink-faint">
+                {formatMoment(order.closedShortAt)}
+              </span>
+            </dd>
+          </div>
+        ) : null}
       </dl>
 
       {order.status === "draft" && canViewValues ? (
@@ -155,6 +171,15 @@ export function PurchaseOrderPanel({
       {canViewValues &&
       (order.status === "draft" || canReceive(order.status)) ? (
         <OrderActions orderId={order.id} status={order.status} />
+      ) : null}
+
+      {canViewValues && order.status === "partially_received" ? (
+        <div className="border-t border-line px-3 py-3">
+          <h3 className="mb-1.5 text-[10px] uppercase tracking-[0.07em] text-ink-muted">
+            Close the balance short
+          </h3>
+          <CloseShortForm orderId={order.id} />
+        </div>
       ) : null}
 
       <div className="border-t border-line px-3 py-2">
@@ -251,8 +276,17 @@ export function PurchaseOrderPanel({
                 <span className="text-ink-muted">
                   {formatMoment(receipt.receivedAt)}
                 </span>
-                <span className="ml-auto text-[11px] text-ink-faint">
-                  {receipt.lineCount} line{receipt.lineCount === 1 ? "" : "s"}
+                <span className="ml-auto shrink-0 text-[11px] text-ink-faint">
+                  {formatQuantity(receipt.accepted)} in
+                  {Number(receipt.damaged) + Number(receipt.rejected) > 0 ? (
+                    <span className="text-warning">
+                      {" · "}
+                      {formatQuantity(
+                        Number(receipt.damaged) + Number(receipt.rejected),
+                      )}{" "}
+                      short
+                    </span>
+                  ) : null}
                 </span>
               </li>
             ))}
