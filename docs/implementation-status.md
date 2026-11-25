@@ -134,6 +134,59 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-25 — Slice D built: stocktake (branch `feat/stocktake`, stacked on
+  `feat/activity-log`, not merged or deployed).**
+  `0017_stocktake.sql` adds `stocktake_sessions` (reference `ST-0001`, draft /
+  completed / cancelled, the scope that built the sheet, starter, completion time)
+  and `stocktake_lines` (one active product each, `expected_quantity` snapshotted at
+  open, optional `counted_quantity`, and `on_hand_before` / `applied_delta` filled
+  at finalise). Both tables are read-only for `authenticated`; a unique index on
+  `(business_id, reference_id, product_id)` where `reference_type = 'stocktake'` is
+  the ledger's own second lock against a double finalise. `stocktake_lines`'
+  product key is deferred so deleting a business cannot fail on cascade order.
+  **Functions:** `private.create_stocktake(business, scope)` validates the scope
+  (`category_id`, `search`), numbers the sheet and snapshots on-hand for every
+  active product in scope; `private.save_stocktake_counts(session, counts)` sets or
+  clears counts on a draft sheet and refuses foreign lines; `private.complete_stocktake(session)`
+  locks each product, reads the **live** ledger sum, stores `on_hand_before` and
+  `applied_delta`, and writes one `adjustment` per non-zero difference with
+  `reference_type = 'stocktake'`. The delta is `counted - current`, never
+  `counted - expected`: stock that arrived while counting is real stock. The demo
+  reset now clears both stocktake tables before products, or its product delete
+  would hit the line foreign key.
+  **Screens:** a new `/stocktake` page in the rail and the phone's More sheet. It
+  starts a sheet from an optional category and name/SKU search, lists previous
+  sheets with counted and adjustment totals, and opens a sheet with one counted box
+  per product plus **Save counts** and **Complete stocktake**. Completing runs the
+  counts and the finalise in one transaction and writes one `stocktake.completed`
+  event (counted, adjusted, net) to the activity feed. Viewers see every sheet and
+  cannot write; the database refuses them anyway.
+  **Verified:** `npm run db:migrate` applied 1 migration (18 tracked);
+  `tests/db/stocktake.test.ts` passes 10 tests as `authenticated` — lines snapshot
+  on-hand and skip archived products, category and search scope are stored and
+  applied, an empty scope / viewer / foreign tenant is refused (`22023`, `42501`,
+  `P0002`), counts set and clear and bad or foreign lines are refused, completion
+  uses the live ledger (8 on hand, count 6, adjustment −2, one movement), a matching
+  count writes no movement, an empty sheet and a second completion and a late count
+  are refused, another business sees no sessions or lines, and a demo reset clears a
+  sheet without tripping over the product foreign key. `npm run check` exit 0 (the
+  same 2 pre-existing warnings in `permissions.ts`), `npm run test` 219 passed in
+  32 files, `npm run test:db` 119 passed in 11 files, `npm run build` exit 0 (the
+  route table lists `/stocktake`), `npm run secrets:check` ok.
+  **Browser walk (2026-11-25, local as `owner@cafe.test`):** the screen showed its
+  empty state; a sheet started with the search "Bananas" opened as ST-0001 with one
+  line (26 kg expected); entering 20 and confirming **Complete stocktake** showed
+  the banner, the list row "Completed · 1/1 · 1 · −6" and the sheet
+  "1 counted · 1 adjusted · −6 net" with ledger before 26 and adjustment −6.
+  Postgres held one `adjustment` of `-6.000` with reason `Stocktake ST-0001` and the
+  session as its reference, and the feed held `stocktake.completed` /
+  `Completed ST-0001 · 1 counted, 1 adjusted`. The local demo Bananas on-hand is now 20.
+  **Not verified:** the viewer role on the screen (the database refusal is tested),
+  phone and tablet widths, a sheet larger than one line, more than one open sheet at
+  a time, cancelling a sheet (the status exists but no action is wired), and anything
+  deployed — `0013`–`0017` all need `npm run db:migrate:hosted` before this code
+  ships.
+
 - **2026-11-25 — Slice C built: activity log (branch `feat/activity-log`, stacked on
   `feat/receiving-discrepancies`, not merged or deployed).**
   `0016_activity_log.sql` adds `activity_log`: business, actor, an action from a
