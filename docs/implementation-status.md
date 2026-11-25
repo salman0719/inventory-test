@@ -11,15 +11,19 @@ Keep this file current. Do not report a task as complete until it has been verif
   Supabase account `owner@cafe.test` is linked to the local Demo Cafe, so signing in
   with it renders real catalogue data. Slice 2 (the demo reset workflow) is
   committed as `906a7c2`; every Phase 5 slice is now built apart from product
-  images and CSV import. Phase 6a is committed as `a392ca2`, and the product,
+  images and CSV import. Extension slices A–G are built on stacked feature
+  branches: supplier facts, receiving discrepancies, the activity log, stocktake,
+  reorder suggestions, multiple suppliers per product, and barcode/QR scanning.
+  Phase 6a is committed as `a392ca2`, and the product,
   supplier, stock and purchase-order journeys were walked in the browser on
   2026-11-22: defects D1–D3 are fixed (`0ef1b41`, `b368be9`, `1219908`)
 - Current deployment: Vercel stage at `https://inventory-stage.vercel.app`
   (public, no deployment protection; serves `main` through `e460b66`, with the
   hosted Supabase database seeded through `db:seed:hosted` and migrated through
   `0012` — 13 tracked)
-- Last updated: 2026-11-25 (Slice F built and its product-supplier panel walked
-  in a visible browser; not merged, pushed or deployed)
+- Last updated: 2026-11-25 (Slice G built on `feat/barcode-qr`; barcode search,
+  QR labels, manual scanning and the desktop notice walked in a visible browser;
+  camera scanning not tested on an Android device; not merged, pushed or deployed)
 
 ## Phase checklist
 
@@ -81,6 +85,8 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [x] CSV export (committed `d2d0149`; every report, filters respected)
 - [ ] CSV import (P2: not started, no decision to build it)
 - [ ] Image upload
+- [x] Barcode and QR scanning (Slice G, `feat/barcode-qr`; built and walked in a
+      browser, Android camera path not tested on a device)
 - [x] Seed and reset (committed `906a7c2`; `private.reset_demo_business` and the Settings panel)
 
 ### Phase 6: Validation
@@ -134,6 +140,57 @@ Keep this file current. Do not report a task as complete until it has been verif
 ## Recently completed
 
 Add date, task, verification method, and result.
+
+- **2026-11-25 — Slice G built: optional barcodes, printable QR labels and
+  Android scanning (branch `feat/barcode-qr`, stacked on `feat/product-suppliers`,
+  not merged or deployed).**
+  `0020_product_barcode.sql` adds nullable `products.barcode` and a partial
+  `(business_id, barcode)` index. It is indexed but deliberately not unique: the
+  same manufacturer barcode can identify a case and a unit, so a scan can return a
+  chooser. The product form and panel carry the field, and catalogue search now
+  matches name, SKU or barcode. The Zod boundary trims it, caps it at 80 characters
+  and stores blank as null; there is no checksum validation.
+  **Labels:** `/products/labels` prints one product from the panel or the current
+  filtered list. Each label is a server-rendered SVG QR of
+  `<origin>/scan/<product uuid>`, plus name, SKU, the default supplier's code and
+  the barcode. The QR contains only the stable id, so reprinting cannot encode a
+  stale price or quantity. The sheet is A4 at 63.5 × 38.1 mm, three columns by
+  **seven** rows (21 labels); the plan's 3 × 8 grid is 304.8 mm tall and cannot fit
+  A4. Print CSS hides the shell and breaks between sheets. `qrcode` is the only new
+  dependency, used on the server.
+  **Scanning:** `/scan` resolves a typed barcode or SKU on the server and redirects
+  a single match into the product panel; several matches stay as a chooser;
+  `/scan/<uuid>` is the QR landing route. Both run through `withTenant`, so a
+  foreign id is indistinguishable from a missing one. Camera scanning uses the
+  native `BarcodeDetector` and only appears on Android in a secure context with
+  that API. Desktop, iOS and unsupported Android browsers get a short note naming
+  Chrome on Android, while manual entry and USB-scanner input stay available.
+  **Verified:** `npm run db:migrate` applied 1 migration (21 tracked), and the
+  local schema has the `barcode` column and
+  `products_business_barcode_idx` index. `npm run check` exit 0 (0 errors, the same
+  2 pre-existing warnings in `src/lib/permissions.ts`); `npm run test` 240 passed
+  in 35 files; `npm run test:db` 143 passed in 15 files, including
+  `tests/db/product-labels.test.ts` (3: default supplier code, barcode search,
+  archived filter, tenant boundary) and `tests/db/scan.test.ts` (5: duplicate-code
+  chooser, case-insensitive SKU, QR URL, tenant boundary, unknown code).
+  `npm run build` exit 0 (the route table lists `/products/labels`, `/scan` and
+  `/scan/[code]`); `npm run secrets:check` ok.
+  **Browser walk (2026-11-25, visible local Chromium, signed in as
+  `owner@cafe.test`):** the product header showed **Scan** and **Print labels**.
+  `/scan` on desktop showed "Camera scanning is available on Android" and kept the
+  manual form. Typing `CAF-020` opened Pork belly; then setting its barcode to
+  `9300675024235` in the product form saved, the panel displayed it, and
+  `/scan?code=9300675024235` plus the same search in the catalogue both resolved to
+  Pork belly. `/scan/<pork-id>` redirected to its panel. A temporary duplicate
+  barcode on Bacon showed the two-product chooser, and choosing Bacon opened it;
+  Bacon's barcode was then cleared. The single-product label page rendered one
+  63.5 × 38.1 mm label with a server-rendered SVG, and the panel's **Print label**
+  link carried the product id.
+  **Not verified:** no camera scan ran on an Android device, so permission, focus,
+  decoding a real QR/barcode and the 350 ms detection loop are untested; the print
+  dialog and a physical print were not opened; multi-page label pagination, a
+  viewer, narrow widths, and anything deployed were not walked. `0020` is local
+  only and needs `npm run db:migrate:hosted` before this code ships.
 
 - **2026-11-25 — Slice F built: multiple suppliers per product (branch
   `feat/product-suppliers`, stacked on `feat/reorder-suggestions`, not merged or
