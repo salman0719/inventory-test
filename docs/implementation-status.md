@@ -163,6 +163,12 @@ Add date, task, verification method, and result.
   $2.60 per kg on 25 Nov 2026 from Fresh Fields Produce"; changed its catalogue
   cost, saw **Use as cost**, and confirmed it restored $2.60 with the receipt
   untouched.
+  **Review fixes (2026-11-25):** the app now reads `lastPaid` from
+  `product_last_price` instead of re-deriving it with a second join, so the view is
+  the single definition of that figure; `useLastPaidCost` re-derives the price on the
+  server and the panel no longer posts an amount, so a crafted form cannot set an
+  arbitrary cost. Re-verified in the browser: changing the catalogue cost brought
+  back **Use as cost** and the action restored the receipt price.
   **Not verified:** price history with more than one receipt, lead times of 0 and 1,
   the duplicate-code message in the browser, the viewer role, and anything deployed
   to the stage.

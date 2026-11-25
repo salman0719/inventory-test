@@ -66,9 +66,10 @@ This is a starting point for architecture discussion, not a final schema. Confir
 
 One row per business, product and supplier: the unit cost and `received_at` of the
 most recent non-null receipt line, derived from `purchase_receipt_lines` joined to
-its receipt and order. `security_invoker`, so it obeys the caller's RLS. Price
-history is the same join without `DISTINCT ON`, read newest-first with a limit;
-no price table exists and no backfill is needed.
+its receipt and order. `security_invoker`, so it obeys the caller's RLS. The
+product panel reads its last paid price from this view, so there is one definition
+of the figure; price history is the same join without `DISTINCT ON`, read
+newest-first with a limit. No price table exists and no backfill is needed.
 
 ### product_suppliers
 
