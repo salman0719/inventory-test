@@ -134,6 +134,52 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-25 — Slice B of the feature extension built: receiving discrepancies and
+  closing short (branch `feat/receiving-discrepancies`, stacked on
+  `feat/supplier-price-facts`, not merged or deployed).**
+  `0015_receiving_discrepancies.sql` adds `quantity_accepted`, `quantity_damaged`,
+  `quantity_rejected` and `discrepancy_reason` to `purchase_receipt_lines`, backfills
+  `accepted = received` (so every earlier receipt reads as fully accepted) and adds
+  checks that the three parts add up to what arrived and none is negative;
+  `purchase_orders` gains `closed_short_at` and `close_reason`.
+  `private.receive_purchase_order` keeps its signature but its payload now carries
+  the split: `received` is what arrived, and only `quantity_accepted` writes a
+  `stock_movements` row, so damaged or rejected stock cannot inflate on-hand and a
+  delivery that was entirely unusable writes no movement at all. `received_quantity`
+  still rises by `received`, so outstanding stays ordered minus arrived. New
+  `private.close_purchase_order_short(uuid, text)` moves `partially_received` →
+  `received` with a reason and leaves the line balances exactly as they were; the
+  one-open-order-per-supplier index ignores closed orders, so the supplier can be
+  ordered from again without cancelling the history.
+  **Server:** the receiving schema takes accepted, damaged, rejected and a note — a
+  discrepancy without the note is refused — and what arrived is computed server-side
+  (`arrivedQuantity`) rather than trusted from the browser. A line left at zero across
+  all three boxes is dropped as untouched. The panel lists each delivery as
+  "5 in · 1 short" and offers a close-short form with a confirmation and a reason; an
+  order closed short shows the reason and when.
+  **Verified:** `npm run db:migrate` applied 1 migration (16 tracked);
+  `tests/db/purchase-orders.test.ts` adds 7 tests (25 total): the split receives 8
+  arrived as 7 accepted + 1 damaged, leaves 8 on the line and posts 7 to stock; a
+  fully damaged delivery posts no movement; a breakdown that does not add up writes
+  nothing (`22023`); a discrepancy without a note is refused; close-short records the
+  reason and lets the same supplier be ordered again; closing an ordered-but-untouched
+  order and a blank reason are both refused (`22023`). `npm run check` exit 0 (the
+  same 2 pre-existing warnings), `npm run test` 211 passed in 31 files,
+  `npm run test:db` 102 passed in 9 files, `npm run build` exit 0,
+  `npm run secrets:check` ok.
+  **Browser walk (2026-11-25, local, signed in as `owner@cafe.test`):** marked draft
+  PO-0002 (Coldstream Dairy) as ordered, then received Eggs as 5 accepted + 1 damaged
+  with "One tray cracked in transit" and left the milk line at zero. The panel showed
+  Partly received, Eggs in 6 / due 0, Milk in 0 / due 24, and the delivery as
+  "5 in · 1 short". The database held 6 arrived / 5 accepted / 1 damaged and one `+5`
+  movement, with no milk line and no milk movement. Closed the balance short with
+  "Dairy cut the standing order": status Received, the reason and timestamp displayed,
+  the receive form and close control gone, line balances unchanged.
+  **Not verified:** the viewer role on receiving, the over-receipt message in the
+  browser (it is covered by the database tests), splits across more than two lines,
+  and anything deployed — `0013`, `0014` and `0015` all need
+  `npm run db:migrate:hosted` before this code ships.
+
 - **2026-11-25 — Slice A of the feature extension built: supplier facts from the existing
   books (branch `feat/supplier-price-facts`, not merged or deployed).**
   `0013_supplier_price_facts.sql` adds `suppliers.lead_time_days` (nullable, 0–365),
