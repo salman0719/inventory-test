@@ -6,6 +6,7 @@ import {
   foreignKey,
   index,
   integer,
+  jsonb,
   numeric,
   pgTable,
   text,
@@ -431,6 +432,56 @@ export const purchaseReceiptLines = pgTable(
       columns: [t.businessId, t.purchaseOrderLineId],
       foreignColumns: [purchaseOrderLines.businessId, purchaseOrderLines.id],
     }),
+  ],
+);
+
+/**
+ * Who changed what. Append-only: the application role may insert and read, never
+ * update or delete. An event is written inside the transaction that makes the
+ * change, so the two cannot exist apart.
+ *
+ * `entity_id` is deliberately not a foreign key — it points at products, suppliers,
+ * orders or receipts depending on `entity_type`. `detail` holds ids, never copies of
+ * names, so a rename does not rewrite history.
+ */
+export const activityLog = pgTable(
+  "activity_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id, { onDelete: "cascade" }),
+    /** FK to auth.users is added by the migration, as elsewhere in this file. */
+    actorUserId: uuid("actor_user_id").notNull(),
+    action: text("action").notNull(),
+    entityType: text("entity_type").notNull(),
+    entityId: uuid("entity_id"),
+    summary: text("summary").notNull(),
+    detail: jsonb("detail").notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("activity_log_business_created_idx").on(t.businessId, t.createdAt),
+    check(
+      "activity_log_action_check",
+      sql`${t.action} in (
+        'product.created','product.updated','product.archived','product.restored',
+        'supplier.created','supplier.updated','supplier.archived','supplier.restored',
+        'purchase_order.created','purchase_order.ordered','purchase_order.cancelled',
+        'purchase_order.closed_short','receipt.recorded','stocktake.completed',
+        'import.completed'
+      )`,
+    ),
+    check(
+      "activity_log_entity_type_check",
+      sql`${t.entityType} in ('product','supplier','purchase_order','receipt','stocktake','import')`,
+    ),
+    check(
+      "activity_log_summary_check",
+      sql`length(btrim(${t.summary})) between 1 and 300`,
+    ),
   ],
 );
 
