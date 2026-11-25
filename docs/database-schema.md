@@ -33,8 +33,10 @@ This is a starting point for architecture discussion, not a final schema. Confir
 - id
 - business_id
 - category_id
+- supplier_id (nullable)
 - name
 - sku
+- supplier_sku (nullable; the supplier's own code, unique per supplier, case-insensitive)
 - description
 - unit_of_measure
 - cost_price
@@ -55,9 +57,18 @@ This is a starting point for architecture discussion, not a final schema. Confir
 - phone
 - address
 - notes
+- lead_time_days (nullable, 0–365 calendar days)
 - is_archived
 - created_at
 - updated_at
+
+### product_last_price (view)
+
+One row per business, product and supplier: the unit cost and `received_at` of the
+most recent non-null receipt line, derived from `purchase_receipt_lines` joined to
+its receipt and order. `security_invoker`, so it obeys the caller's RLS. Price
+history is the same join without `DISTINCT ON`, read newest-first with a limit;
+no price table exists and no backfill is needed.
 
 ### product_suppliers
 

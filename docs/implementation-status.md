@@ -134,6 +134,30 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-25 — Slice A of the feature extension built: supplier facts from the existing
+  books (branch `feat/supplier-price-facts`, not merged or deployed).**
+  `0013_supplier_price_facts.sql` adds `suppliers.lead_time_days` (nullable, 0–365),
+  `products.supplier_sku` and the partial unique index that stops one supplier using
+  the same code twice (case-insensitive), plus `product_last_price` — a
+  `security_invoker` view over receipt lines, so "last paid" needed no new table and
+  no backfill.
+  **Screens:** the supplier form records a lead time and its panel shows it; the
+  product form records the supplier's code and its panel shows it; a product panel
+  now shows **last paid** beside the catalogue cost with up to five receipts and a
+  **Use as cost** action, which is the only path that moves `cost_price`; a draft order
+  pre-fills its expected date as today plus the chosen supplier's calendar lead time,
+  still editable.
+  **Verified:** `npm run db:migrate` applied 1 migration (14 tracked);
+  `tests/db/supplier-facts.test.ts` passes 5 tests as `authenticated` — the 0–365
+  bound refuses 366/−1, the code index refuses `FF-100`/`ff-100` for one supplier but
+  allows it across suppliers and ignores nulls, and the view returns the later of two
+  committed receipts while another tenant sees zero rows. `npm run check` exit 0
+  (0 errors, the same 2 pre-existing warnings), `npm run test` 207 passed in 31 files, `npm run test:db` 94 passed in 9 files
+  (`tests/db/supplier-facts.test.ts` adds 5), `npm run build` exit 0 and
+  `npm run secrets:check` ok.
+  **Not verified:** no signed-in browser walk of the new panel sections or the
+  Use-as-cost action, and nothing is deployed to the stage.
+
 - **2026-11-25 — The stage caught up: migrations `0009`–`0012` applied and `main`
   deployed.** `npm run db:migrate:hosted` applied 4 migrations (9 → 13 tracked)
   **before** the code shipped, so no request could reach a half-migrated database. A
