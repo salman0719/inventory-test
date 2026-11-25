@@ -18,7 +18,7 @@ Keep this file current. Do not report a task as complete until it has been verif
   (public, no deployment protection; serves `main` through `e460b66`, with the
   hosted Supabase database seeded through `db:seed:hosted` and migrated through
   `0012` — 13 tracked)
-- Last updated: 2026-11-25
+- Last updated: 2026-11-25 (Slice E built and partly walked)
 
 ## Phase checklist
 
@@ -133,6 +133,66 @@ Keep this file current. Do not report a task as complete until it has been verif
 ## Recently completed
 
 Add date, task, verification method, and result.
+
+- **2026-11-25 — Slice E built: reorder suggestions (branch
+  `feat/reorder-suggestions`, stacked on `feat/stocktake`, not merged or
+  deployed).**
+  `0018_reorder_targets.sql` adds a nullable `products.target_stock_level`
+  (`numeric(12,3)`, null or ≥ 0). Null is meaningful: it means the suggestion
+  doubles the reorder level, computed at read time so changing the reorder level
+  moves the target with it. Storing the doubled figure would make an old product
+  look deliberately configured. Drizzle's previous snapshot predated the
+  hand-written `0013`–`0017` migrations, so its generated SQL tried to recreate
+  existing objects; `0018` was replaced with the minimal column change and the
+  `0018` snapshot now carries the whole current schema for future diffs.
+  **Formula:** one pure function, `src/lib/reorder-input.ts`, used by the read
+  path and unit tests: `suggested = max(0, target − on hand − on order)`. On-order
+  sums only `ordered` and `partially_received` lines. A draft is not subtracted,
+  because nothing has been promised to the supplier, but a product already on the
+  supplier's draft is returned with `onDraft` and cannot be selected again. Active
+  products without an active supplier are excluded and counted separately.
+  **Write path:** `saveReorderSelection` re-checks the supplier and products inside
+  the caller's transaction, then creates a draft when the supplier has no open
+  order, **extends the existing draft** when one exists, and refuses with a sentence
+  when that order is already `ordered` or `partially_received`. It never creates a
+  second open order. Lines reuse the product's current cost and the supplier's
+  lead time for the expected date. `createPurchaseOrder` and
+  `updateDraftPurchaseOrder` now accept an optional `PoolClient`, so the selection
+  and its tests join one authenticated transaction.
+  **Screens:** a new `/reorder` page after Purchase orders in the rail and the
+  phone's More sheet, grouped by supplier with on hand, on order, target (showing
+  whether it is set or doubled), an editable suggested quantity, per-product
+  selection and one **Create draft order** / **Add to PO-xxxx** action. A sent
+  open order makes the group read-only with its reason; viewers see the figures
+  without controls. Products gain an optional **Target stock** field and the panel
+  shows it when set.
+  **Verified:** `npm run db:migrate` applied 1 migration (19 tracked);
+  `npm run check` exit 0 (the same 2 pre-existing warnings in `permissions.ts`);
+  `npm run test` 229 passed in 33 files; `npm run test:db` 127 passed in 12 files,
+  including `tests/db/reorder.test.ts` 8 as `authenticated` — sent-order quantities
+  reduce the suggestion while a draft's
+  do not, a stored target wins including zero, a null target doubles the reorder
+  level, a draft line is marked, another tenant sees nothing, a negative target is
+  refused (`23514`), a selection creates one draft with the lead-time date, an
+  existing draft is extended to two lines without a second order, and a duplicate
+  line, a sent open order, a viewer, a foreign supplier and a product from another
+  supplier are all refused; `npm run build` exit 0 (the route table lists
+  `/reorder`); `npm run secrets:check` ok.
+  **Browser walk (2026-11-25, local as `owner@cafe.test`):** `/reorder` rendered
+  34 suggestions across 9 suppliers. Coldstream Dairy (PO-0002, partly received)
+  and Fresh Fields Produce (PO-0001, ordered) were read-only with the sentence
+  "Receive or close it before ordering more"; the other groups offered editable
+  quantities and **Create draft order**. Selecting Chicken stock paste 1kg from
+  Basin Dry Goods at its suggested 1 created **PO-0003** and opened its panel:
+  Draft, $18.40, "Created from reorder suggestions.", line 1, no deliveries.
+  Returning to `/reorder` showed "Draft PO-0003", the row marked "On PO-0003" and
+  the action **Add to PO-0003**. The merge of a second line was not submitted in
+  the browser; it is covered by `tests/db/reorder.test.ts`. This local demo now
+  holds the draft PO-0003.
+  **Not verified:** adding a second product to the draft through the screen, the
+  error banner, the viewer role on screen, phone and tablet widths, and anything
+  deployed — `0013`–`0018` still need `npm run db:migrate:hosted` before this code
+  ships.
 
 - **2026-11-25 — Slice D built: stocktake (branch `feat/stocktake`, stacked on
   `feat/activity-log`, not merged or deployed).**
