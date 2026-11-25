@@ -23,6 +23,7 @@ type Fields = {
   phone: string;
   address: string;
   notes: string;
+  leadTimeDays: string;
 };
 
 function initialFields(defaults: SupplierDefaults): Fields {
@@ -33,6 +34,7 @@ function initialFields(defaults: SupplierDefaults): Fields {
     phone: toField(defaults.phone),
     address: toField(defaults.address),
     notes: toField(defaults.notes),
+    leadTimeDays: defaults.leadTimeDays?.toString() ?? "",
   };
 }
 
@@ -102,6 +104,21 @@ export function SupplierForm({
           placeholder="optional"
           className={INPUT}
         />
+      </label>
+
+      <label className="flex flex-col gap-1">
+        <span className={LABEL}>Lead time (days)</span>
+        <input
+          {...bind("leadTimeDays")}
+          inputMode="numeric"
+          maxLength={3}
+          placeholder="optional"
+          className={`${INPUT} font-mono`}
+        />
+        <span className="text-[11px] text-ink-faint">
+          Calendar days from ordering to delivery. Used to pre-fill the expected
+          date on a draft order.
+        </span>
       </label>
 
       <label className="flex flex-col gap-1">

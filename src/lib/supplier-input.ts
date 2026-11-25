@@ -29,6 +29,19 @@ export const supplierInputSchema = z.object({
   phone: optional(40, "Keep the phone to 40 characters or fewer."),
   address: optional(200, "Keep the address to 200 characters or fewer."),
   notes: optional(2000, "Keep the notes to 2000 characters or fewer."),
+  /** Calendar days, not working days; blank means unknown. */
+  leadTimeDays: z
+    .string()
+    .trim()
+    .refine(
+      (value) => value === "" || /^\d{1,3}$/.test(value),
+      "Enter the lead time in whole days, for example 2.",
+    )
+    .refine(
+      (value) => value === "" || Number(value) <= 365,
+      "Keep the lead time to 365 days or fewer.",
+    )
+    .transform((value) => (value === "" ? null : Number(value))),
 });
 
 export type SupplierInput = z.infer<typeof supplierInputSchema>;

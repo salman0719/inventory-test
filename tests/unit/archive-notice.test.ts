@@ -75,6 +75,7 @@ const supplier: SupplierSummary = {
   phone: null,
   address: null,
   notes: null,
+  leadTimeDays: null,
   isArchived: false,
   productCount: 0,
 };

@@ -121,6 +121,13 @@ function SupplierBody({
         <Value label="Products">
           <span className="font-mono">{supplier.productCount}</span>
         </Value>
+        <Value label="Lead time">
+          {supplier.leadTimeDays === null
+            ? "—"
+            : supplier.leadTimeDays === 0
+              ? "Same day"
+              : `${supplier.leadTimeDays} calendar ${supplier.leadTimeDays === 1 ? "day" : "days"}`}
+        </Value>
       </dl>
 
       {supplier.address ? (

@@ -8,6 +8,7 @@ const valid = {
   phone: "",
   address: "",
   notes: "",
+  leadTimeDays: "",
 };
 
 function parse(overrides: Partial<typeof valid>) {
@@ -43,5 +44,22 @@ describe("supplier input", () => {
     const result = parse({ phone: "02 5550 3142", address: "12 Kembla Rd" });
     expect(result.data?.phone).toBe("02 5550 3142");
     expect(result.data?.address).toBe("12 Kembla Rd");
+  });
+
+  it("reads a blank lead time as unknown", () => {
+    expect(parse({}).data?.leadTimeDays).toBeNull();
+  });
+
+  it("accepts whole days from 0 to 365", () => {
+    expect(parse({ leadTimeDays: "0" }).data?.leadTimeDays).toBe(0);
+    expect(parse({ leadTimeDays: "2" }).data?.leadTimeDays).toBe(2);
+    expect(parse({ leadTimeDays: "365" }).data?.leadTimeDays).toBe(365);
+  });
+
+  it("refuses a lead time that is not whole days in range", () => {
+    expect(parse({ leadTimeDays: "366" }).success).toBe(false);
+    expect(parse({ leadTimeDays: "-1" }).success).toBe(false);
+    expect(parse({ leadTimeDays: "2.5" }).success).toBe(false);
+    expect(parse({ leadTimeDays: "two" }).success).toBe(false);
   });
 });

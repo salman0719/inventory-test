@@ -39,6 +39,7 @@ export async function saveSupplier(
     phone: formValue(formData, "phone"),
     address: formValue(formData, "address"),
     notes: formValue(formData, "notes"),
+    leadTimeDays: formValue(formData, "leadTimeDays"),
   });
 
   if (!parsed.success) {

@@ -15,6 +15,7 @@ export type SupplierSummary = {
   phone: string | null;
   address: string | null;
   notes: string | null;
+  leadTimeDays: number | null;
   isArchived: boolean;
   productCount: number;
 };
@@ -32,7 +33,7 @@ const UUID_PATTERN =
 
 const SELECT_SUPPLIER = `
   select s.id, s.name, s.contact_name, s.email, s.phone, s.address, s.notes,
-         s.is_archived, count(p.id)::int as product_count
+         s.lead_time_days, s.is_archived, count(p.id)::int as product_count
     from suppliers s
     left join products p
       on p.business_id = s.business_id and p.supplier_id = s.id
@@ -47,6 +48,7 @@ type Row = {
   phone: string | null;
   address: string | null;
   notes: string | null;
+  lead_time_days: number | null;
   is_archived: boolean;
   product_count: number;
 };
@@ -60,6 +62,7 @@ function toSummary(row: Row): SupplierSummary {
     phone: row.phone,
     address: row.address,
     notes: row.notes,
+    leadTimeDays: row.lead_time_days,
     isArchived: row.is_archived,
     productCount: row.product_count,
   };
@@ -175,8 +178,9 @@ export async function createSupplier(
   return withTenant(userId, async (client) => {
     const result = await client.query<{ id: string }>(
       `insert into suppliers
-         (business_id, name, contact_name, email, phone, address, notes)
-       values ($1, $2, $3, $4, $5, $6, $7)
+         (business_id, name, contact_name, email, phone, address, notes,
+          lead_time_days)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
        returning id`,
       [
         businessId,
@@ -186,6 +190,7 @@ export async function createSupplier(
         input.phone,
         input.address,
         input.notes,
+        input.leadTimeDays,
       ],
     );
     return result.rows[0].id;
@@ -204,7 +209,7 @@ export async function updateSupplier(
     const result = await client.query(
       `update suppliers
           set name = $3, contact_name = $4, email = $5, phone = $6,
-              address = $7, notes = $8, updated_at = now()
+              address = $7, notes = $8, lead_time_days = $9, updated_at = now()
         where business_id = $1 and id = $2`,
       [
         businessId,
@@ -215,6 +220,7 @@ export async function updateSupplier(
         input.phone,
         input.address,
         input.notes,
+        input.leadTimeDays,
       ],
     );
     return result.rowCount === 1;

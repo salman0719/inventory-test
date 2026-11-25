@@ -10,6 +10,7 @@ export type SupplierDefaults = {
   phone: string | null;
   address: string | null;
   notes: string | null;
+  leadTimeDays: number | null;
 };
 
 export const EMPTY_SUPPLIER: SupplierDefaults = {
@@ -20,4 +21,5 @@ export const EMPTY_SUPPLIER: SupplierDefaults = {
   phone: "",
   address: "",
   notes: "",
+  leadTimeDays: null,
 };
