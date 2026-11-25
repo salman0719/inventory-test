@@ -132,6 +132,12 @@ export default async function ProductsPage({
           </p>
           <div className="ml-auto flex items-center gap-2">
             <PendingLink
+              href="/scan"
+              className="inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-2.5 text-[12px] font-medium hover:border-accent hover:text-accent"
+            >
+              Scan
+            </PendingLink>
+            <PendingLink
               href={labelsHref()}
               className="inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-2.5 text-[12px] font-medium hover:border-accent hover:text-accent"
             >
