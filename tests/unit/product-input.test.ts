@@ -60,10 +60,25 @@ describe("product input", () => {
 
   it("keeps the supplier code as typed, or null when blank", () => {
     expect(parse({}).data?.supplierSku).toBeNull();
-    expect(parse({ supplierSku: "  FF/100-A " }).data?.supplierSku).toBe(
-      "FF/100-A",
-    );
+    expect(
+      parse({
+        supplierId: "11111111-1111-4111-8111-111111111111",
+        supplierSku: "  FF/100-A ",
+      }).data?.supplierSku,
+    ).toBe("FF/100-A");
     expect(parse({ supplierSku: "x".repeat(61) }).success).toBe(false);
+  });
+
+  it("refuses a supplier code when no supplier is chosen", () => {
+    const refused = parse({ supplierSku: "FF/100-A" });
+    expect(refused.success).toBe(false);
+    expect(refused.error?.issues[0]?.message).toBe(
+      "Choose a supplier before adding their code, or clear the code.",
+    );
+    // A chosen supplier, with or without a code, is still valid.
+    const supplierId = "11111111-1111-4111-8111-111111111111";
+    expect(parse({ supplierId, supplierSku: "FF/100-A" }).success).toBe(true);
+    expect(parse({ supplierId }).data?.supplierSku).toBeNull();
   });
 });
 

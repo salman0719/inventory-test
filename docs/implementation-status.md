@@ -168,7 +168,11 @@ Add date, task, verification method, and result.
   the single definition of that figure; `useLastPaidCost` re-derives the price on the
   server and the panel no longer posts an amount, so a crafted form cannot set an
   arbitrary cost. Re-verified in the browser: changing the catalogue cost brought
-  back **Use as cost** and the action restored the receipt price.
+  back **Use as cost** and the action restored the receipt price. The remaining
+  gap is closed too: a supplier code with "No supplier" selected is now refused
+  by `productInputSchema` with "Choose a supplier before adding their code, or
+  clear the code", so the form keeps what was typed instead of saving a code that
+  the partial unique index would never check.
   **Not verified:** price history with more than one receipt, lead times of 0 and 1,
   the duplicate-code message in the browser, the viewer role, and anything deployed
   to the stage.
