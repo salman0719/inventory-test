@@ -111,6 +111,16 @@ export default async function ProductsPage({
     });
   }
 
+  /** The label sheet prints this list's filtered products. */
+  function labelsHref(): string {
+    const search = new URLSearchParams();
+    if (q) search.set("q", q);
+    if (categoryId) search.set("cat", categoryId);
+    if (archived) search.set("archived", "true");
+    const query = search.toString();
+    return query ? `/products/labels?${query}` : "/products/labels";
+  }
+
   return (
     <PanelProvider initialHref={hrefFor({})}>
       <section className="flex flex-col gap-4">
@@ -120,18 +130,26 @@ export default async function ProductsPage({
             {total} product{total === 1 ? "" : "s"}
             {filtered ? " match these filters" : ""} · {active.name}
           </p>
-          {creating ? null : (
-            <PanelLink
-              href={hrefFor({
-                new: "true",
-                product: undefined,
-                edit: undefined,
-              })}
-              className="ml-auto inline-flex min-h-[36px] items-center rounded bg-accent px-3 text-[12px] font-semibold text-on-accent"
+          <div className="ml-auto flex items-center gap-2">
+            <PendingLink
+              href={labelsHref()}
+              className="inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-2.5 text-[12px] font-medium hover:border-accent hover:text-accent"
             >
-              New product
-            </PanelLink>
-          )}
+              Print labels
+            </PendingLink>
+            {creating ? null : (
+              <PanelLink
+                href={hrefFor({
+                  new: "true",
+                  product: undefined,
+                  edit: undefined,
+                })}
+                className="inline-flex min-h-[36px] items-center rounded bg-accent px-3 text-[12px] font-semibold text-on-accent"
+              >
+                New product
+              </PanelLink>
+            )}
+          </div>
         </header>
 
         <ResultsBusy>

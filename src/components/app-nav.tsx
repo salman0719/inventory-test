@@ -219,7 +219,7 @@ export function AppNav() {
     <>
       <aside
         inert={moreOpen}
-        className="fixed inset-y-0 left-0 z-40 hidden w-[76px] flex-col bg-rail min-[600px]:flex"
+        className="app-chrome fixed inset-y-0 left-0 z-40 hidden w-[76px] flex-col bg-rail min-[600px]:flex"
       >
         <Link
           href="/"
@@ -260,7 +260,7 @@ export function AppNav() {
 
       <div
         inert={moreOpen}
-        className="fixed inset-x-0 bottom-0 z-40 min-[600px]:hidden"
+        className="app-chrome fixed inset-x-0 bottom-0 z-40 min-[600px]:hidden"
       >
         <nav
           aria-label="Primary"

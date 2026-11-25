@@ -24,7 +24,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <AppNav />
       {/* The phone's More sheet makes this column inert while it is open. */}
       <div id={PAGE_CONTENT_ID} className="min-[600px]:pl-[76px]">
-        <header className="sticky top-0 z-30 flex min-h-[52px] items-center gap-3 border-b border-line bg-surface px-3 min-[600px]:min-h-[46px] min-[600px]:px-4">
+        <header className="app-chrome sticky top-0 z-30 flex min-h-[52px] items-center gap-3 border-b border-line bg-surface px-3 min-[600px]:min-h-[46px] min-[600px]:px-4">
           {/* The rail carries the wordmark from 600px up; below that the rail is
               gone, so it moves into the header and stays the home link. */}
           <Link

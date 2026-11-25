@@ -204,10 +204,18 @@ function ProductBody({
             <dt className="text-[10px] uppercase tracking-[0.07em] text-ink-muted">
               Barcode
             </dt>
-            <dd className="font-mono text-[13px] break-all">{product.barcode}</dd>
+            <dd className="font-mono text-[13px] break-all">
+              {product.barcode}
+            </dd>
           </div>
         ) : null}
       </dl>
+
+      <div className="px-3 pb-3">
+        <a href={`/products/labels?product=${product.id}`} className={BUTTON}>
+          Print label
+        </a>
+      </div>
 
       <ProductSuppliers
         productId={product.id}
