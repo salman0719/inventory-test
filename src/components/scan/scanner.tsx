@@ -4,54 +4,137 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ScanProduct } from "@/lib/scan";
+import { manualScanHref } from "@/lib/scan-code";
 import {
-  manualScanHref,
+  assessScanDevice,
   scannerSupport,
+  type ScanDecoder,
+  type ScanDeviceProfile,
   type ScannerSupport,
-} from "@/lib/scan-code";
+} from "@/lib/scan-device";
+import type {
+  ScanWorkerRequest,
+  ScanWorkerResponse,
+} from "@/lib/scan-worker-protocol";
 
-type DetectedBarcode = { rawValue: string };
-type BarcodeDetectorLike = {
-  detect(source: CanvasImageSource): Promise<DetectedBarcode[]>;
+type ScanEnvironment = {
+  support: ScannerSupport;
+  device: ScanDeviceProfile;
 };
-type BarcodeDetectorConstructor = {
-  new (options?: { formats?: string[] }): BarcodeDetectorLike;
-  getSupportedFormats?: () => Promise<string[]>;
-};
-
-const WANTED_FORMATS = [
-  "qr_code",
-  "ean_13",
-  "ean_8",
-  "code_128",
-  "upc_a",
-  "upc_e",
-];
 
 /**
  * Capabilities are a constant for the life of the tab. Reading them through
  * `useSyncExternalStore` keeps the server render (`null`) and the hydrated client
  * value in one place without setting state from an effect.
  */
-let cachedSupport: ScannerSupport | undefined;
+let cachedEnvironment: ScanEnvironment | undefined;
 
 function subscribeToNothing(): () => void {
   return () => undefined;
 }
 
-function supportSnapshot(): ScannerSupport {
-  if (cachedSupport === undefined) {
-    cachedSupport = scannerSupport({
-      userAgent: navigator.userAgent,
-      hasBarcodeDetector: "BarcodeDetector" in window,
-      isSecureContext: window.isSecureContext,
-    });
+function environmentSnapshot(): ScanEnvironment {
+  if (cachedEnvironment === undefined) {
+    const navigatorWithMemory = navigator as Navigator & {
+      deviceMemory?: number;
+    };
+    cachedEnvironment = {
+      support: scannerSupport({
+        hasBarcodeDetector: "BarcodeDetector" in window,
+        hasWebAssembly: typeof WebAssembly === "object",
+        hasCamera: typeof navigator.mediaDevices?.getUserMedia === "function",
+        hasWorker: "Worker" in window,
+        isSecureContext: window.isSecureContext,
+      }),
+      device: assessScanDevice({
+        userAgent: navigator.userAgent,
+        deviceMemory: navigatorWithMemory.deviceMemory,
+        hardwareConcurrency: navigator.hardwareConcurrency,
+      }),
+    };
   }
-  return cachedSupport;
+  return cachedEnvironment;
 }
 
-function serverSupportSnapshot(): null {
+function serverEnvironmentSnapshot(): null {
   return null;
+}
+
+class NativeDecoderUnavailable extends Error {
+  constructor() {
+    super("The built-in detector is unavailable.");
+    this.name = "NativeDecoderUnavailable";
+  }
+}
+
+class DecoderStartError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DecoderStartError";
+  }
+}
+
+type DecoderHandle = { worker: Worker; mode: ScanDecoder };
+
+function createDecoder(mode: ScanDecoder): Promise<DecoderHandle> {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(
+      new URL("./scan-decoder.worker.ts", import.meta.url),
+      { type: "module" },
+    );
+    let settled = false;
+
+    function finish(action: () => void): void {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      worker.onmessage = null;
+      worker.onerror = null;
+      action();
+    }
+
+    const timeout = window.setTimeout(() => {
+      finish(() => {
+        worker.terminate();
+        reject(
+          new DecoderStartError("The on-device decoder did not start in time."),
+        );
+      });
+    }, 15_000);
+
+    worker.onmessage = (event: MessageEvent<ScanWorkerResponse>) => {
+      const message = event.data;
+      if (message.type === "ready") {
+        finish(() => resolve({ worker, mode: message.mode }));
+        return;
+      }
+      if (message.type === "fallback") {
+        finish(() => {
+          worker.terminate();
+          reject(new NativeDecoderUnavailable());
+        });
+        return;
+      }
+      if (message.type === "error") {
+        finish(() => {
+          worker.terminate();
+          reject(new DecoderStartError(message.message));
+        });
+      }
+    };
+
+    worker.onerror = () => {
+      finish(() => {
+        worker.terminate();
+        reject(new DecoderStartError("The decoder failed to load."));
+      });
+    };
+
+    worker.postMessage({
+      type: "start",
+      mode,
+    } satisfies ScanWorkerRequest);
+  });
 }
 
 export function Scanner({
@@ -65,86 +148,214 @@ export function Scanner({
 }) {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const workerRef = useRef<Worker | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<number | null>(null);
-  const support = useSyncExternalStore(
+  const waitingRef = useRef(false);
+  const runRef = useRef(0);
+  const switchingRef = useRef(false);
+  const decoderModeRef = useRef<ScanDecoder | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  const environment = useSyncExternalStore(
     subscribeToNothing,
-    supportSnapshot,
-    serverSupportSnapshot,
+    environmentSnapshot,
+    serverEnvironmentSnapshot,
   );
+  const support = environment?.support ?? null;
+  const device = environment?.device;
+  const lowPower = device?.tier === "low";
+
   const [starting, setStarting] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [decoderMode, setDecoderMode] = useState<ScanDecoder | null>(null);
+  const [decoderLoading, setDecoderLoading] = useState<ScanDecoder | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     return () => {
+      runRef.current += 1;
       if (timerRef.current !== null) window.clearInterval(timerRef.current);
       streamRef.current?.getTracks().forEach((track) => track.stop());
+      workerRef.current?.terminate();
     };
   }, []);
 
-  function stopCamera() {
+  function stopCamera(): void {
+    runRef.current += 1;
     if (timerRef.current !== null) {
       window.clearInterval(timerRef.current);
       timerRef.current = null;
     }
+    waitingRef.current = false;
+    switchingRef.current = false;
+    const worker = workerRef.current;
+    workerRef.current = null;
+    worker?.terminate();
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
+    decoderModeRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
     setScanning(false);
+    setDecoderMode(null);
+    setDecoderLoading(null);
   }
 
-  async function startCamera() {
+  function attachWorker(worker: Worker, mode: ScanDecoder): void {
+    workerRef.current = worker;
+    decoderModeRef.current = mode;
+    setDecoderMode(mode);
+    setDecoderLoading(null);
+    waitingRef.current = false;
+
+    worker.onmessage = (event: MessageEvent<ScanWorkerResponse>) => {
+      handleWorkerMessage(event.data);
+    };
+    worker.onerror = () => {
+      stopCamera();
+      setError("The decoder stopped. Enter the code below.");
+    };
+  }
+
+  function handleWorkerMessage(message: ScanWorkerResponse): void {
+    if (message.type === "result") {
+      stopCamera();
+      router.push(manualScanHref(message.value));
+      return;
+    }
+    if (message.type === "done") {
+      waitingRef.current = false;
+      return;
+    }
+    if (message.type === "fallback") {
+      void switchToWasm();
+      return;
+    }
+    if (message.type === "error") {
+      stopCamera();
+      setError("The on-device decoder stopped. Enter the code below.");
+    }
+  }
+
+  async function switchToWasm(): Promise<void> {
+    if (switchingRef.current || decoderModeRef.current !== "native") return;
+    switchingRef.current = true;
+    const run = runRef.current;
+    waitingRef.current = false;
+    const oldWorker = workerRef.current;
+    workerRef.current = null;
+    oldWorker?.terminate();
+    decoderModeRef.current = null;
+    setDecoderMode(null);
+    setDecoderLoading("wasm");
+
+    try {
+      const next = await createDecoder("wasm");
+      if (run !== runRef.current) {
+        next.worker.terminate();
+        return;
+      }
+      attachWorker(next.worker, next.mode);
+    } catch {
+      if (run === runRef.current) {
+        stopCamera();
+        setError("The fallback decoder could not start. Enter the code below.");
+      }
+    } finally {
+      switchingRef.current = false;
+    }
+  }
+
+  function captureFrame(): void {
+    if (waitingRef.current || !workerRef.current || document.hidden) return;
+    const video = videoRef.current;
+    const worker = workerRef.current;
+    if (!video || !worker || video.videoWidth === 0) return;
+
+    const maxDimension = lowPower ? 720 : 960;
+    const scale = Math.min(
+      1,
+      maxDimension / Math.max(video.videoWidth, video.videoHeight),
+    );
+    const width = Math.max(1, Math.round(video.videoWidth * scale));
+    const height = Math.max(1, Math.round(video.videoHeight * scale));
+
+    const canvas = canvasRef.current ?? document.createElement("canvas");
+    canvasRef.current = canvas;
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) return;
+
+    context.drawImage(video, 0, 0, width, height);
+    const image = context.getImageData(0, 0, width, height);
+    const buffer = image.data.buffer;
+    waitingRef.current = true;
+    try {
+      worker.postMessage(
+        {
+          type: "frame",
+          buffer,
+          width,
+          height,
+        } satisfies ScanWorkerRequest,
+        [buffer],
+      );
+    } catch {
+      waitingRef.current = false;
+    }
+  }
+
+  async function startCamera(): Promise<void> {
     setError(null);
     setStarting(true);
-    try {
-      const Detector = (
-        window as unknown as { BarcodeDetector?: BarcodeDetectorConstructor }
-      ).BarcodeDetector;
-      if (!Detector) {
-        throw new Error("BarcodeDetector is unavailable");
-      }
+    const run = ++runRef.current;
 
+    try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: { facingMode: { ideal: "environment" } },
       });
+      if (run !== runRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       streamRef.current = stream;
 
       const video = videoRef.current;
       if (!video) throw new Error("Video element is unavailable");
       video.srcObject = stream;
       await video.play();
+      if (run !== runRef.current) return;
 
-      const formats = Detector.getSupportedFormats
-        ? await Detector.getSupportedFormats()
-        : [];
-      const selected = WANTED_FORMATS.filter((format) =>
-        formats.includes(format),
-      );
-      const detector = new Detector(
-        selected.length > 0 ? { formats: selected } : undefined,
-      );
+      const initial: ScanDecoder =
+        support?.kind === "ready" ? support.decoder : "wasm";
+      if (initial === "wasm") setDecoderLoading("wasm");
 
-      setScanning(true);
-      let busy = false;
-      timerRef.current = window.setInterval(async () => {
-        if (busy || !videoRef.current) return;
-        busy = true;
-        try {
-          const found = await detector.detect(videoRef.current);
-          const value = found.find((barcode) => barcode.rawValue.trim());
-          if (value) {
-            stopCamera();
-            router.push(manualScanHref(value.rawValue));
-          }
-        } catch {
-          // A frame that cannot be decoded is normal; keep the preview running.
-        } finally {
-          busy = false;
+      let handle: DecoderHandle;
+      try {
+        handle = await createDecoder(initial);
+      } catch (caught) {
+        if (caught instanceof NativeDecoderUnavailable) {
+          setDecoderLoading("wasm");
+          handle = await createDecoder("wasm");
+        } else {
+          throw caught;
         }
-      }, 350);
+      }
+
+      if (run !== runRef.current) {
+        handle.worker.terminate();
+        return;
+      }
+
+      attachWorker(handle.worker, handle.mode);
+      setScanning(true);
+      timerRef.current = window.setInterval(captureFrame, lowPower ? 650 : 350);
     } catch (caught) {
+      if (run !== runRef.current) return;
       stopCamera();
       const name = caught instanceof DOMException ? caught.name : "";
       if (name === "NotAllowedError" || name === "SecurityError") {
@@ -153,6 +364,10 @@ export function Scanner({
         );
       } else if (name === "NotFoundError" || name === "OverconstrainedError") {
         setError("No usable camera was found. Enter the code below.");
+      } else if (caught instanceof DecoderStartError) {
+        setError(
+          "The on-device decoder could not load. Enter the code below, or try again.",
+        );
       } else {
         setError("The camera could not start. Enter the code below.");
       }
@@ -163,6 +378,36 @@ export function Scanner({
 
   return (
     <div className="flex flex-col gap-3">
+      {device && !device.isChromeAndroid ? (
+        <div
+          role="note"
+          className="rounded border border-line bg-panel px-3 py-2.5"
+        >
+          <p className="text-[12px] font-medium">Best on Chrome for Android</p>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-ink-muted">
+            For the fastest, most reliable camera scanning, use Chrome on an
+            Android phone. This browser is {device.browserLabel}; scanning can
+            work here, but performance and reliability vary.
+          </p>
+        </div>
+      ) : null}
+
+      {lowPower ? (
+        <div
+          role="alert"
+          className="rounded border border-warning bg-warning-soft px-3 py-2.5 text-warning"
+        >
+          <p className="text-[12px] font-semibold">
+            This device may struggle to scan
+          </p>
+          <p className="mt-0.5 text-[11px] leading-relaxed">
+            It reports {device?.reasons.join(" and ")}. Camera decoding can be
+            slow, use significant battery, or fail. Manual barcode or SKU entry
+            is the more reliable choice here.
+          </p>
+        </div>
+      ) : null}
+
       {notFound ? (
         <div
           role="status"
@@ -259,13 +504,29 @@ export function Scanner({
                     disabled={starting}
                     className="inline-flex min-h-[40px] items-center rounded bg-accent px-3 text-[12px] font-semibold text-on-accent disabled:opacity-60"
                   >
-                    {starting ? "Starting camera…" : "Start camera"}
+                    {starting
+                      ? decoderLoading === "wasm"
+                        ? "Loading decoder…"
+                        : "Starting camera…"
+                      : lowPower
+                        ? "Try camera anyway"
+                        : "Start camera"}
                   </button>
                 )}
                 <span aria-live="polite" className="text-[11px] text-ink-muted">
-                  {scanning ? "Scanning…" : ""}
+                  {scanning
+                    ? decoderMode === "wasm"
+                      ? "Scanning with the on-device fallback…"
+                      : "Scanning with the built-in detector…"
+                    : ""}
                 </span>
               </div>
+              {decoderMode === "wasm" ? (
+                <p className="text-[10.5px] text-ink-faint">
+                  The fallback decoder is downloaded once and runs on this
+                  device.
+                </p>
+              ) : null}
             </>
           ) : (
             <div

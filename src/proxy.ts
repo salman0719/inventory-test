@@ -127,7 +127,8 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Everything except Next assets, the favicon and static files.
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2)$).*)",
+    // Everything except Next assets, the favicon and static files. The scanner's
+    // wasm is fetched by a worker, which cannot carry the session redirect flow.
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|wasm)$).*)",
   ],
 };
