@@ -134,6 +134,48 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-25 — Slice C built: activity log (branch `feat/activity-log`, stacked on
+  `feat/receiving-discrepancies`, not merged or deployed).**
+  `0016_activity_log.sql` adds `activity_log`: business, actor, an action from a
+  fixed 15-value list, entity type and id, a summary capped at 300 characters and a
+  `jsonb` detail, indexed on `(business_id, created_at desc, id desc)`. Members may
+  select, owner and staff may insert, and update and delete are revoked — the log is
+  append-only. `private.activity_feed(...)` is the read path: it returns one page with
+  the actor's email (`auth.users` is not readable by the application role), checks
+  membership itself, filters by area and pages on `(created_at, id)` so two events in
+  the same second cannot hide each other. The demo reset now clears the feed, because
+  it deletes the rows those events describe.
+  **Write path:** one event per change, inserted on the same `withTenant` client as
+  the change, so an event and its change commit or roll back together: product
+  created/updated/archived/restored (including the catalogue-cost change), supplier
+  created/updated/archived/restored, order created/ordered/cancelled/closed short,
+  and receipt recorded. A receipt event points at the receipt and carries the order
+  id; the ledger is never duplicated into the log. Draft edits write nothing: a draft
+  is a notepad, and the feed starts when the order is sent.
+  **Screens:** a new `/activity` page (rail, and the phone's More sheet) with area
+  filters, day grouping, cursor pagination and rows that open the product, supplier or
+  order they name; the dashboard gains a **Recent activity** card of the last six,
+  read inside the transaction it already opens.
+  **Verified:** `npm run db:migrate` applied 1 migration (17 tracked);
+  `tests/db/activity-log.test.ts` passes 7 tests as `authenticated` — an event rolls
+  back with the change it describes, a viewer's insert is refused (`42501`), update
+  and delete are refused, another business's events are invisible and its feed raises
+  `P0002`, the feed returns the actor's email and filters by area, paging on
+  `(created_at, id)` returns every event exactly once, and a receipt event points at a
+  receipt that exists. `npm run check` exit 0 (the same 2 pre-existing warnings),
+  `npm run test` 211 passed in 31 files, `npm run test:db` 109 passed in 10 files,
+  `npm run build` exit 0, `npm run secrets:check` ok.
+  **Browser walk (2026-11-25, local, `owner@cafe.test`):** the activity page showed
+  its empty state, then a product edit — Bananas' reorder level from 8 to 10 in the
+  product panel — produced "Updated Bananas / Product changed · owner" under Today;
+  the Suppliers filter showed its empty state; the dashboard card showed the same
+  event. The stored row is `product.updated`, entity the product, detail
+  `{"sku": "CAF-008"}`.
+  **Not verified:** an event from a second user (the actor label's fallback is
+  untested), order and receipt events in a browser (they are covered by the database
+  tests only), pagination beyond one page, and anything deployed — `0013`–`0016` all
+  need `npm run db:migrate:hosted` before this code ships.
+
 - **2026-11-25 — Slice B of the feature extension built: receiving discrepancies and
   closing short (branch `feat/receiving-discrepancies`, stacked on
   `feat/supplier-price-facts`, not merged or deployed).**
