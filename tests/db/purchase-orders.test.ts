@@ -124,10 +124,24 @@ async function createOrder(
   return { orderId, lineIds };
 }
 
+/**
+ * One line of a delivery. `quantity` is what arrived; the breakdown defaults to
+ * "all accepted", which is how most deliveries arrive and keeps the older cases
+ * readable.
+ */
+type ReceiptSpec = {
+  lineId: string;
+  quantity: string;
+  accepted?: string;
+  damaged?: string;
+  rejected?: string;
+  reason?: string;
+};
+
 function receive(
   client: PoolClient,
   orderId: string,
-  lines: { lineId: string; quantity: string }[],
+  lines: ReceiptSpec[],
   key: string = randomUUID(),
 ) {
   return client.query<{ receipt_id: string; status: string }>(
@@ -136,10 +150,21 @@ function receive(
     [
       orderId,
       JSON.stringify(
-        lines.map((line) => ({
-          purchase_order_line_id: line.lineId,
-          quantity: line.quantity,
-        })),
+        lines.map((line) => {
+          const damaged = line.damaged ?? "0";
+          const rejected = line.rejected ?? "0";
+          const accepted =
+            line.accepted ??
+            String(Number(line.quantity) - Number(damaged) - Number(rejected));
+          return {
+            purchase_order_line_id: line.lineId,
+            received: line.quantity,
+            accepted,
+            damaged,
+            rejected,
+            reason: line.reason,
+          };
+        }),
       ),
       key,
     ],
@@ -789,5 +814,204 @@ describe("concurrent receiving", () => {
     );
     expect(stored.receipts).toBe(1);
     expect(stored.receivedStock).toBe(5);
+  });
+});
+
+describe("receiving with discrepancies", () => {
+  it("splits arrived stock into accepted, damaged and rejected", async () => {
+    const result = await asUser(ids.owner, async (client) => {
+      const { orderId, lineIds } = await createOrder(client);
+      const receipt = await receive(client, orderId, [
+        {
+          lineId: lineIds[0],
+          quantity: "8",
+          accepted: "7",
+          damaged: "1",
+          rejected: "0",
+          reason: "One tub crushed in transit",
+        },
+      ]);
+      const line = await client.query<{
+        quantity_received: string;
+        quantity_accepted: string;
+        quantity_damaged: string;
+        quantity_rejected: string;
+        discrepancy_reason: string | null;
+      }>(
+        `select quantity_received::text, quantity_accepted::text,
+                quantity_damaged::text, quantity_rejected::text,
+                discrepancy_reason
+           from purchase_receipt_lines
+          where receipt_id = $1`,
+        [receipt.rows[0]?.receipt_id],
+      );
+      const ordered = await client.query<{ received_quantity: string }>(
+        "select received_quantity::text from purchase_order_lines where id = $1",
+        [lineIds[0]],
+      );
+      return {
+        status: receipt.rows[0]?.status,
+        parts: line.rows[0],
+        arrived: Number(ordered.rows[0]?.received_quantity),
+        state: await orderState(client, orderId),
+      };
+    });
+
+    expect(result.parts).toEqual({
+      quantity_received: "8.000",
+      quantity_accepted: "7.000",
+      quantity_damaged: "1.000",
+      quantity_rejected: "0.000",
+      discrepancy_reason: "One tub crushed in transit",
+    });
+    // Only what was accepted reaches the ledger; the line counts what arrived.
+    expect(result.state.receivedStock).toBe(7);
+    expect(result.arrived).toBe(8);
+    expect(result.status).toBe("partially_received");
+  });
+
+  it("writes no stock movement when nothing was usable", async () => {
+    const result = await asUser(ids.owner, async (client) => {
+      const { orderId, lineIds } = await createOrder(client);
+      await receive(client, orderId, [
+        {
+          lineId: lineIds[0],
+          quantity: "5",
+          accepted: "0",
+          damaged: "5",
+          reason: "Whole crate frozen on arrival",
+        },
+      ]);
+      const ordered = await client.query<{ received_quantity: string }>(
+        "select received_quantity::text from purchase_order_lines where id = $1",
+        [lineIds[0]],
+      );
+      return {
+        arrived: Number(ordered.rows[0]?.received_quantity),
+        state: await orderState(client, orderId),
+      };
+    });
+
+    expect(result.state.movements).toBe(0);
+    expect(result.state.receivedStock).toBe(0);
+    expect(result.arrived).toBe(5);
+  });
+
+  it("refuses a breakdown that does not add up and writes nothing", async () => {
+    const result = await asUser(ids.owner, async (client) => {
+      const { orderId, lineIds } = await createOrder(client);
+      const error = await captureError(client, () =>
+        receive(client, orderId, [
+          {
+            lineId: lineIds[0],
+            quantity: "8",
+            accepted: "7",
+            damaged: "0",
+            rejected: "0",
+          },
+        ]),
+      );
+      return { error, state: await orderState(client, orderId) };
+    });
+
+    expect(result.error.code).toBe("22023");
+    expect(result.error.message).toContain("must add up");
+    expect(result.state.receipts).toBe(0);
+    expect(result.state.movements).toBe(0);
+  });
+
+  it("asks for a note when stock arrived damaged or was rejected", async () => {
+    const result = await asUser(ids.owner, async (client) => {
+      const { orderId, lineIds } = await createOrder(client);
+      const error = await captureError(client, () =>
+        receive(client, orderId, [
+          {
+            lineId: lineIds[0],
+            quantity: "5",
+            accepted: "4",
+            rejected: "1",
+          },
+        ]),
+      );
+      return { error, state: await orderState(client, orderId) };
+    });
+
+    expect(result.error.code).toBe("22023");
+    expect(result.error.message).toContain("what was wrong");
+    expect(result.state.receipts).toBe(0);
+  });
+});
+
+describe("close_purchase_order_short", () => {
+  it("closes the balance, records why, and frees the supplier", async () => {
+    const result = await asUser(ids.owner, async (client) => {
+      const { orderId, lineIds } = await createOrder(client);
+      await receive(client, orderId, [{ lineId: lineIds[0], quantity: "4" }]);
+      await client.query("select private.close_purchase_order_short($1, $2)", [
+        orderId,
+        "The rest of the order was not available",
+      ]);
+      const order = await client.query<{
+        status: string;
+        closed_short_at: Date | null;
+        close_reason: string | null;
+      }>(
+        `select status, closed_short_at, close_reason
+           from purchase_orders where id = $1`,
+        [orderId],
+      );
+      const line = await client.query<{ received_quantity: string }>(
+        "select received_quantity::text from purchase_order_lines where id = $1",
+        [lineIds[0]],
+      );
+      // The one-open-order-per-supplier index ignores a closed order, so the
+      // supplier can be ordered from again without losing this order's history.
+      const next = await createOrder(client);
+      return {
+        order: order.rows[0],
+        received: Number(line.rows[0]?.received_quantity),
+        nextOrder: next.orderId,
+      };
+    });
+
+    expect(result.order?.status).toBe("received");
+    expect(result.order?.close_reason).toBe(
+      "The rest of the order was not available",
+    );
+    expect(result.order?.closed_short_at).toBeInstanceOf(Date);
+    // Balances are left exactly as they were; nothing was received in their place.
+    expect(result.received).toBe(4);
+    expect(result.nextOrder).toBeTruthy();
+  });
+
+  it("refuses an order that was never partly received", async () => {
+    const result = await asUser(ids.owner, async (client) => {
+      const { orderId } = await createOrder(client);
+      return captureError(client, () =>
+        client.query("select private.close_purchase_order_short($1, $2)", [
+          orderId,
+          "Not coming",
+        ]),
+      );
+    });
+
+    expect(result.code).toBe("22023");
+    expect(result.message).toContain("partly received");
+  });
+
+  it("refuses a blank reason", async () => {
+    const result = await asUser(ids.owner, async (client) => {
+      const { orderId, lineIds } = await createOrder(client);
+      await receive(client, orderId, [{ lineId: lineIds[0], quantity: "1" }]);
+      return captureError(client, () =>
+        client.query("select private.close_purchase_order_short($1, $2)", [
+          orderId,
+          "   ",
+        ]),
+      );
+    });
+
+    expect(result.code).toBe("22023");
+    expect(result.message).toContain("why the order is closing short");
   });
 });

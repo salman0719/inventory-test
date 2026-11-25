@@ -136,7 +136,10 @@ async function orderAndReceive(
       JSON.stringify([
         {
           purchase_order_line_id: line.rows[0].id,
-          quantity: options.quantity,
+          received: options.quantity,
+          accepted: options.quantity,
+          damaged: "0",
+          rejected: "0",
         },
       ]),
       randomUUID(),

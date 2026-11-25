@@ -260,6 +260,9 @@ export const purchaseOrders = pgTable(
     orderedAt: timestamp("ordered_at", { withTimezone: true }),
     expectedDeliveryAt: date("expected_delivery_at"),
     notes: text("notes"),
+    /** Set when a partly received order is closed without the balance. */
+    closedShortAt: timestamp("closed_short_at", { withTimezone: true }),
+    closeReason: text("close_reason"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -378,16 +381,45 @@ export const purchaseReceiptLines = pgTable(
       .references(() => businesses.id, { onDelete: "cascade" }),
     receiptId: uuid("receipt_id").notNull(),
     purchaseOrderLineId: uuid("purchase_order_line_id").notNull(),
+    /** Arrived: accepted + damaged + rejected. */
     quantityReceived: numeric("quantity_received", {
       precision: 12,
       scale: 3,
     }).notNull(),
+    /** The part that reaches the ledger. */
+    quantityAccepted: numeric("quantity_accepted", {
+      precision: 12,
+      scale: 3,
+    })
+      .notNull()
+      .default("0"),
+    quantityDamaged: numeric("quantity_damaged", {
+      precision: 12,
+      scale: 3,
+    })
+      .notNull()
+      .default("0"),
+    quantityRejected: numeric("quantity_rejected", {
+      precision: 12,
+      scale: 3,
+    })
+      .notNull()
+      .default("0"),
+    discrepancyReason: text("discrepancy_reason"),
     unitCost: numeric("unit_cost", { precision: 12, scale: 2 }),
   },
   (t) => [
     check(
       "purchase_receipt_lines_quantity_check",
       sql`${t.quantityReceived} > 0`,
+    ),
+    check(
+      "purchase_receipt_lines_breakdown_check",
+      sql`${t.quantityReceived} = ${t.quantityAccepted} + ${t.quantityDamaged} + ${t.quantityRejected}`,
+    ),
+    check(
+      "purchase_receipt_lines_parts_check",
+      sql`${t.quantityAccepted} >= 0 and ${t.quantityDamaged} >= 0 and ${t.quantityRejected} >= 0`,
     ),
     foreignKey({
       name: "purchase_receipt_lines_receipt_fk",
