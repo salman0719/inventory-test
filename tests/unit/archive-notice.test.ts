@@ -25,6 +25,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/app/(app)/products/actions", () => ({
   saveProduct: vi.fn(),
   setArchived: mocks.archiveProduct,
+  addSupplierLink: vi.fn(),
+  removeSupplierLink: vi.fn(),
+  makeDefaultSupplier: vi.fn(),
 }));
 
 vi.mock("@/app/(app)/suppliers/actions", () => ({
@@ -109,6 +112,7 @@ function renderProductPanel(isArchived: boolean) {
         product: { ...product, isArchived },
         categories: [],
         suppliers: [],
+        links: [],
         price: { lastPaid: null, entries: [] },
         currency: "AUD",
         saved: true,
@@ -135,7 +139,9 @@ function renderSupplierPanel() {
 }
 
 async function submitArchive(action: { mock: { calls: unknown[] } }) {
-  const form = container.querySelector("form");
+  const form = Array.from(container.querySelectorAll("form")).find(
+    (candidate) => candidate.querySelector('input[name="archived"]'),
+  );
   if (!form) throw new Error("No archive form rendered");
   await act(async () => {
     form.requestSubmit();

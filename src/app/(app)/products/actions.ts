@@ -4,12 +4,19 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getActiveBusiness } from "@/lib/businesses";
-import { productInputSchema } from "@/lib/product-input";
 import {
+  productInputSchema,
+  productSupplierLinkInputSchema,
+  productSupplierLinkRefSchema,
+} from "@/lib/product-input";
+import {
+  addProductSupplier,
   createCategory,
   createProduct,
   getProductPriceHistory,
   isUniqueViolation,
+  removeProductSupplier,
+  setDefaultProductSupplier,
   setProductArchived as archiveProduct,
   setProductCost,
   updateProduct,
@@ -27,6 +34,7 @@ import { getSessionUser } from "@/lib/session";
 
 export type ProductFormState = { error?: string };
 export type CategoryFormState = { error?: string; ok?: boolean };
+export type SupplierLinkFormState = { error?: string };
 
 function formValue(formData: FormData, key: string): string {
   const value = formData.get(key);
@@ -76,7 +84,7 @@ export async function saveProduct(
   } catch (error) {
     if (isUniqueViolation(error)) {
       const constraint = (error as { constraint?: string } | null)?.constraint;
-      if (constraint === "products_business_supplier_code_key") {
+      if (constraint === "product_suppliers_code_key") {
         return {
           error:
             "That supplier code is already used by another product from this supplier.",
@@ -132,6 +140,117 @@ export async function useLastPaidCost(formData: FormData): Promise<void> {
 
   revalidatePath("/products");
   redirect(`/products?product=${productId}&saved=true`);
+}
+
+export async function addSupplierLink(
+  _previous: SupplierLinkFormState,
+  formData: FormData,
+): Promise<SupplierLinkFormState> {
+  const user = await getSessionUser();
+  if (!user) redirect("/sign-in");
+
+  const { active } = await getActiveBusiness(user.id);
+  if (!active) return { error: "No business is available." };
+
+  const parsed = productSupplierLinkInputSchema.safeParse({
+    productId: formValue(formData, "productId"),
+    supplierId: formValue(formData, "supplierId"),
+    supplierSku: formValue(formData, "supplierSku"),
+    leadTimeDays: formValue(formData, "leadTimeDays"),
+  });
+  if (!parsed.success) {
+    return {
+      error:
+        parsed.error.issues[0]?.message ?? "Check the supplier and try again.",
+    };
+  }
+
+  let result;
+  try {
+    result = await addProductSupplier(
+      user.id,
+      active.id,
+      parsed.data.productId,
+      parsed.data,
+    );
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      const constraint = (error as { constraint?: string } | null)?.constraint;
+      return {
+        error:
+          constraint === "product_suppliers_code_key"
+            ? "That supplier code is already used by another product from this supplier."
+            : "That supplier is already linked to this product.",
+      };
+    }
+    throw error;
+  }
+  if (!result.ok) return { error: result.error };
+
+  revalidatePath("/products");
+  revalidatePath("/reorder");
+  revalidatePath("/purchase-orders");
+  redirect(`/products?product=${parsed.data.productId}&saved=true`);
+}
+
+export async function removeSupplierLink(
+  _previous: SupplierLinkFormState,
+  formData: FormData,
+): Promise<SupplierLinkFormState> {
+  const user = await getSessionUser();
+  if (!user) redirect("/sign-in");
+
+  const { active } = await getActiveBusiness(user.id);
+  if (!active) return { error: "No business is available." };
+
+  const parsed = productSupplierLinkRefSchema.safeParse({
+    productId: formValue(formData, "productId"),
+    linkId: formValue(formData, "linkId"),
+  });
+  if (!parsed.success) return { error: "Reload the product and try again." };
+
+  const result = await removeProductSupplier(
+    user.id,
+    active.id,
+    parsed.data.productId,
+    parsed.data.linkId,
+  );
+  if (!result.ok) return { error: result.error };
+
+  revalidatePath("/products");
+  revalidatePath("/reorder");
+  revalidatePath("/purchase-orders");
+  redirect(`/products?product=${parsed.data.productId}&saved=true`);
+}
+
+export async function makeDefaultSupplier(
+  _previous: SupplierLinkFormState,
+  formData: FormData,
+): Promise<SupplierLinkFormState> {
+  const user = await getSessionUser();
+  if (!user) redirect("/sign-in");
+
+  const { active } = await getActiveBusiness(user.id);
+  if (!active) return { error: "No business is available." };
+
+  const parsed = productSupplierLinkRefSchema.safeParse({
+    productId: formValue(formData, "productId"),
+    linkId: formValue(formData, "linkId"),
+  });
+  if (!parsed.success) return { error: "Reload the product and try again." };
+
+  const result = await setDefaultProductSupplier(
+    user.id,
+    active.id,
+    parsed.data.productId,
+    parsed.data.linkId,
+  );
+  if (!result.ok) return { error: result.error };
+
+  revalidatePath("/products");
+  revalidatePath("/reorder");
+  revalidatePath("/purchase-orders");
+  redirect(`/products?product=${parsed.data.productId}&saved=true`);
 }
 
 export async function setArchived(formData: FormData): Promise<void> {

@@ -283,6 +283,26 @@ describe("private.reset_demo_business", () => {
         { sku: "TST-002", on_hand: "0", selling_price: "2.50" },
       ]);
 
+      const links = await client.query<{
+        sku: string;
+        supplier: string;
+        is_default: boolean;
+      }>(
+        `select p.sku, s.name as supplier, ps.is_default
+           from product_suppliers ps
+           join products p
+             on p.business_id = ps.business_id and p.id = ps.product_id
+           join suppliers s
+             on s.business_id = ps.business_id and s.id = ps.supplier_id
+          where ps.business_id = $1
+          order by p.sku`,
+        [ids.business],
+      );
+      expect(links.rows).toEqual([
+        { sku: "TST-001", supplier: "Test Produce", is_default: true },
+        { sku: "TST-002", supplier: "Test Dairy", is_default: true },
+      ]);
+
       const order = await client.query<{
         status: string;
         ordered_at: Date | null;

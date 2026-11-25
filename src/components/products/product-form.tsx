@@ -7,7 +7,11 @@ import {
 } from "@/app/(app)/products/actions";
 import { PanelLink } from "@/components/panel-link";
 import type { ProductDefaults } from "@/lib/product-defaults";
-import type { CategoryOption, SupplierOption } from "@/lib/products";
+import type {
+  CategoryOption,
+  ProductSupplierLink,
+  SupplierOption,
+} from "@/lib/products";
 
 const INPUT =
   "h-9 w-full rounded border border-line bg-surface px-2 text-[13px]";
@@ -68,11 +72,13 @@ export function ProductForm({
   defaults,
   categories,
   suppliers,
+  links,
   cancelHref,
 }: {
   defaults: ProductDefaults;
   categories: CategoryOption[];
   suppliers: SupplierOption[];
+  links: ProductSupplierLink[];
   cancelHref: string;
 }) {
   const [state, formAction, pending] = useActionState<
@@ -94,6 +100,20 @@ export function ProductForm({
         >,
       ) => setFields((current) => ({ ...current, [key]: event.target.value })),
     };
+  }
+
+  /**
+   * The code belongs to the chosen supplier, not to the product. Picking a
+   * supplier that is already linked loads its saved code; a new supplier starts
+   * blank, so the old supplier's code cannot silently move across.
+   */
+  function chooseSupplier(supplierId: string) {
+    const link = links.find((option) => option.supplierId === supplierId);
+    setFields((current) => ({
+      ...current,
+      supplierId,
+      supplierSku: link?.supplierSku ?? "",
+    }));
   }
 
   return (
@@ -145,14 +165,17 @@ export function ProductForm({
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className={LABEL}>Supplier</span>
+        <span className={LABEL}>Default supplier</span>
         <select
-          {...bind("supplierId")}
+          name="supplierId"
+          value={fields.supplierId}
+          onChange={(event) => chooseSupplier(event.target.value)}
+          required
           disabled={suppliers.length === 0}
           className={`${INPUT} disabled:text-ink-muted`}
         >
           <option value="">
-            {suppliers.length === 0 ? "No suppliers yet" : "No supplier"}
+            {suppliers.length === 0 ? "No suppliers yet" : "Choose a supplier"}
           </option>
           {suppliers.map((supplier) => (
             <option key={supplier.id} value={supplier.id}>
@@ -160,15 +183,14 @@ export function ProductForm({
             </option>
           ))}
         </select>
-        {suppliers.length === 0 ? (
-          <span className="text-[11px] text-ink-faint">
-            Supplier records arrive with the suppliers slice.
-          </span>
-        ) : null}
+        <span className="text-[11px] text-ink-faint">
+          A product needs a default supplier. Add other suppliers from the
+          product panel after saving.
+        </span>
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className={LABEL}>Supplier code</span>
+        <span className={LABEL}>Default supplier code</span>
         <input
           {...bind("supplierSku")}
           maxLength={60}

@@ -73,7 +73,8 @@ export type OrderFormOptions = {
     sku: string;
     unitOfMeasure: string;
     costPrice: string;
-    supplierId: string | null;
+    /** Every supplier this product can be ordered from. */
+    supplierIds: string[];
   }[];
 };
 
@@ -385,13 +386,18 @@ export async function getOrderFormOptions(
       sku: string;
       unit_of_measure: string;
       cost_price: string;
-      supplier_id: string | null;
+      supplier_ids: string[];
     }>(
-      `select id, name, sku, unit_of_measure, cost_price::text as cost_price,
-              supplier_id
-         from products
-        where business_id = $1 and is_archived = false
-        order by lower(name)`,
+      `select p.id, p.name, p.sku, p.unit_of_measure,
+              p.cost_price::text as cost_price,
+              array_agg(ps.supplier_id) as supplier_ids
+         from products p
+         join product_suppliers ps
+           on ps.business_id = p.business_id and ps.product_id = p.id
+          and ps.is_active
+        where p.business_id = $1 and p.is_archived = false
+        group by p.id
+        order by lower(p.name)`,
       [businessId],
     );
     return {
@@ -406,7 +412,7 @@ export async function getOrderFormOptions(
         sku: row.sku,
         unitOfMeasure: row.unit_of_measure,
         costPrice: row.cost_price,
-        supplierId: row.supplier_id,
+        supplierIds: row.supplier_ids,
       })),
     };
   });
@@ -444,6 +450,29 @@ async function insertLines(
 }
 
 /**
+ * An order may only contain products that the chosen supplier can supply. The
+ * form filters its options, but the server must not take that for granted: a
+ * crafted post could otherwise put a dairy line on a produce order, where the
+ * receipt would add stock nobody ordered from that supplier.
+ */
+async function linesMatchSupplier(
+  client: PoolClient,
+  businessId: string,
+  supplierId: string,
+  input: PurchaseOrderInput,
+): Promise<boolean> {
+  const productIds = [...new Set(input.lines.map((line) => line.productId))];
+  const linked = await client.query(
+    `select 1
+       from product_suppliers ps
+      where ps.business_id = $1 and ps.supplier_id = $2 and ps.is_active
+        and ps.product_id = any($3::uuid[])`,
+    [businessId, supplierId, productIds],
+  );
+  return linked.rowCount === productIds.length;
+}
+
+/**
  * Create a draft. The order and its lines are one `withTenant` transaction, so a
  * rejected line leaves no half-written order behind.
  */
@@ -455,6 +484,16 @@ export async function createPurchaseOrder(
 ): Promise<OrderWriteResult> {
   try {
     return await runInTenant(userId, existingClient, async (client) => {
+      if (
+        !(await linesMatchSupplier(client, businessId, input.supplierId, input))
+      ) {
+        return {
+          ok: false as const,
+          error:
+            "Some of those products are not supplied by the chosen supplier. Reload the form and try again.",
+        };
+      }
+
       const orderNumber = await nextOrderNumber(client, businessId);
       const created = await client.query<{ id: string }>(
         `insert into purchase_orders
@@ -511,6 +550,16 @@ export async function updateDraftPurchaseOrder(
 
   try {
     return await runInTenant(userId, existingClient, async (client) => {
+      if (
+        !(await linesMatchSupplier(client, businessId, input.supplierId, input))
+      ) {
+        return {
+          ok: false as const,
+          error:
+            "Some of those products are not supplied by the chosen supplier. Reload the form and try again.",
+        };
+      }
+
       const updated = await client.query(
         `update purchase_orders
             set supplier_id = $3, expected_delivery_at = $4, notes = $5,

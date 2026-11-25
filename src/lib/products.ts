@@ -38,6 +38,19 @@ export type CategoryOption = {
 
 export type SupplierOption = { id: string; name: string };
 
+/** One supplier a product can be bought from, with its own terms. */
+export type ProductSupplierLink = {
+  id: string;
+  supplierId: string;
+  supplierName: string;
+  supplierSku: string | null;
+  /** The link's override, or null when the supplier's lead time applies. */
+  leadTimeDays: number | null;
+  /** The link's lead time, falling back to the supplier's. */
+  effectiveLeadTimeDays: number | null;
+  isDefault: boolean;
+};
+
 /** One receipt line, as the product panel reads it: what was paid, when, to whom. */
 export type PricePaid = {
   unitCost: string;
@@ -62,14 +75,17 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const SELECT_PRODUCT = `
-  select p.id, p.name, p.sku, p.supplier_sku, p.unit_of_measure, p.category_id,
-         c.name as category_name, p.supplier_id, s.name as supplier_name,
-         p.cost_price, p.selling_price, p.reorder_level, p.target_stock_level,
-         p.description, p.is_archived,
+  select p.id, p.name, p.sku, ps.supplier_sku, p.unit_of_measure,
+         p.category_id, c.name as category_name, ps.supplier_id,
+         s.name as supplier_name, p.cost_price, p.selling_price,
+         p.reorder_level, p.target_stock_level, p.description, p.is_archived,
          coalesce(st.on_hand, 0)::text as on_hand
     from products p
     left join categories c on c.business_id = p.business_id and c.id = p.category_id
-    left join suppliers s on s.business_id = p.business_id and s.id = p.supplier_id
+    left join product_suppliers ps
+      on ps.business_id = p.business_id and ps.product_id = p.id
+     and ps.is_default and ps.is_active
+    left join suppliers s on s.business_id = p.business_id and s.id = ps.supplier_id
     left join product_stock st on st.business_id = p.business_id and st.product_id = p.id
 `;
 
@@ -244,6 +260,7 @@ export async function getProductPanel(
   product: ProductSummary | null;
   categories: CategoryOption[];
   suppliers: SupplierOption[];
+  links: ProductSupplierLink[];
   price: ProductPriceHistory;
 }> {
   return withTenant(userId, async (client) => {
@@ -254,10 +271,18 @@ export async function getProductPanel(
       request.mode === "detail"
         ? []
         : listCategories(userId, businessId, client),
-      request.mode === "detail"
-        ? []
-        : listSuppliers(userId, businessId, client),
+      // Detail needs the options too: alternates are added from the panel.
+      listSuppliers(userId, businessId, client),
     ]);
+    const links =
+      request.mode !== "create" && product !== null
+        ? await listProductSupplierLinks(
+            userId,
+            businessId,
+            request.productId,
+            client,
+          )
+        : [];
     const price =
       request.mode === "detail" && product !== null
         ? await getProductPriceHistory(
@@ -267,7 +292,49 @@ export async function getProductPanel(
             client,
           )
         : NO_PRICE_HISTORY;
-    return { product, categories, suppliers, price };
+    return { product, categories, suppliers, links, price };
+  });
+}
+
+export async function listProductSupplierLinks(
+  userId: string,
+  businessId: string,
+  productId: string,
+  client?: PoolClient,
+): Promise<ProductSupplierLink[]> {
+  if (!UUID_PATTERN.test(productId)) return [];
+
+  return runInTenant(userId, client, async (client) => {
+    const result = await client.query<{
+      id: string;
+      supplier_id: string;
+      supplier_name: string;
+      supplier_sku: string | null;
+      lead_time_days: number | null;
+      effective_lead_time_days: number | null;
+      is_default: boolean;
+    }>(
+      `select ps.id, ps.supplier_id, s.name as supplier_name,
+              ps.supplier_sku, ps.lead_time_days,
+              coalesce(ps.lead_time_days, s.lead_time_days)::int
+                as effective_lead_time_days,
+              ps.is_default
+         from product_suppliers ps
+         join suppliers s
+           on s.business_id = ps.business_id and s.id = ps.supplier_id
+        where ps.business_id = $1 and ps.product_id = $2 and ps.is_active
+        order by ps.is_default desc, lower(s.name)`,
+      [businessId, productId],
+    );
+    return result.rows.map((row) => ({
+      id: row.id,
+      supplierId: row.supplier_id,
+      supplierName: row.supplier_name,
+      supplierSku: row.supplier_sku,
+      leadTimeDays: row.lead_time_days,
+      effectiveLeadTimeDays: row.effective_lead_time_days,
+      isDefault: row.is_default,
+    }));
   });
 }
 
@@ -387,6 +454,40 @@ export async function listSuppliers(
   });
 }
 
+/**
+ * Make a supplier the product's default, without disturbing its alternates.
+ *
+ * The old default stays linked as an alternate: changing who supplies a product
+ * today does not erase the wholesaler that supplied it last month. The partial
+ * unique index is the database's guarantee that the unset-then-set is atomic.
+ */
+async function setDefaultSupplierLink(
+  client: PoolClient,
+  businessId: string,
+  productId: string,
+  supplierId: string,
+  supplierSku: string | null,
+): Promise<void> {
+  await client.query(
+    `update product_suppliers
+        set is_default = false, updated_at = now()
+      where business_id = $1 and product_id = $2
+        and supplier_id <> $3 and is_default`,
+    [businessId, productId, supplierId],
+  );
+  await client.query(
+    `insert into product_suppliers
+       (business_id, product_id, supplier_id, supplier_sku, is_default, is_active)
+     values ($1, $2, $3, $4, true, true)
+     on conflict (business_id, product_id, supplier_id) do update
+       set supplier_sku = excluded.supplier_sku,
+           is_default = true,
+           is_active = true,
+           updated_at = now()`,
+    [businessId, productId, supplierId, supplierSku],
+  );
+}
+
 export async function createProduct(
   userId: string,
   businessId: string,
@@ -395,10 +496,9 @@ export async function createProduct(
   return withTenant(userId, async (client) => {
     const result = await client.query<{ id: string }>(
       `insert into products
-         (business_id, name, sku, description, category_id, supplier_id,
-          supplier_sku, unit_of_measure, cost_price, selling_price, reorder_level,
-          target_stock_level)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+         (business_id, name, sku, description, category_id, unit_of_measure,
+          cost_price, selling_price, reorder_level, target_stock_level)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        returning id`,
       [
         businessId,
@@ -406,8 +506,6 @@ export async function createProduct(
         input.sku,
         input.description,
         input.categoryId,
-        input.supplierId,
-        input.supplierSku,
         input.unitOfMeasure,
         input.costPrice,
         input.sellingPrice,
@@ -416,6 +514,13 @@ export async function createProduct(
       ],
     );
     const id = result.rows[0].id;
+    await setDefaultSupplierLink(
+      client,
+      businessId,
+      id,
+      input.supplierId,
+      input.supplierSku,
+    );
 
     await recordActivity(client, {
       actorUserId: userId,
@@ -424,7 +529,7 @@ export async function createProduct(
       entityType: "product",
       entityId: id,
       summary: `Added ${input.name}`,
-      detail: { sku: input.sku },
+      detail: { sku: input.sku, supplier_id: input.supplierId },
     });
     return id;
   });
@@ -443,9 +548,8 @@ export async function updateProduct(
     const result = await client.query(
       `update products
           set name = $3, sku = $4, description = $5, category_id = $6,
-              supplier_id = $7, supplier_sku = $8, unit_of_measure = $9,
-              cost_price = $10, selling_price = $11, reorder_level = $12,
-              target_stock_level = $13, updated_at = now()
+              unit_of_measure = $7, cost_price = $8, selling_price = $9,
+              reorder_level = $10, target_stock_level = $11, updated_at = now()
         where business_id = $1 and id = $2
         returning id`,
       [
@@ -455,8 +559,6 @@ export async function updateProduct(
         input.sku,
         input.description,
         input.categoryId,
-        input.supplierId,
-        input.supplierSku,
         input.unitOfMeasure,
         input.costPrice,
         input.sellingPrice,
@@ -466,6 +568,14 @@ export async function updateProduct(
     );
     if (result.rowCount !== 1) return false;
 
+    await setDefaultSupplierLink(
+      client,
+      businessId,
+      productId,
+      input.supplierId,
+      input.supplierSku,
+    );
+
     await recordActivity(client, {
       actorUserId: userId,
       businessId,
@@ -473,9 +583,220 @@ export async function updateProduct(
       entityType: "product",
       entityId: productId,
       summary: `Updated ${input.name}`,
-      detail: { sku: input.sku },
+      detail: { sku: input.sku, supplier_id: input.supplierId },
     });
     return true;
+  });
+}
+
+export type SupplierLinkResult = { ok: true } | { ok: false; error: string };
+
+export async function addProductSupplier(
+  userId: string,
+  businessId: string,
+  productId: string,
+  input: {
+    supplierId: string;
+    supplierSku: string | null;
+    leadTimeDays: number | null;
+  },
+): Promise<SupplierLinkResult> {
+  if (!UUID_PATTERN.test(productId) || !UUID_PATTERN.test(input.supplierId)) {
+    return {
+      ok: false,
+      error: "That product or supplier is not in this business.",
+    };
+  }
+
+  return withTenant(userId, async (client) => {
+    const product = await client.query<{ name: string }>(
+      "select name from products where business_id = $1 and id = $2",
+      [businessId, productId],
+    );
+    if (product.rowCount !== 1) {
+      return {
+        ok: false as const,
+        error: "That product is not in this business.",
+      };
+    }
+    const supplier = await client.query<{ name: string }>(
+      `select name from suppliers
+        where business_id = $1 and id = $2 and is_archived = false`,
+      [businessId, input.supplierId],
+    );
+    if (supplier.rowCount !== 1) {
+      return {
+        ok: false as const,
+        error: "That supplier is not active in this business.",
+      };
+    }
+
+    await client.query(
+      `insert into product_suppliers
+         (business_id, product_id, supplier_id, supplier_sku, lead_time_days,
+          is_default, is_active)
+       values ($1, $2, $3, $4, $5, false, true)
+       on conflict (business_id, product_id, supplier_id) do update
+         set supplier_sku = excluded.supplier_sku,
+             lead_time_days = excluded.lead_time_days,
+             is_active = true,
+             updated_at = now()`,
+      [
+        businessId,
+        productId,
+        input.supplierId,
+        input.supplierSku,
+        input.leadTimeDays,
+      ],
+    );
+
+    await recordActivity(client, {
+      actorUserId: userId,
+      businessId,
+      action: "product.updated",
+      entityType: "product",
+      entityId: productId,
+      summary: `Added ${supplier.rows[0].name} to ${product.rows[0].name}`,
+      detail: { supplier_id: input.supplierId },
+    });
+    return { ok: true as const };
+  });
+}
+
+export async function setDefaultProductSupplier(
+  userId: string,
+  businessId: string,
+  productId: string,
+  linkId: string,
+): Promise<SupplierLinkResult> {
+  if (!UUID_PATTERN.test(productId) || !UUID_PATTERN.test(linkId)) {
+    return { ok: false, error: "That supplier link is not in this business." };
+  }
+
+  return withTenant(userId, async (client) => {
+    const link = await client.query<{
+      supplier_id: string;
+      supplier_name: string;
+    }>(
+      `select ps.supplier_id, s.name as supplier_name
+         from product_suppliers ps
+         join suppliers s
+           on s.business_id = ps.business_id and s.id = ps.supplier_id
+        where ps.business_id = $1 and ps.product_id = $2 and ps.id = $3
+          and ps.is_active`,
+      [businessId, productId, linkId],
+    );
+    const row = link.rows[0];
+    const product = await client.query<{ name: string }>(
+      "select name from products where business_id = $1 and id = $2",
+      [businessId, productId],
+    );
+    if (!row || product.rowCount !== 1) {
+      return {
+        ok: false as const,
+        error: "That supplier link is not in this business.",
+      };
+    }
+
+    await client.query(
+      `update product_suppliers set is_default = false, updated_at = now()
+        where business_id = $1 and product_id = $2 and is_default`,
+      [businessId, productId],
+    );
+    await client.query(
+      `update product_suppliers set is_default = true, updated_at = now()
+        where business_id = $1 and product_id = $2 and id = $3`,
+      [businessId, productId, linkId],
+    );
+
+    await recordActivity(client, {
+      actorUserId: userId,
+      businessId,
+      action: "product.updated",
+      entityType: "product",
+      entityId: productId,
+      summary: `Made ${row.supplier_name} the default supplier for ${product.rows[0].name}`,
+      detail: { supplier_id: row.supplier_id },
+    });
+    return { ok: true as const };
+  });
+}
+
+export async function removeProductSupplier(
+  userId: string,
+  businessId: string,
+  productId: string,
+  linkId: string,
+): Promise<SupplierLinkResult> {
+  if (!UUID_PATTERN.test(productId) || !UUID_PATTERN.test(linkId)) {
+    return { ok: false, error: "That supplier link is not in this business." };
+  }
+
+  return withTenant(userId, async (client) => {
+    const link = await client.query<{
+      supplier_id: string;
+      supplier_name: string;
+      is_default: boolean;
+      product_name: string;
+    }>(
+      `select ps.supplier_id, s.name as supplier_name, ps.is_default,
+              p.name as product_name
+         from product_suppliers ps
+         join suppliers s
+           on s.business_id = ps.business_id and s.id = ps.supplier_id
+         join products p
+           on p.business_id = ps.business_id and p.id = ps.product_id
+        where ps.business_id = $1 and ps.product_id = $2 and ps.id = $3`,
+      [businessId, productId, linkId],
+    );
+    const row = link.rows[0];
+    if (!row) {
+      return {
+        ok: false as const,
+        error: "That supplier link is not in this business.",
+      };
+    }
+    if (row.is_default) {
+      return {
+        ok: false as const,
+        error: "Choose another default supplier before removing this one.",
+      };
+    }
+
+    const openOrder = await client.query(
+      `select 1
+         from purchase_order_lines l
+         join purchase_orders po
+           on po.business_id = l.business_id
+          and po.id = l.purchase_order_id
+        where l.business_id = $1 and l.product_id = $2 and po.supplier_id = $3
+          and po.status in ('draft', 'ordered', 'partially_received')
+        limit 1`,
+      [businessId, productId, row.supplier_id],
+    );
+    if (openOrder.rowCount === 1) {
+      return {
+        ok: false as const,
+        error: `${row.supplier_name} has an open order with this product. Receive or close it before removing the supplier.`,
+      };
+    }
+
+    await client.query(
+      `delete from product_suppliers
+        where business_id = $1 and product_id = $2 and id = $3`,
+      [businessId, productId, linkId],
+    );
+
+    await recordActivity(client, {
+      actorUserId: userId,
+      businessId,
+      action: "product.updated",
+      entityType: "product",
+      entityId: productId,
+      summary: `Removed ${row.supplier_name} from ${row.product_name}`,
+      detail: { supplier_id: row.supplier_id },
+    });
+    return { ok: true as const };
   });
 }
 

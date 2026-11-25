@@ -96,35 +96,41 @@ export async function getReorderPage(
   return runInTenant(userId, client, async (client) => {
     const result = await client.query<CandidateRow>(
       `with on_order as (
-         select l.business_id, l.product_id,
+         select l.business_id, po.supplier_id, l.product_id,
                 sum(l.quantity_ordered - l.received_quantity) as quantity
            from purchase_order_lines l
            join purchase_orders po
              on po.business_id = l.business_id and po.id = l.purchase_order_id
           where l.business_id = $1
             and po.status in ('ordered', 'partially_received')
-          group by l.business_id, l.product_id
+          group by l.business_id, po.supplier_id, l.product_id
        )
        select p.id as product_id, p.name, p.sku, p.unit_of_measure,
               p.reorder_level::text as reorder_level,
               p.target_stock_level::text as target_stock_level,
               coalesce(st.on_hand, 0)::text as on_hand,
               coalesce(oo.quantity, 0)::text as on_order,
-              s.id as supplier_id, s.name as supplier_name, s.lead_time_days,
+              ps.supplier_id, s.name as supplier_name,
+              coalesce(ps.lead_time_days, s.lead_time_days)::int
+                as lead_time_days,
               open_po.id as open_order_id,
               open_po.order_number,
               open_po.status as order_status,
               (draft_line.id is not null) as on_draft
          from products p
+         join product_suppliers ps
+           on ps.business_id = p.business_id and ps.product_id = p.id
+          and ps.is_active
          join suppliers s
-           on s.business_id = p.business_id and s.id = p.supplier_id
+           on s.business_id = p.business_id and s.id = ps.supplier_id
          left join product_stock st
            on st.business_id = p.business_id and st.product_id = p.id
          left join on_order oo
            on oo.business_id = p.business_id and oo.product_id = p.id
+          and oo.supplier_id = ps.supplier_id
          left join purchase_orders open_po
            on open_po.business_id = p.business_id
-          and open_po.supplier_id = p.supplier_id
+          and open_po.supplier_id = ps.supplier_id
           and open_po.status in ('draft', 'ordered', 'partially_received')
          left join purchase_order_lines draft_line
            on draft_line.business_id = p.business_id
@@ -173,6 +179,15 @@ export async function getReorderPage(
         groups.set(row.supplier_id, group);
       }
 
+      // One card per supplier: its lead time is the longest of the linked
+      // products' effective times, so the suggested date is not optimistic.
+      if (
+        row.lead_time_days !== null &&
+        (group.leadTimeDays === null || row.lead_time_days > group.leadTimeDays)
+      ) {
+        group.leadTimeDays = row.lead_time_days;
+      }
+
       group.rows.push({
         productId: row.product_id,
         name: row.name,
@@ -207,8 +222,13 @@ export async function getReorderPage(
 
     const unassigned = await client.query<{ total: number }>(
       `select count(*)::int as total
-         from products
-        where business_id = $1 and is_archived = false and supplier_id is null`,
+         from products p
+        where p.business_id = $1 and p.is_archived = false
+          and not exists (
+            select 1 from product_suppliers ps
+             where ps.business_id = p.business_id and ps.product_id = p.id
+               and ps.is_active
+          )`,
       [businessId],
     );
 
@@ -253,11 +273,20 @@ export async function saveReorderSelection(
   client?: PoolClient,
 ): Promise<ReorderWriteResult> {
   return runInTenant(userId, client, async (client) => {
+    const productIds = input.lines.map((line) => line.productId);
     const supplier = await client.query<SupplierRow>(
-      `select name, lead_time_days
-         from suppliers
-        where business_id = $1 and id = $2 and is_archived = false`,
-      [businessId, input.supplierId],
+      `select s.name,
+              coalesce(
+                max(coalesce(ps.lead_time_days, s.lead_time_days)),
+                s.lead_time_days
+              )::int as lead_time_days
+         from suppliers s
+         left join product_suppliers ps
+           on ps.business_id = s.business_id and ps.supplier_id = s.id
+          and ps.is_active and ps.product_id = any($3::uuid[])
+        where s.business_id = $1 and s.id = $2 and s.is_archived = false
+        group by s.id`,
+      [businessId, input.supplierId, productIds],
     );
     const supplierRow = supplier.rows[0];
     if (!supplierRow) {
@@ -267,12 +296,14 @@ export async function saveReorderSelection(
       };
     }
 
-    const productIds = input.lines.map((line) => line.productId);
     const products = await client.query<ProductRow>(
-      `select id, name, cost_price::text as cost_price
-         from products
-        where business_id = $1 and supplier_id = $2 and is_archived = false
-          and id = any($3::uuid[])`,
+      `select p.id, p.name, p.cost_price::text as cost_price
+         from products p
+         join product_suppliers ps
+           on ps.business_id = p.business_id and ps.product_id = p.id
+          and ps.supplier_id = $2 and ps.is_active
+        where p.business_id = $1 and p.is_archived = false
+          and p.id = any($3::uuid[])`,
       [businessId, input.supplierId, productIds],
     );
 

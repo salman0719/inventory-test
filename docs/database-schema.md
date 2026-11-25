@@ -33,10 +33,8 @@ This is a starting point for architecture discussion, not a final schema. Confir
 - id
 - business_id
 - category_id
-- supplier_id (nullable)
 - name
 - sku
-- supplier_sku (nullable; the supplier's own code, unique per supplier, case-insensitive, and only allowed when a supplier is set)
 - description
 - unit_of_measure
 - cost_price
@@ -48,6 +46,9 @@ This is a starting point for architecture discussion, not a final schema. Confir
 - updated_at
 
 ### suppliers
+
+`lead_time_days` is the supplier-wide fallback; a `product_suppliers` row can
+override it for one product.
 
 - id
 - business_id
@@ -73,7 +74,30 @@ newest-first with a limit. No price table exists and no backfill is needed.
 
 ### product_suppliers
 
-Use only if products can have multiple suppliers. Otherwise a nullable `supplier_id` on products may be simpler. Do not over-model without a demonstrated need.
+Which suppliers can supply a product, and on what terms. This replaced
+`products.supplier_id` and `products.supplier_sku` in migration `0019`.
+
+- id
+- business_id
+- product_id
+- supplier_id
+- supplier_sku (nullable; the supplier's own code, unique per supplier,
+  case-insensitive)
+- lead_time_days (nullable, 0–365; overrides `suppliers.lead_time_days`)
+- is_default
+- is_active
+- created_at
+- updated_at
+
+Exactly one active default is allowed per product, enforced by the partial unique
+index `product_suppliers_one_default`. The default link is what the catalogue,
+inventory, dashboard and stock report name. Every active link is a supplier the
+product can be ordered from, including alternates. `supplier_sku` lives here, not
+on `products`, because the same product has a different code at each wholesaler.
+The supplier's lead time remains the fallback when a link's value is null.
+
+The product form requires a default supplier. A link can be removed only when it
+is not the default and the product is not on an open order from that supplier.
 
 ### inventory_locations
 

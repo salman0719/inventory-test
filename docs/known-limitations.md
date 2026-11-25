@@ -102,6 +102,18 @@ Record limitations honestly. Include severity, workaround, and whether the issue
 | A rejected quantity resets to the outstanding default            | low      | The error states the outstanding quantity and the field is pre-filled with it                                                       | No           | Intentional         |
 | Viewers can see order values and costs                           | medium   | The database refuses viewer writes; screens are not role-aware yet                                                                  | No           | Deferred            |
 
+## Slice F (multiple suppliers per product) — 2026-11-25
+
+| Limitation or risk                                                                               | Severity | Workaround                                                                                                                                | Blocks demo?      | Status       |
+| ------------------------------------------------------------------------------------------------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------- | ------------ |
+| There is no side-by-side price or lead-time comparison across a product's suppliers              | medium   | The product panel lists each link's code, effective lead time and last-paid history; choosing between them is still an operator judgement | No                | Deferred     |
+| A new product must start with a default supplier                                                 | medium   | Create or choose the supplier first; the alternative is a product that cannot be ordered                                                  | No                | By design    |
+| A legacy product with no default cannot be saved until a supplier is chosen                      | low      | Edit it once and choose a supplier; the form says so                                                                                      | No                | By design    |
+| An alternate supplier cannot be removed while that product is on an open order from them         | low      | Receive or close the order first; the panel explains why                                                                                  | No                | By design    |
+| Only one alternate row can be added at a time, with no bulk import of supplier catalogues        | low      | The panel form is a few fields; bulk supplier mapping belongs with CSV import                                                             | No                | Deferred     |
+| The bundled seed gives each product one supplier; alternate links are not seeded                 | low      | Add an alternate from the product panel to demonstrate the feature                                                                        | No                | Intentional  |
+| `0019` moves supplier data destructively; deploying it before the code would break the old reads | high     | Apply `npm run db:migrate:hosted` and deploy the matching code in the same release                                                        | No for local demo | Not deployed |
+
 ## Slice 8 (dashboard) — 2026-11-22
 
 | Limitation or risk                                          | Severity | Workaround                                                                                                      | Blocks demo? | Status              |

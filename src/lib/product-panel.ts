@@ -2,6 +2,7 @@ import type { PanelRequest } from "./panel";
 import type {
   CategoryOption,
   ProductPriceHistory,
+  ProductSupplierLink,
   ProductSummary,
   SupplierOption,
 } from "./products";
@@ -24,6 +25,8 @@ export type ProductPanelPayload = {
   product: ProductSummary | null;
   categories: CategoryOption[];
   suppliers: SupplierOption[];
+  /** Active supplier links, default first; empty unless the detail view. */
+  links: ProductSupplierLink[];
   /** What was paid, from receipts; empty for a create form or a viewer. */
   price: ProductPriceHistory;
   currency: string;

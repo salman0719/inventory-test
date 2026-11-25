@@ -18,7 +18,8 @@ Keep this file current. Do not report a task as complete until it has been verif
   (public, no deployment protection; serves `main` through `e460b66`, with the
   hosted Supabase database seeded through `db:seed:hosted` and migrated through
   `0012` — 13 tracked)
-- Last updated: 2026-11-25 (Slice E built and partly walked)
+- Last updated: 2026-11-25 (Slice F built; browser panel API checked,
+  rendered panel not visually inspected because the preview tab was hidden)
 
 ## Phase checklist
 
@@ -133,6 +134,54 @@ Keep this file current. Do not report a task as complete until it has been verif
 ## Recently completed
 
 Add date, task, verification method, and result.
+
+- **2026-11-25 — Slice F built: multiple suppliers per product (branch
+  `feat/product-suppliers`, stacked on `feat/reorder-suggestions`, not merged or
+  deployed).**
+  `0019_product_suppliers.sql` adds `product_suppliers` and makes it the single
+  source of truth for a product's suppliers. Each row carries the supplier's own
+  code, an optional lead-time override, an active flag and a default flag. A
+  partial unique index permits one active default per product; another permits a
+  supplier code once per supplier, case-insensitively. The migration backfills one
+  default link for every product that had `products.supplier_id`, preserving its
+  `supplier_sku`, then drops both product columns. `suppliers.lead_time_days`
+  remains the fallback when a link has no override. The demo reset function now
+  writes the default links instead of the dropped columns.
+  **Reads:** the catalogue, inventory, dashboard and stock report name the default
+  supplier. Reorder suggestions join active links, so a product appears once under
+  every supplier that can supply it; sent-order quantities are netted per supplier,
+  and a supplier card uses the longest effective lead time in its group. The order
+  form lists each product under every linked supplier, and order creation/editing
+  now refuses a line that the chosen supplier does not supply. Supplier product
+  counts and lists also read links, so an alternate is counted once.
+  **Screens:** the product form requires a default supplier and labels the code as
+  that supplier's. The product panel lists every active supplier with its code,
+  effective lead time and default badge; an alternate can be added with its own
+  code and lead-time override, promoted to default, or removed. Removal is refused
+  for the default and for a supplier with an open order containing the product.
+  **Verified:** `npm run db:migrate` applied 1 migration (20 tracked) and the
+  backfill produced 221 links, 221 defaults and 0 active products without a default
+  in the local database. `npm run check` exit 0 (the same 2 pre-existing warnings in
+  `permissions.ts`); `npm run test` 230 passed in 33 files; `npm run test:db` 135
+  passed in 13 files, including the new `tests/db/product-suppliers.test.ts` (6)
+  which covers the no-default count and repair, link listing and supplier counts,
+  default promotion keeping the old link, refusal to remove the default, duplicate
+  supplier-code refusal, linked supplier options, order refusal for an unlinked
+  product, reorder fan-out under both suppliers with the longest lead time, and a
+  draft created under the alternate. The tenant-isolation test also reads and writes
+  links through RLS. `npm run db:seed` is idempotent (221 products, 3 orders);
+  `npm run build` exit 0; `npm run secrets:check` ok.
+  **Browser/API check (2026-11-25, local signed-in tab):** `/products` served its
+  60-product list, and `/api/products/panel` for Pork belly returned 200 with
+  `Harbour Line Meats` as the default, one link and nine supplier options;
+  `/api/purchase-orders/panel?mode=create` returned 60 products, 9 suppliers and
+  each product's linked supplier ids. The preview tab reported
+  `document.visibilityState: hidden`, so React's streamed reveal stayed on "Loading
+  page" and the rendered panel was **not visually inspected**.
+  **Not verified:** adding, promoting and removing a link through the browser UI;
+  the duplicate-code message in the browser; the viewer panel; narrow widths; and
+  anything deployed. `0019` drops columns, so `npm run db:migrate:hosted` and the
+  matching code must ship together.
 
 - **2026-11-25 — Slice E built: reorder suggestions (branch
   `feat/reorder-suggestions`, stacked on `feat/stocktake`, not merged or

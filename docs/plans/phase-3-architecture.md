@@ -117,7 +117,9 @@ null, `reorder_level` numeric(12,3) not null default 0 check ≥ 0, `image_path`
   `on delete restrict` (archive instead of delete).
 - **One supplier per product**, nullable. No `product_suppliers` table: nothing in
   the approved scope needs multi-supplier products, and the brief warns against
-  over-modelling.
+  over-modelling. **Superseded 2026-11-25 by Slice F:** migration `0019` adds
+  `product_suppliers` and moves the default supplier, supplier code and
+  per-product lead time there; this section records the original Phase 3 design.
 - Index `(business_id, is_archived, name)`, and `(business_id, supplier_id)`.
 
 ### stock_movements (the ledger — append only)

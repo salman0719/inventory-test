@@ -119,20 +119,43 @@ beforeAll(async () => {
     );
     await client.query(
       `insert into products
-         (id, business_id, supplier_id, name, sku, unit_of_measure, cost_price,
+         (id, business_id, name, sku, unit_of_measure, cost_price,
           reorder_level, target_stock_level, is_archived)
        values
-         ($1, $2, $3, 'Reorder Tomatoes', 'REO-1', 'kg', 2.00, 4, null, false),
-         ($4, $2, $3, 'Reorder Cucumbers', 'REO-2', 'ea', 1.00, 4, 3, false),
-         ($5, $2, $6, 'Reorder Milk', 'REO-3', 'bottle', 3.10, 6, 10, false),
-         ($7, $2, $6, 'Reorder Cream', 'REO-4', 'ea', 2.20, 4, 5, false),
-         ($8, $2, $9, 'Reorder Flour', 'REO-5', 'bag', 9.00, 2, null, false),
-         ($10, $2, $11, 'Reorder Buns', 'REO-6', 'pack', 3.20, 2, null, false),
-         ($12, $2, null, 'Reorder Loose Apples', 'REO-7', 'kg', 3.00, 2, null, false),
-         ($13, $2, $3, 'Reorder Retired Tea', 'REO-8', 'box', 5.00, 2, null, true)`,
+         ($1, $2, 'Reorder Tomatoes', 'REO-1', 'kg', 2.00, 4, null, false),
+         ($3, $2, 'Reorder Cucumbers', 'REO-2', 'ea', 1.00, 4, 3, false),
+         ($4, $2, 'Reorder Milk', 'REO-3', 'bottle', 3.10, 6, 10, false),
+         ($5, $2, 'Reorder Cream', 'REO-4', 'ea', 2.20, 4, 5, false),
+         ($6, $2, 'Reorder Flour', 'REO-5', 'bag', 9.00, 2, null, false),
+         ($7, $2, 'Reorder Buns', 'REO-6', 'pack', 3.20, 2, null, false),
+         ($8, $2, 'Reorder Loose Apples', 'REO-7', 'kg', 3.00, 2, null, false),
+         ($9, $2, 'Reorder Retired Tea', 'REO-8', 'box', 5.00, 2, null, true)`,
       [
         ids.productA,
         ids.business,
+        ids.productB,
+        ids.productC,
+        ids.productD,
+        ids.productE,
+        ids.productF,
+        ids.productNoSupplier,
+        ids.productArchived,
+      ],
+    );
+    await client.query(
+      `insert into product_suppliers
+         (business_id, product_id, supplier_id, is_default)
+       values
+         ($1, $2, $3, true),
+         ($1, $4, $3, true),
+         ($1, $5, $6, true),
+         ($1, $7, $6, true),
+         ($1, $8, $9, true),
+         ($1, $10, $11, true),
+         ($1, $12, $3, true)`,
+      [
+        ids.business,
+        ids.productA,
         ids.supplierA,
         ids.productB,
         ids.productC,
@@ -142,7 +165,6 @@ beforeAll(async () => {
         ids.supplierC,
         ids.productF,
         ids.supplierD,
-        ids.productNoSupplier,
         ids.productArchived,
       ],
     );

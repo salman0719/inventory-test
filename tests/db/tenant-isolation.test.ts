@@ -76,15 +76,21 @@ beforeAll(async () => {
       [ids.supplierA, ids.businessA, ids.supplierB, ids.businessB],
     );
     await client.query(
-      `insert into products (id, business_id, supplier_id, name, sku, cost_price, reorder_level)
-       values ($1, $2, $3, 'Product A', 'SKU-A', 2.50, 5),
-              ($4, $5, $6, 'Product B', 'SKU-B', 9.00, 2)`,
+      `insert into products (id, business_id, name, sku, cost_price, reorder_level)
+       values ($1, $2, 'Product A', 'SKU-A', 2.50, 5),
+              ($3, $4, 'Product B', 'SKU-B', 9.00, 2)`,
+      [ids.productA, ids.businessA, ids.productB, ids.businessB],
+    );
+    await client.query(
+      `insert into product_suppliers
+         (business_id, product_id, supplier_id, is_default)
+       values ($1, $2, $3, true), ($4, $5, $6, true)`,
       [
-        ids.productA,
         ids.businessA,
+        ids.productA,
         ids.supplierA,
-        ids.productB,
         ids.businessB,
+        ids.productB,
         ids.supplierB,
       ],
     );
@@ -240,6 +246,44 @@ describe("ledger write protection", () => {
         ]),
       ),
     ).rejects.toMatchObject({ code: "42501" });
+  });
+});
+
+describe("supplier links", () => {
+  it("reads and writes only links inside the caller's business", async () => {
+    const result = await asUser(ids.ownerA, async (client) => {
+      const foreign = await client.query<{ total: number }>(
+        "select count(*)::int as total from product_suppliers where business_id = $1",
+        [ids.businessB],
+      );
+      const own = await client.query<{ total: number }>(
+        "select count(*)::int as total from product_suppliers where business_id = $1",
+        [ids.businessA],
+      );
+      const refused = await client.query("savepoint link_attempt").then(() =>
+        client
+          .query(
+            `insert into product_suppliers
+                 (business_id, product_id, supplier_id, is_default)
+               values ($1, $2, $3, false)`,
+            [ids.businessB, ids.productB, ids.supplierB],
+          )
+          .then(() => null)
+          .catch(async (error: { code?: string }) => {
+            await client.query("rollback to savepoint link_attempt");
+            return error.code ?? "";
+          }),
+      );
+      return {
+        foreign: foreign.rows[0]?.total,
+        own: own.rows[0]?.total,
+        refused,
+      };
+    });
+
+    expect(result.foreign).toBe(0);
+    expect(result.own).toBe(1);
+    expect(result.refused).toBe("42501");
   });
 });
 

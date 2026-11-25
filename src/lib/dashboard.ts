@@ -126,8 +126,11 @@ export async function getDashboard(
          left join product_stock st
            on st.business_id = p.business_id and st.product_id = p.id
          left join on_order oo on oo.product_id = p.id
+         left join product_suppliers ps
+           on ps.business_id = p.business_id and ps.product_id = p.id
+          and ps.is_default and ps.is_active
          left join suppliers s
-           on s.business_id = p.business_id and s.id = p.supplier_id
+           on s.business_id = p.business_id and s.id = ps.supplier_id
         where p.business_id = $1
           and p.is_archived = false
           and (coalesce(st.on_hand, 0) <= 0 or ${LOW_SQL})

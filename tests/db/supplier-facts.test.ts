@@ -271,36 +271,80 @@ describe("supplier lead time", () => {
   });
 });
 
-describe("supplier product code", () => {
-  it("is unique per supplier, ignoring case, and free across suppliers", async () => {
+describe("product supplier links", () => {
+  it("allows one active default per product", async () => {
     const result = await asUser(ids.owner, async (client) => {
       await client.query(
-        `update products set supplier_id = $2, supplier_sku = 'FF-100'
-          where id = $1`,
-        [ids.product, ids.supplier],
+        `insert into product_suppliers
+           (business_id, product_id, supplier_id, is_default)
+         values ($1, $2, $3, true)`,
+        [ids.business, ids.product, ids.supplier],
+      );
+      const secondDefault = await captureError(client, () =>
+        client.query(
+          `insert into product_suppliers
+             (business_id, product_id, supplier_id, is_default)
+           values ($1, $2, $3, true)`,
+          [ids.business, ids.product, ids.secondSupplier],
+        ),
+      );
+      const duplicateLink = await captureError(client, () =>
+        client.query(
+          `insert into product_suppliers
+             (business_id, product_id, supplier_id)
+           values ($1, $2, $3)`,
+          [ids.business, ids.product, ids.supplier],
+        ),
+      );
+      return { secondDefault, duplicateLink };
+    });
+
+    expect(result.secondDefault).toMatchObject({
+      code: "23505",
+      constraint: "product_suppliers_one_default",
+    });
+    expect(result.duplicateLink).toMatchObject({
+      code: "23505",
+      constraint: "product_suppliers_business_product_supplier_key",
+    });
+  });
+
+  it("keeps a supplier code unique per supplier, ignoring case", async () => {
+    const result = await asUser(ids.owner, async (client) => {
+      await client.query(
+        `insert into product_suppliers
+           (business_id, product_id, supplier_id, supplier_sku, is_default)
+         values ($1, $2, $3, 'FF-100', true)`,
+        [ids.business, ids.product, ids.supplier],
       );
       const duplicate = await captureError(client, () =>
         client.query(
-          `update products set supplier_id = $2, supplier_sku = 'ff-100'
-            where id = $1`,
-          [ids.secondProduct, ids.supplier],
+          `insert into product_suppliers
+             (business_id, product_id, supplier_id, supplier_sku)
+           values ($1, $2, $3, 'ff-100')`,
+          [ids.business, ids.secondProduct, ids.supplier],
         ),
-      );
-      // Not set: the index is partial.
-      await client.query(
-        `update products set supplier_id = null, supplier_sku = null
-          where id = $1`,
-        [ids.secondProduct],
       );
       // The same code at a different supplier is a different code.
       await client.query(
-        `update products set supplier_id = $2, supplier_sku = 'FF-100'
-          where id = $1`,
-        [ids.secondProduct, ids.secondSupplier],
+        `insert into product_suppliers
+           (business_id, product_id, supplier_id, supplier_sku)
+         values ($1, $2, $3, 'FF-100')`,
+        [ids.business, ids.secondProduct, ids.secondSupplier],
       );
-      const codes = await client.query<{ sku: string; supplier_sku: string }>(
-        `select sku, supplier_sku from products
-          where business_id = $1 order by sku`,
+      const codes = await client.query<{
+        sku: string;
+        supplier_name: string;
+        supplier_sku: string | null;
+      }>(
+        `select p.sku, s.name as supplier_name, ps.supplier_sku
+           from product_suppliers ps
+           join products p
+             on p.business_id = ps.business_id and p.id = ps.product_id
+           join suppliers s
+             on s.business_id = ps.business_id and s.id = ps.supplier_id
+          where ps.business_id = $1
+          order by p.sku, s.name`,
         [ids.business],
       );
       return { duplicate, codes: codes.rows };
@@ -308,42 +352,55 @@ describe("supplier product code", () => {
 
     expect(result.duplicate).toMatchObject({
       code: "23505",
-      constraint: "products_business_supplier_code_key",
+      constraint: "product_suppliers_code_key",
     });
     expect(result.codes).toEqual([
-      { sku: "FACT-1", supplier_sku: "FF-100" },
-      { sku: "FACT-2", supplier_sku: "FF-100" },
+      { sku: "FACT-1", supplier_name: "Facts Produce", supplier_sku: "FF-100" },
+      { sku: "FACT-2", supplier_name: "Facts Dairy", supplier_sku: "FF-100" },
     ]);
   });
 
-  it("refuses a code with no supplier, and lets the pair be cleared", async () => {
+  it("accepts a lead time from 0 to 365 days and a code that can be cleared", async () => {
     const result = await asUser(ids.owner, async (client) => {
-      // The exact shape the partial unique index cannot see: a code, no supplier.
-      const refused = await captureError(client, () =>
+      await client.query(
+        `insert into product_suppliers
+           (business_id, product_id, supplier_id, supplier_sku, lead_time_days,
+            is_default)
+         values ($1, $2, $3, 'FF-300', 0, true)`,
+        [ids.business, ids.product, ids.supplier],
+      );
+      await client.query(
+        `update product_suppliers set lead_time_days = 365
+          where business_id = $1 and product_id = $2`,
+        [ids.business, ids.product],
+      );
+      const tooLong = await captureError(client, () =>
         client.query(
-          `update products set supplier_id = null, supplier_sku = 'FF-300'
-            where id = $1`,
-          [ids.secondProduct],
+          `update product_suppliers set lead_time_days = 366
+            where business_id = $1 and product_id = $2`,
+          [ids.business, ids.product],
         ),
       );
-      // Clearing both together is the way out of the rule.
       const cleared = await client.query<{
-        supplier_id: string | null;
+        lead_time_days: number | null;
         supplier_sku: string | null;
       }>(
-        `update products set supplier_id = null, supplier_sku = null
-          where id = $1
-          returning supplier_id, supplier_sku`,
-        [ids.secondProduct],
+        `update product_suppliers set supplier_sku = null, lead_time_days = null
+          where business_id = $1 and product_id = $2
+          returning lead_time_days, supplier_sku`,
+        [ids.business, ids.product],
       );
-      return { refused, cleared: cleared.rows[0] };
+      return { tooLong, cleared: cleared.rows[0] };
     });
 
-    expect(result.refused).toMatchObject({
+    expect(result.tooLong).toMatchObject({
       code: "23514",
-      constraint: "products_supplier_code_check",
+      constraint: "product_suppliers_lead_time_days_check",
     });
-    expect(result.cleared).toEqual({ supplier_id: null, supplier_sku: null });
+    expect(result.cleared).toEqual({
+      lead_time_days: null,
+      supplier_sku: null,
+    });
   });
 });
 

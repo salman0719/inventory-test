@@ -9,11 +9,13 @@ import { formatMoney, formatQuantity, stockStatus } from "@/lib/product-input";
 import type {
   CategoryOption,
   ProductPriceHistory,
+  ProductSupplierLink,
   ProductSummary,
   SupplierOption,
 } from "@/lib/products";
 import { PanelLink } from "../panel-link";
 import { ProductForm } from "./product-form";
+import { ProductSuppliers } from "./product-suppliers";
 import { StatusLabel } from "./status-label";
 
 const BUTTON =
@@ -38,6 +40,7 @@ export function ProductPanel({
   product,
   categories,
   suppliers,
+  links,
   price,
   currency,
   saved,
@@ -49,6 +52,7 @@ export function ProductPanel({
   product: ProductSummary | null;
   categories: CategoryOption[];
   suppliers: SupplierOption[];
+  links: ProductSupplierLink[];
   price: ProductPriceHistory;
   currency: string;
   saved: boolean;
@@ -110,12 +114,15 @@ export function ProductPanel({
             defaults={product ?? EMPTY_PRODUCT}
             categories={categories}
             suppliers={suppliers}
+            links={links}
             cancelHref={closeHref}
           />
         </div>
       ) : product ? (
         <ProductBody
           product={product}
+          suppliers={suppliers}
+          links={links}
           price={price}
           currency={currency}
           saved={saved}
@@ -128,12 +135,16 @@ export function ProductPanel({
 
 function ProductBody({
   product,
+  suppliers,
+  links,
   price,
   currency,
   saved,
   canViewValues,
 }: {
   product: ProductSummary;
+  suppliers: SupplierOption[];
+  links: ProductSupplierLink[];
   price: ProductPriceHistory;
   currency: string;
   saved: boolean;
@@ -195,6 +206,14 @@ function ProductBody({
           </Value>
         ) : null}
       </dl>
+
+      <ProductSuppliers
+        productId={product.id}
+        links={links}
+        suppliers={suppliers}
+        unitOfMeasure={product.unitOfMeasure}
+        canEdit={canViewValues}
+      />
 
       {canViewValues ? (
         <div className="border-t border-line px-3 py-2">

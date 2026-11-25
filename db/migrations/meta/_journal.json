@@ -134,6 +134,13 @@
       "when": 1796016000000,
       "tag": "0018_reorder_targets",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1796102400000,
+      "tag": "0019_product_suppliers",
+      "breakpoints": true
     }
   ]
 }

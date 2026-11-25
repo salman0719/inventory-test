@@ -81,15 +81,17 @@ export async function seedDemoCatalogue(
     const sku = demoProductSku(catalogue.skuPrefix, index);
 
     const supplierName = catalogue.supplierByCategory[category];
+    const supplierId = supplierName
+      ? (supplierIds.get(supplierName.toLowerCase()) ?? null)
+      : null;
     const saved = await pool.query<{ id: string }>(
       `insert into products
-         (business_id, name, sku, category_id, supplier_id, unit_of_measure,
+         (business_id, name, sku, category_id, unit_of_measure,
           cost_price, selling_price, reorder_level)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
        on conflict (business_id, sku) do update
          set name = excluded.name,
              category_id = excluded.category_id,
-             supplier_id = excluded.supplier_id,
              unit_of_measure = excluded.unit_of_measure,
              cost_price = excluded.cost_price,
              selling_price = excluded.selling_price,
@@ -101,15 +103,31 @@ export async function seedDemoCatalogue(
         name,
         sku,
         categoryIds.get(category.toLowerCase()) ?? null,
-        supplierName
-          ? (supplierIds.get(supplierName.toLowerCase()) ?? null)
-          : null,
         unit,
         cost.toFixed(2),
         price === null ? null : price.toFixed(2),
         String(reorder),
       ],
     );
+
+    if (supplierId !== null) {
+      // A re-seed can move a product to another category and supplier. The old
+      // supplier stays linked as an alternate; the new one becomes the default.
+      await pool.query(
+        `update product_suppliers set is_default = false, updated_at = now()
+          where business_id = $1 and product_id = $2
+            and supplier_id <> $3 and is_default`,
+        [catalogue.businessId, saved.rows[0].id, supplierId],
+      );
+      await pool.query(
+        `insert into product_suppliers
+           (business_id, product_id, supplier_id, is_default, is_active)
+         values ($1, $2, $3, true, true)
+         on conflict (business_id, product_id, supplier_id) do update
+           set is_default = true, is_active = true, updated_at = now()`,
+        [catalogue.businessId, saved.rows[0].id, supplierId],
+      );
+    }
 
     if (onHand > 0) {
       await pool.query(

@@ -43,6 +43,23 @@ function optionalUuid(label: string) {
     .transform((value) => (value === "" ? null : value));
 }
 
+const supplierCodeSchema = z
+  .string()
+  .trim()
+  .max(60, "Keep the supplier code to 60 characters or fewer.")
+  .transform((value) => (value === "" ? null : value));
+
+/** A link's lead time, or blank to use the supplier's own figure. */
+const optionalLeadTimeSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) =>
+      value === "" || (/^\d{1,3}$/.test(value) && Number(value) <= 365),
+    "Enter a lead time from 0 to 365 days, or leave it blank.",
+  )
+  .transform((value) => (value === "" ? null : Number(value)));
+
 function optionalMoney(label: string) {
   return z
     .string()
@@ -54,84 +71,93 @@ function optionalMoney(label: string) {
     .transform((value) => (value === "" ? null : value));
 }
 
-export const productInputSchema = z
-  .object({
-    name: z
-      .string()
-      .trim()
-      .min(1, "Enter a product name.")
-      .max(120, "Keep the name to 120 characters or fewer."),
-    sku: z
-      .string()
-      .trim()
-      .min(1, "Enter a SKU.")
-      .max(40, "Keep the SKU to 40 characters or fewer.")
-      .regex(
-        SKU_PATTERN,
-        "Use letters, numbers, dots, dashes or underscores in the SKU.",
-      )
-      .transform((value) => value.toUpperCase()),
-    categoryId: optionalUuid("category"),
-    supplierId: optionalUuid("supplier"),
-    /** The supplier's own catalogue code; free text, often with a slash. */
-    supplierSku: z
-      .string()
-      .trim()
-      .max(60, "Keep the supplier code to 60 characters or fewer.")
-      .transform((value) => (value === "" ? null : value)),
-    unitOfMeasure: z
-      .string()
-      .trim()
-      .min(1, "Enter a unit, for example kg or ea.")
-      .max(12, "Keep the unit to 12 characters or fewer."),
-    costPrice: z
-      .string()
-      .trim()
-      .regex(
-        MONEY_PATTERN,
-        "Enter the cost price as an amount, for example 4.50.",
-      ),
-    sellingPrice: optionalMoney("the selling price"),
-    reorderLevel: z
-      .string()
-      .trim()
-      .regex(
-        QUANTITY_PATTERN,
-        "Enter the reorder level as a number, for example 6 or 2.5.",
-      ),
-    /** Blank means the reorder screen doubles the reorder level instead. */
-    targetStockLevel: z
-      .string()
-      .trim()
-      .default("")
-      .refine(
-        (value) => value === "" || QUANTITY_PATTERN.test(value),
-        "Enter the target stock as a number, for example 12 or 2.5.",
-      )
-      .transform((value) => (value === "" ? null : value)),
-    description: z
-      .string()
-      .trim()
-      .max(2000, "Keep the description to 2000 characters or fewer.")
-      .transform((value) => (value === "" ? null : value)),
-  })
-  .superRefine((value, context) => {
-    // A supplier's code only means something against a supplier. The unique index
-    // is partial, so nothing below catches this: a code saved with no supplier
-    // would never be listed or checked against the supplier's catalogue. Refuse it
-    // rather than clear it, because clearing typed input silently is worse than an
-    // error the operator can act on.
-    if (value.supplierSku !== null && value.supplierId === null) {
-      context.addIssue({
-        code: "custom",
-        path: ["supplierSku"],
-        message:
-          "Choose a supplier before adding their code, or clear the code.",
-      });
-    }
-  });
+export const productInputSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Enter a product name.")
+    .max(120, "Keep the name to 120 characters or fewer."),
+  sku: z
+    .string()
+    .trim()
+    .min(1, "Enter a SKU.")
+    .max(40, "Keep the SKU to 40 characters or fewer.")
+    .regex(
+      SKU_PATTERN,
+      "Use letters, numbers, dots, dashes or underscores in the SKU.",
+    )
+    .transform((value) => value.toUpperCase()),
+  categoryId: optionalUuid("category"),
+  /** The default supplier. A product without one is refused by this form. */
+  supplierId: z
+    .string()
+    .trim()
+    .refine(
+      (value) => z.uuid().safeParse(value).success,
+      "Choose a supplier for this product.",
+    ),
+  /** The default supplier's own catalogue code; free text, often a slash. */
+  supplierSku: supplierCodeSchema,
+  unitOfMeasure: z
+    .string()
+    .trim()
+    .min(1, "Enter a unit, for example kg or ea.")
+    .max(12, "Keep the unit to 12 characters or fewer."),
+  costPrice: z
+    .string()
+    .trim()
+    .regex(
+      MONEY_PATTERN,
+      "Enter the cost price as an amount, for example 4.50.",
+    ),
+  sellingPrice: optionalMoney("the selling price"),
+  reorderLevel: z
+    .string()
+    .trim()
+    .regex(
+      QUANTITY_PATTERN,
+      "Enter the reorder level as a number, for example 6 or 2.5.",
+    ),
+  /** Blank means the reorder screen doubles the reorder level instead. */
+  targetStockLevel: z
+    .string()
+    .trim()
+    .default("")
+    .refine(
+      (value) => value === "" || QUANTITY_PATTERN.test(value),
+      "Enter the target stock as a number, for example 12 or 2.5.",
+    )
+    .transform((value) => (value === "" ? null : value)),
+  description: z
+    .string()
+    .trim()
+    .max(2000, "Keep the description to 2000 characters or fewer.")
+    .transform((value) => (value === "" ? null : value)),
+});
 
 export type ProductInput = z.infer<typeof productInputSchema>;
+
+/** A second supplier added from the product panel. */
+export const productSupplierLinkInputSchema = z.object({
+  productId: z.uuid(),
+  supplierId: z.uuid(),
+  supplierSku: supplierCodeSchema,
+  leadTimeDays: optionalLeadTimeSchema,
+});
+
+export type ProductSupplierLinkInput = z.infer<
+  typeof productSupplierLinkInputSchema
+>;
+
+/** Make-default and remove actions: the link must belong to the product. */
+export const productSupplierLinkRefSchema = z.object({
+  productId: z.uuid(),
+  linkId: z.uuid(),
+});
+
+export type ProductSupplierLinkRef = z.infer<
+  typeof productSupplierLinkRefSchema
+>;
 
 /**
  * Stock state for the table. On-hand is derived from the ledger, so this reads a

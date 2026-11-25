@@ -147,11 +147,8 @@ export const products = pgTable(
       .notNull()
       .references(() => businesses.id, { onDelete: "cascade" }),
     categoryId: uuid("category_id"),
-    supplierId: uuid("supplier_id"),
     name: text("name").notNull(),
     sku: text("sku").notNull(),
-    /** The code the supplier uses for this product; sku stays internal. */
-    supplierSku: text("supplier_sku"),
     description: text("description"),
     unitOfMeasure: text("unit_of_measure").notNull().default("ea"),
     costPrice: numeric("cost_price", { precision: 12, scale: 2 })
@@ -183,16 +180,6 @@ export const products = pgTable(
       t.isArchived,
       t.name,
     ),
-    index("products_business_supplier_idx").on(t.businessId, t.supplierId),
-    // One supplier cannot use the same code for two products of ours. The index
-    // is partial, so the check below carries the "a code needs a supplier" rule.
-    uniqueIndex("products_business_supplier_code_key")
-      .on(t.businessId, t.supplierId, sql`lower(${t.supplierSku})`)
-      .where(sql`${t.supplierSku} is not null and ${t.supplierId} is not null`),
-    check(
-      "products_supplier_code_check",
-      sql`${t.supplierSku} is null or ${t.supplierId} is not null`,
-    ),
     check("products_cost_price_check", sql`${t.costPrice} >= 0`),
     check(
       "products_selling_price_check",
@@ -208,8 +195,81 @@ export const products = pgTable(
       columns: [t.businessId, t.categoryId],
       foreignColumns: [categories.businessId, categories.id],
     }).onDelete("restrict"),
+  ],
+);
+
+/**
+ * Which suppliers can supply a product, and on what terms.
+ *
+ * This table is the single source of truth for a product's supplier: the default
+ * row replaces the old `products.supplier_id`, and the per-supplier code and lead
+ * time live here rather than on the product or the supplier. A product with no
+ * default is representable here (the product form refuses to create one that way)
+ * so that a supplier can be removed without deleting the product.
+ */
+export const productSuppliers = pgTable(
+  "product_suppliers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id, { onDelete: "cascade" }),
+    productId: uuid("product_id").notNull(),
+    supplierId: uuid("supplier_id").notNull(),
+    /** The code this supplier uses for the product; the product SKU stays ours. */
+    supplierSku: text("supplier_sku"),
+    /** Overrides the supplier's default lead time for this product. */
+    leadTimeDays: integer("lead_time_days"),
+    isDefault: boolean("is_default").notNull().default(false),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("product_suppliers_business_product_supplier_key").on(
+      t.businessId,
+      t.productId,
+      t.supplierId,
+    ),
+    uniqueIndex("product_suppliers_business_id_key").on(t.businessId, t.id),
+    // One active default per product. An inactive default is not a default.
+    uniqueIndex("product_suppliers_one_default")
+      .on(t.businessId, t.productId)
+      .where(sql`${t.isDefault} and ${t.isActive}`),
+    // One supplier cannot use the same code for two of our products. The same
+    // code at another supplier is a different code.
+    uniqueIndex("product_suppliers_code_key")
+      .on(t.businessId, t.supplierId, sql`lower(${t.supplierSku})`)
+      .where(sql`${t.supplierSku} is not null`),
+    index("product_suppliers_business_supplier_idx").on(
+      t.businessId,
+      t.supplierId,
+      t.isActive,
+    ),
+    index("product_suppliers_business_product_idx").on(
+      t.businessId,
+      t.productId,
+      t.isActive,
+    ),
+    check(
+      "product_suppliers_default_active_check",
+      sql`not ${t.isDefault} or ${t.isActive}`,
+    ),
+    check(
+      "product_suppliers_lead_time_days_check",
+      sql`${t.leadTimeDays} is null or ${t.leadTimeDays} between 0 and 365`,
+    ),
     foreignKey({
-      name: "products_supplier_fk",
+      name: "product_suppliers_product_fk",
+      columns: [t.businessId, t.productId],
+      foreignColumns: [products.businessId, products.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "product_suppliers_supplier_fk",
       columns: [t.businessId, t.supplierId],
       foreignColumns: [suppliers.businessId, suppliers.id],
     }).onDelete("restrict"),

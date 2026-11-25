@@ -11,9 +11,9 @@ import { suggestedDeliveryDate } from "@/lib/purchase-order-input";
 /**
  * The draft order editor: supplier, expected date, notes and the lines.
  *
- * The supplier comes first because a product belongs to one supplier; the product
- * select is filtered to that supplier's catalogue, and a product's cost pre-fills
- * the unit cost so the common case is one click per line.
+ * The supplier comes first because that chooses the catalogue; the product select
+ * shows every product linked to that supplier, and a product's cost pre-fills the
+ * unit cost so the common case is one click per line.
  *
  * Quantities and costs stay strings: they are posted as numeric text and never
  * round through a float on the way to Postgres.
@@ -30,7 +30,7 @@ type ProductOption = {
   sku: string;
   unitOfMeasure: string;
   costPrice: string;
-  supplierId: string | null;
+  supplierIds: string[];
 };
 
 export type OrderFormDefaults = {
@@ -93,8 +93,8 @@ export function PurchaseOrderForm({
     (supplier) => supplier.id === supplierId,
   )?.leadTimeDays;
 
-  const supplierProducts = products.filter(
-    (product) => product.supplierId === supplierId,
+  const supplierProducts = products.filter((product) =>
+    product.supplierIds.includes(supplierId),
   );
 
   function updateRow(key: number, patch: Partial<Row>) {
@@ -107,8 +107,8 @@ export function PurchaseOrderForm({
     if (value === supplierId) return;
     const supplier = suppliers.find((option) => option.id === value);
     setSupplierId(value);
-    // A line's product belongs to the old supplier; keeping it would submit a
-    // product the new supplier does not sell.
+    // A line's product may not be linked to the new supplier; keeping it would
+    // submit a product the new supplier does not sell.
     setRows([{ key: nextKey++, productId: "", quantity: "", unitCost: "" }]);
     // A suggestion the operator can overwrite, and only when they have not
     // already typed a date of their own.

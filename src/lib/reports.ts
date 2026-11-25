@@ -157,8 +157,11 @@ export async function getStockReport(
          from products p
          left join categories c
            on c.business_id = p.business_id and c.id = p.category_id
+         left join product_suppliers ps
+           on ps.business_id = p.business_id and ps.product_id = p.id
+          and ps.is_default and ps.is_active
          left join suppliers s
-           on s.business_id = p.business_id and s.id = p.supplier_id
+           on s.business_id = p.business_id and s.id = ps.supplier_id
          left join product_stock st
            on st.business_id = p.business_id and st.product_id = p.id
          left join on_order oo on oo.product_id = p.id

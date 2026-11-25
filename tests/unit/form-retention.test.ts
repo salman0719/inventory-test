@@ -104,6 +104,7 @@ describe("product form retention", () => {
           defaults: EMPTY_PRODUCT,
           categories: [],
           suppliers: [],
+          links: [],
           cancelHref: "/products",
         }),
       );
