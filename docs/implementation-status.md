@@ -166,7 +166,9 @@ Add date, task, verification method, and result.
   `(business_id, product_id, supplier_id)` index serves product lookups. The
   product list no longer joins supplier links it never reads, and the edit form
   takes the default supplier and code from the links payload instead of a second
-  copy on the product summary.
+  copy on the product summary. The product list and panel also await their shared
+  `PoolClient` in sequence, because pg does not support concurrent queries on one
+  client.
   **Verified:** `npm run db:migrate` applied 1 migration (20 tracked) and the
   backfill produced 221 links, 221 defaults and 0 active products without a default
   in the local database; `npx drizzle-kit generate` reports no schema changes. `npm run check` exit 0 (the same 2 pre-existing warnings in

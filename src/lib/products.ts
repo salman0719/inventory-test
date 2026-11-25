@@ -251,16 +251,18 @@ export async function getProductPanel(
   price: ProductPriceHistory;
 }> {
   return withTenant(userId, async (client) => {
-    const [product, categories, suppliers] = await Promise.all([
+    // One PoolClient runs one query at a time; awaiting each read keeps that
+    // contract explicit instead of making pg queue them behind each other.
+    const product =
       request.mode === "create"
         ? null
-        : getProduct(userId, businessId, request.productId, client),
+        : await getProduct(userId, businessId, request.productId, client);
+    const categories =
       request.mode === "detail"
         ? []
-        : listCategories(userId, businessId, client),
-      // Detail needs the options too: alternates are added from the panel.
-      listSuppliers(userId, businessId, client),
-    ]);
+        : await listCategories(userId, businessId, client);
+    // Detail needs the options too: alternates are added from the panel.
+    const suppliers = await listSuppliers(userId, businessId, client);
     const links =
       request.mode !== "create" && product !== null
         ? await listProductSupplierLinks(
@@ -417,10 +419,8 @@ export async function getProductsPage(
   categories: CategoryOption[];
 }> {
   return withTenant(userId, async (client) => {
-    const [page, categories] = await Promise.all([
-      listProducts(userId, businessId, options, client),
-      listCategories(userId, businessId, client),
-    ]);
+    const page = await listProducts(userId, businessId, options, client);
+    const categories = await listCategories(userId, businessId, client);
     return { ...page, categories };
   });
 }
