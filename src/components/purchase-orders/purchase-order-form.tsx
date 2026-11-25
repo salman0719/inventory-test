@@ -6,6 +6,7 @@ import {
   type OrderFormState,
 } from "@/app/(app)/purchase-orders/actions";
 import { PanelLink } from "@/components/panel-link";
+import { suggestedDeliveryDate } from "@/lib/purchase-order-input";
 
 /**
  * The draft order editor: supplier, expected date, notes and the lines.
@@ -18,7 +19,11 @@ import { PanelLink } from "@/components/panel-link";
  * round through a float on the way to Postgres.
  */
 
-type SupplierOption = { id: string; name: string };
+type SupplierOption = {
+  id: string;
+  name: string;
+  leadTimeDays: number | null;
+};
 type ProductOption = {
   id: string;
   name: string;
@@ -79,7 +84,14 @@ export function PurchaseOrderForm({
     {},
   );
   const [supplierId, setSupplierId] = useState(defaults.supplierId);
+  const [expectedDeliveryAt, setExpectedDeliveryAt] = useState(
+    defaults.expectedDeliveryAt,
+  );
   const [rows, setRows] = useState<Row[]>(() => toRows(defaults));
+
+  const supplierLeadTime = suppliers.find(
+    (supplier) => supplier.id === supplierId,
+  )?.leadTimeDays;
 
   const supplierProducts = products.filter(
     (product) => product.supplierId === supplierId,
@@ -93,10 +105,18 @@ export function PurchaseOrderForm({
 
   function chooseSupplier(value: string) {
     if (value === supplierId) return;
+    const supplier = suppliers.find((option) => option.id === value);
     setSupplierId(value);
     // A line's product belongs to the old supplier; keeping it would submit a
     // product the new supplier does not sell.
     setRows([{ key: nextKey++, productId: "", quantity: "", unitCost: "" }]);
+    // A suggestion the operator can overwrite, and only when they have not
+    // already typed a date of their own.
+    setExpectedDeliveryAt((current) =>
+      current === ""
+        ? (suggestedDeliveryDate(supplier?.leadTimeDays ?? null) ?? current)
+        : current,
+    );
   }
 
   function chooseProduct(row: Row, productId: string) {
@@ -142,9 +162,18 @@ export function PurchaseOrderForm({
         <input
           type="date"
           name="expectedDeliveryAt"
-          defaultValue={defaults.expectedDeliveryAt}
+          value={expectedDeliveryAt}
+          onChange={(event) => setExpectedDeliveryAt(event.target.value)}
           className={INPUT}
         />
+        {supplierLeadTime !== null && supplierLeadTime !== undefined ? (
+          <span className="text-[11px] text-ink-faint">
+            {supplierLeadTime === 0
+              ? "This supplier usually delivers the same day. "
+              : `This supplier usually takes ${supplierLeadTime} calendar ${supplierLeadTime === 1 ? "day" : "days"}. `}
+            The date is a suggestion you can change.
+          </span>
+        ) : null}
       </label>
 
       <div className="flex flex-col gap-1.5">

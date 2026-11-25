@@ -57,7 +57,7 @@ export type PurchaseOrderDetail = {
 };
 
 export type OrderFormOptions = {
-  suppliers: { id: string; name: string }[];
+  suppliers: { id: string; name: string; leadTimeDays: number | null }[];
   products: {
     id: string;
     name: string;
@@ -346,8 +346,12 @@ export async function getOrderFormOptions(
   client?: PoolClient,
 ): Promise<OrderFormOptions> {
   return runInTenant(userId, client, async (client) => {
-    const suppliers = await client.query<{ id: string; name: string }>(
-      `select id, name from suppliers
+    const suppliers = await client.query<{
+      id: string;
+      name: string;
+      lead_time_days: number | null;
+    }>(
+      `select id, name, lead_time_days from suppliers
         where business_id = $1 and is_archived = false
         order by lower(name)`,
       [businessId],
@@ -368,7 +372,11 @@ export async function getOrderFormOptions(
       [businessId],
     );
     return {
-      suppliers: suppliers.rows,
+      suppliers: suppliers.rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        leadTimeDays: row.lead_time_days,
+      })),
       products: products.rows.map((row) => ({
         id: row.id,
         name: row.name,

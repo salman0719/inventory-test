@@ -6,6 +6,7 @@ import {
   purchaseOrderInputSchema,
   quantityField,
   receiptSchema,
+  suggestedDeliveryDate,
 } from "@/lib/purchase-order-input";
 
 const PRODUCT_A = "11111111-1111-4111-8111-111111111111";
@@ -23,6 +24,25 @@ function order(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+describe("suggestedDeliveryDate", () => {
+  it("adds the lead time as calendar days", () => {
+    const from = new Date(2026, 10, 25, 15, 30); // 25 Nov 2026, local time
+
+    expect(suggestedDeliveryDate(2, from)).toBe("2026-11-27");
+    expect(suggestedDeliveryDate(0, from)).toBe("2026-11-25");
+  });
+
+  it("rolls over a month and a year", () => {
+    expect(suggestedDeliveryDate(10, new Date(2026, 11, 28))).toBe(
+      "2027-01-07",
+    );
+  });
+
+  it("suggests nothing when the supplier has no lead time", () => {
+    expect(suggestedDeliveryDate(null, new Date(2026, 10, 25))).toBeNull();
+  });
+});
 
 describe("purchaseOrderInputSchema", () => {
   it("accepts a draft with one line and trims the notes", () => {

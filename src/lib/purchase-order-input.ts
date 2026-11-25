@@ -185,6 +185,27 @@ export function quantityField(value: string | number): string {
   return Number.isFinite(quantity) ? String(quantity) : String(value);
 }
 
+/**
+ * Today plus a supplier's calendar lead time, as the form's `yyyy-mm-dd` value.
+ * Null when no lead time is recorded, so the field stays the operator's to fill.
+ */
+export function suggestedDeliveryDate(
+  leadTimeDays: number | null,
+  from: Date = new Date(),
+): string | null {
+  if (leadTimeDays === null) return null;
+  // Local parts, not toISOString: a UTC conversion can move the date by a day.
+  const date = new Date(
+    from.getFullYear(),
+    from.getMonth(),
+    from.getDate() + leadTimeDays,
+  );
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 /** What is still owed on a line: ordered minus received, never below zero. */
 export function outstandingQuantity(
   ordered: string | number,
