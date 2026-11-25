@@ -216,12 +216,9 @@ function ProductBody({
                 </p>
               ) : (
                 <form action={useLastPaidCost} className="mt-1.5">
+                  {/* Only the product is posted: the action re-reads the latest
+                      price, so the amount cannot be forged. */}
                   <input type="hidden" name="productId" value={product.id} />
-                  <input
-                    type="hidden"
-                    name="unitCost"
-                    value={price.lastPaid.unitCost}
-                  />
                   <button type="submit" className={BUTTON}>
                     Use as cost
                   </button>

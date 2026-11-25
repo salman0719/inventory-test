@@ -8,6 +8,7 @@ import { productInputSchema } from "@/lib/product-input";
 import {
   createCategory,
   createProduct,
+  getProductPriceHistory,
   isUniqueViolation,
   setProductArchived as archiveProduct,
   setProductCost,
@@ -104,30 +105,32 @@ export async function useLastPaidCost(formData: FormData): Promise<void> {
   if (!active) redirect("/products");
 
   const parsed = z
-    .object({
-      productId: z.uuid(),
-      unitCost: z
-        .string()
-        .trim()
-        .regex(/^\d{1,10}(\.\d{1,2})?$/, "Enter a cost as an amount."),
-    })
-    .safeParse({
-      productId: formValue(formData, "productId"),
-      unitCost: formValue(formData, "unitCost"),
-    });
+    .object({ productId: z.uuid() })
+    .safeParse({ productId: formValue(formData, "productId") });
 
   if (!parsed.success) redirect("/products");
+
+  const { productId } = parsed.data;
+  // The amount is never taken from the form. "Last paid" is evidence in the
+  // receipts, so the server derives it from the same view the panel reads, and a
+  // crafted post can only name a product in this business.
+  const { lastPaid } = await getProductPriceHistory(
+    user.id,
+    active.id,
+    productId,
+  );
+  if (lastPaid === null) redirect(`/products?product=${productId}`);
 
   const updated = await setProductCost(
     user.id,
     active.id,
-    parsed.data.productId,
-    parsed.data.unitCost,
+    productId,
+    lastPaid.unitCost,
   );
   if (!updated) redirect("/products");
 
   revalidatePath("/products");
-  redirect(`/products?product=${parsed.data.productId}&saved=true`);
+  redirect(`/products?product=${productId}&saved=true`);
 }
 
 export async function setArchived(formData: FormData): Promise<void> {

@@ -268,9 +268,31 @@ export async function getProductPanel(
 
 const PRICE_HISTORY_LIMIT = 5;
 
+type PriceRow = {
+  unit_cost: string;
+  received_at: Date;
+  supplier_id: string;
+  supplier_name: string;
+};
+
+function toPricePaid(row: PriceRow): PricePaid {
+  return {
+    unitCost: row.unit_cost,
+    receivedAt: row.received_at.toISOString(),
+    supplierId: row.supplier_id,
+    supplierName: row.supplier_name,
+  };
+}
+
 /**
  * What was paid for this product, newest first, from the receipts that already
  * exist. `cost_price` is untouched: this is evidence, not valuation.
+ *
+ * "Last paid" is read from `product_last_price`, the view that is the single
+ * definition of that figure in the database. The history list reads receipt lines
+ * directly because the view deliberately collapses to one row per product and
+ * supplier; it shares the view's ordering, so the latest entry and `lastPaid`
+ * describe the same delivery.
  */
 export async function getProductPriceHistory(
   userId: string,
@@ -281,12 +303,18 @@ export async function getProductPriceHistory(
   if (!UUID_PATTERN.test(productId)) return NO_PRICE_HISTORY;
 
   return runInTenant(userId, client, async (client) => {
-    const result = await client.query<{
-      unit_cost: string;
-      received_at: Date;
-      supplier_id: string;
-      supplier_name: string;
-    }>(
+    const latest = await client.query<PriceRow>(
+      `select lp.unit_cost::text as unit_cost, lp.received_at,
+              lp.supplier_id, s.name as supplier_name
+         from product_last_price lp
+         join suppliers s
+           on s.business_id = lp.business_id and s.id = lp.supplier_id
+        where lp.business_id = $1 and lp.product_id = $2
+        order by lp.received_at desc
+        limit 1`,
+      [businessId, productId],
+    );
+    const history = await client.query<PriceRow>(
       `select rl.unit_cost::text as unit_cost, r.received_at,
               po.supplier_id, s.name as supplier_name
          from purchase_receipt_lines rl
@@ -306,13 +334,10 @@ export async function getProductPriceHistory(
         limit $3`,
       [businessId, productId, PRICE_HISTORY_LIMIT],
     );
-    const entries = result.rows.map((row) => ({
-      unitCost: row.unit_cost,
-      receivedAt: row.received_at.toISOString(),
-      supplierId: row.supplier_id,
-      supplierName: row.supplier_name,
-    }));
-    return { lastPaid: entries[0] ?? null, entries };
+    return {
+      lastPaid: latest.rows[0] ? toPricePaid(latest.rows[0]) : null,
+      entries: history.rows.map(toPricePaid),
+    };
   });
 }
 
