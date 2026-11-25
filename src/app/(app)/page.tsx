@@ -1,6 +1,7 @@
 import { PendingLink } from "@/components/pending-link";
 import { AttentionTable } from "@/components/dashboard/attention-table";
 import { DashboardStats } from "@/components/dashboard/dashboard-stats";
+import { RecentActivity } from "@/components/dashboard/recent-activity";
 import { RecentMovements } from "@/components/dashboard/recent-movements";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { getActiveBusiness } from "@/lib/businesses";
@@ -22,7 +23,7 @@ export default async function DashboardPage() {
 
   const canViewValues = active.role !== "viewer";
 
-  const { summary, attention, movements } = await getDashboard(
+  const { summary, attention, movements, activity } = await getDashboard(
     user.id,
     active.id,
   );
@@ -72,6 +73,8 @@ export default async function DashboardPage() {
       )}
 
       <RecentMovements movements={movements} />
+
+      <RecentActivity entries={activity} />
     </div>
   );
 }

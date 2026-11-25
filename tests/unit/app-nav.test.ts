@@ -6,7 +6,7 @@ import { PAGE_CONTENT_ID } from "@/lib/nav";
 
 /**
  * Direction C's phone navigation: three destinations and More on a fixed bar, the
- * other four screens in a modal sheet.
+ * other screens in a modal sheet.
  *
  * The sheet has to be modal in behaviour, not only on screen — the page and the
  * nav behind it go `inert` and the document stops scrolling — and closing must
@@ -198,7 +198,7 @@ describe("the phone navigation", () => {
     expect(reports?.textContent).toContain("Current");
   });
 
-  it("opens the four remaining screens in a modal sheet", async () => {
+  it("opens the remaining screens in a modal sheet", async () => {
     await render("/products");
     await openMore();
 
@@ -212,7 +212,13 @@ describe("the phone navigation", () => {
       scatter<HTMLAnchorElement>(sheet, "a").map((link) =>
         link.getAttribute("href"),
       ),
-    ).toEqual(["/suppliers", "/purchase-orders", "/reports", "/settings"]);
+    ).toEqual([
+      "/suppliers",
+      "/purchase-orders",
+      "/reports",
+      "/activity",
+      "/settings",
+    ]);
     expect(moreButton().getAttribute("aria-expanded")).toBe("true");
 
     // The page, the rail and the bar behind it are out of reach, and the page

@@ -105,6 +105,18 @@ const ITEMS: Item[] = [
     ),
   },
   {
+    href: "/activity",
+    label: "Activity",
+    short: "Act",
+    tab: "Activity",
+    icon: (
+      <svg {...iconProps}>
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M12 7.5V12l3.2 2" />
+      </svg>
+    ),
+  },
+  {
     href: "/settings",
     label: "Settings",
     short: "Set",

@@ -1,3 +1,4 @@
+import { readActivity, type ActivityEntry } from "./activity";
 import { withTenant } from "./db";
 import type { LedgerMovementType } from "./stock-input";
 
@@ -46,10 +47,12 @@ export type Dashboard = {
   summary: DashboardSummary;
   attention: AttentionItem[];
   movements: RecentMovement[];
+  activity: ActivityEntry[];
 };
 
 export const ATTENTION_LIMIT = 8;
 export const MOVEMENT_LIMIT = 8;
+export const ACTIVITY_LIMIT = 6;
 
 const LOW_SQL = `(coalesce(st.on_hand, 0) > 0 and p.reorder_level > 0
                   and coalesce(st.on_hand, 0) <= p.reorder_level)`;
@@ -156,6 +159,11 @@ export async function getDashboard(
       [businessId, MOVEMENT_LIMIT],
     );
 
+    // The feed shares this transaction, so the dashboard still costs one checkout.
+    const { entries: activity } = await readActivity(client, businessId, {
+      limit: ACTIVITY_LIMIT,
+    });
+
     const row = summaryResult.rows[0];
     return {
       summary: {
@@ -187,6 +195,7 @@ export async function getDashboard(
         reason: movement.reason,
         createdAt: movement.created_at.toISOString(),
       })),
+      activity,
     };
   });
 }
