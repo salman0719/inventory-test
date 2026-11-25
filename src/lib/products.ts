@@ -423,6 +423,26 @@ export async function updateProduct(
   });
 }
 
+/** Set the catalogue cost only; receipts and their history are untouched. */
+export async function setProductCost(
+  userId: string,
+  businessId: string,
+  productId: string,
+  costPrice: string,
+): Promise<boolean> {
+  if (!UUID_PATTERN.test(productId)) return false;
+
+  return withTenant(userId, async (client) => {
+    const result = await client.query(
+      `update products
+          set cost_price = $3::numeric, updated_at = now()
+        where business_id = $1 and id = $2`,
+      [businessId, productId, costPrice],
+    );
+    return result.rowCount === 1;
+  });
+}
+
 export async function setProductArchived(
   userId: string,
   businessId: string,

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { setArchived } from "@/app/(app)/products/actions";
+import { setArchived, useLastPaidCost } from "@/app/(app)/products/actions";
 import { ArchiveForm } from "@/components/archive-form";
 import { PanelFrame } from "@/components/panel-frame";
 import { EMPTY_PRODUCT } from "@/lib/product-defaults";
@@ -207,8 +207,26 @@ function ProductBody({
               </p>
               <p className="mt-0.5 text-[11px] text-ink-faint">
                 Cost above is the catalogue price; this is what the last
-                delivery cost.
+                delivery cost. Updating the cost leaves past receipts as they
+                were.
               </p>
+              {price.lastPaid.unitCost === product.costPrice ? (
+                <p className="mt-1.5 text-[11px] text-ink-faint">
+                  The catalogue cost already matches.
+                </p>
+              ) : (
+                <form action={useLastPaidCost} className="mt-1.5">
+                  <input type="hidden" name="productId" value={product.id} />
+                  <input
+                    type="hidden"
+                    name="unitCost"
+                    value={price.lastPaid.unitCost}
+                  />
+                  <button type="submit" className={BUTTON}>
+                    Use as cost
+                  </button>
+                </form>
+              )}
               {price.entries.length > 1 ? (
                 <ul className="mt-1.5 flex flex-col gap-0.5">
                   {price.entries.map((entry, index) => (

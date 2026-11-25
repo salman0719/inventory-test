@@ -10,6 +10,7 @@ import {
   createProduct,
   isUniqueViolation,
   setProductArchived as archiveProduct,
+  setProductCost,
   updateProduct,
 } from "@/lib/products";
 import { getSessionUser } from "@/lib/session";
@@ -86,6 +87,47 @@ export async function saveProduct(
 
   revalidatePath("/products");
   redirect(`/products?product=${savedId}&saved=true`);
+}
+
+/**
+ * Copy the last paid price into the catalogue cost, on the operator's say-so.
+ *
+ * Deliberately an explicit action rather than an automatic rewrite on receipt:
+ * cost_price is the valuation figure, and a delivery that arrived at a one-off
+ * price should not silently revalue stock. Past receipts keep their own cost.
+ */
+export async function useLastPaidCost(formData: FormData): Promise<void> {
+  const user = await getSessionUser();
+  if (!user) redirect("/sign-in");
+
+  const { active } = await getActiveBusiness(user.id);
+  if (!active) redirect("/products");
+
+  const parsed = z
+    .object({
+      productId: z.uuid(),
+      unitCost: z
+        .string()
+        .trim()
+        .regex(/^\d{1,10}(\.\d{1,2})?$/, "Enter a cost as an amount."),
+    })
+    .safeParse({
+      productId: formValue(formData, "productId"),
+      unitCost: formValue(formData, "unitCost"),
+    });
+
+  if (!parsed.success) redirect("/products");
+
+  const updated = await setProductCost(
+    user.id,
+    active.id,
+    parsed.data.productId,
+    parsed.data.unitCost,
+  );
+  if (!updated) redirect("/products");
+
+  revalidatePath("/products");
+  redirect(`/products?product=${parsed.data.productId}&saved=true`);
 }
 
 export async function setArchived(formData: FormData): Promise<void> {
