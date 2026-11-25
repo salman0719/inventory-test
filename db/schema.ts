@@ -5,6 +5,7 @@ import {
   date,
   foreignKey,
   index,
+  integer,
   numeric,
   pgTable,
   text,
@@ -116,6 +117,8 @@ export const suppliers = pgTable(
     phone: text("phone"),
     address: text("address"),
     notes: text("notes"),
+    /** Typical calendar days from ordering to delivery; null when unknown. */
+    leadTimeDays: integer("lead_time_days"),
     isArchived: boolean("is_archived").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -128,6 +131,10 @@ export const suppliers = pgTable(
     // Referenced by products' and purchase_orders' composite foreign keys.
     uniqueIndex("suppliers_business_id_key").on(t.businessId, t.id),
     index("suppliers_business_name_idx").on(t.businessId, t.name),
+    check(
+      "suppliers_lead_time_days_check",
+      sql`${t.leadTimeDays} is null or ${t.leadTimeDays} between 0 and 365`,
+    ),
   ],
 );
 
@@ -142,6 +149,8 @@ export const products = pgTable(
     supplierId: uuid("supplier_id"),
     name: text("name").notNull(),
     sku: text("sku").notNull(),
+    /** The code the supplier uses for this product; sku stays internal. */
+    supplierSku: text("supplier_sku"),
     description: text("description"),
     unitOfMeasure: text("unit_of_measure").notNull().default("ea"),
     costPrice: numeric("cost_price", { precision: 12, scale: 2 })
@@ -169,6 +178,10 @@ export const products = pgTable(
       t.name,
     ),
     index("products_business_supplier_idx").on(t.businessId, t.supplierId),
+    // One supplier cannot use the same code for two products of ours.
+    uniqueIndex("products_business_supplier_code_key")
+      .on(t.businessId, t.supplierId, sql`lower(${t.supplierSku})`)
+      .where(sql`${t.supplierSku} is not null and ${t.supplierId} is not null`),
     check("products_cost_price_check", sql`${t.costPrice} >= 0`),
     check(
       "products_selling_price_check",

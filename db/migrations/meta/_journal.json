@@ -92,6 +92,13 @@
       "when": 1795498100000,
       "tag": "0012_account_confirmation",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1795584000000,
+      "tag": "0013_supplier_price_facts",
+      "breakpoints": true
     }
   ]
 }
