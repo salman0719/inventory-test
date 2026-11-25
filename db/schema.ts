@@ -178,10 +178,15 @@ export const products = pgTable(
       t.name,
     ),
     index("products_business_supplier_idx").on(t.businessId, t.supplierId),
-    // One supplier cannot use the same code for two products of ours.
+    // One supplier cannot use the same code for two products of ours. The index
+    // is partial, so the check below carries the "a code needs a supplier" rule.
     uniqueIndex("products_business_supplier_code_key")
       .on(t.businessId, t.supplierId, sql`lower(${t.supplierSku})`)
       .where(sql`${t.supplierSku} is not null and ${t.supplierId} is not null`),
+    check(
+      "products_supplier_code_check",
+      sql`${t.supplierSku} is null or ${t.supplierId} is not null`,
+    ),
     check("products_cost_price_check", sql`${t.costPrice} >= 0`),
     check(
       "products_selling_price_check",

@@ -312,6 +312,36 @@ describe("supplier product code", () => {
       { sku: "FACT-2", supplier_sku: "FF-100" },
     ]);
   });
+
+  it("refuses a code with no supplier, and lets the pair be cleared", async () => {
+    const result = await asUser(ids.owner, async (client) => {
+      // The exact shape the partial unique index cannot see: a code, no supplier.
+      const refused = await captureError(client, () =>
+        client.query(
+          `update products set supplier_id = null, supplier_sku = 'FF-300'
+            where id = $1`,
+          [ids.secondProduct],
+        ),
+      );
+      // Clearing both together is the way out of the rule.
+      const cleared = await client.query<{
+        supplier_id: string | null;
+        supplier_sku: string | null;
+      }>(
+        `update products set supplier_id = null, supplier_sku = null
+          where id = $1
+          returning supplier_id, supplier_sku`,
+        [ids.secondProduct],
+      );
+      return { refused, cleared: cleared.rows[0] };
+    });
+
+    expect(result.refused).toMatchObject({
+      code: "23514",
+      constraint: "products_supplier_code_check",
+    });
+    expect(result.cleared).toEqual({ supplier_id: null, supplier_sku: null });
+  });
 });
 
 describe("product_last_price", () => {

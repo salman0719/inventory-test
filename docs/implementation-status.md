@@ -172,7 +172,11 @@ Add date, task, verification method, and result.
   gap is closed too: a supplier code with "No supplier" selected is now refused
   by `productInputSchema` with "Choose a supplier before adding their code, or
   clear the code", so the form keeps what was typed instead of saving a code that
-  the partial unique index would never check.
+  the partial unique index would never check. `0014_supplier_code_requires_supplier.sql`
+  then adds `products_supplier_code_check` (`supplier_sku is null or supplier_id is
+not null`), mirrored in `db/schema.ts`, so a direct SQL write cannot store the
+  combination either; `tests/db/supplier-facts.test.ts` now proves it with a
+  `23514` violation.
   **Not verified:** price history with more than one receipt, lead times of 0 and 1,
   the duplicate-code message in the browser, the viewer role, and anything deployed
   to the stage.

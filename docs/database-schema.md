@@ -36,7 +36,7 @@ This is a starting point for architecture discussion, not a final schema. Confir
 - supplier_id (nullable)
 - name
 - sku
-- supplier_sku (nullable; the supplier's own code, unique per supplier, case-insensitive)
+- supplier_sku (nullable; the supplier's own code, unique per supplier, case-insensitive, and only allowed when a supplier is set)
 - description
 - unit_of_measure
 - cost_price
