@@ -22,7 +22,7 @@ Keep this file current. Do not report a task as complete until it has been verif
   hosted Supabase database seeded through `db:seed:hosted` and migrated through
   `0012` — 13 tracked)
 - Last updated: 2026-11-25 (Slice G built on `feat/barcode-qr`; barcode search,
-  QR labels, manual scanning and the desktop notice walked in a visible browser;
+  QR labels, manual scanning, the worker/WASM fallback and device warnings walked;
   camera scanning not tested on an Android device; not merged, pushed or deployed)
 
 ## Phase checklist
@@ -156,20 +156,27 @@ Add date, task, verification method, and result.
   the barcode. The QR contains only the stable id, so reprinting cannot encode a
   stale price or quantity. The sheet is A4 at 63.5 × 38.1 mm, three columns by
   **seven** rows (21 labels); the plan's 3 × 8 grid is 304.8 mm tall and cannot fit
-  A4. Print CSS hides the shell and breaks between sheets. `qrcode` is the only new
-  dependency, used on the server.
+  A4. Print CSS hides the shell and breaks between sheets. `qrcode` is the only
+  new server-side dependency.
   **Scanning:** `/scan` resolves a typed barcode or SKU on the server and redirects
   a single match into the product panel; several matches stay as a chooser;
   `/scan/<uuid>` is the QR landing route. Both run through `withTenant`, so a
-  foreign id is indistinguishable from a missing one. Camera scanning uses the
-  native `BarcodeDetector` and only appears on Android in a secure context with
-  that API. Desktop, iOS and unsupported Android browsers get a short note naming
-  Chrome on Android, while manual entry and USB-scanner input stay available.
+  foreign id is indistinguishable from a missing one. Camera scanning captures
+  frames on the main thread and transfers `ImageData` to a worker; the worker uses
+  the native `BarcodeDetector` by default. If that is absent or fails, it lazily
+  imports `zxing-wasm/reader` and instantiates the reader wasm from
+  `public/zxing/` — the package's CDN path is blocked and the wasm is fetched only
+  after the fallback is needed. A browser other than Chrome on Android gets a
+  short “best on Chrome for Android” note but still gets the camera when the
+  capabilities exist. A device reporting at most 2 GB of memory or 2 CPU threads
+  gets an alert, the button changes to **Try camera anyway**, and framing is
+  reduced; absence of both signals is reported as unknown, not guessed. Manual
+  entry and USB-scanner input remain available everywhere.
   **Verified:** `npm run db:migrate` applied 1 migration (21 tracked), and the
   local schema has the `barcode` column and
   `products_business_barcode_idx` index. `npm run check` exit 0 (0 errors, the same
-  2 pre-existing warnings in `src/lib/permissions.ts`); `npm run test` 240 passed
-  in 35 files; `npm run test:db` 143 passed in 15 files, including
+  2 pre-existing warnings in `src/lib/permissions.ts`); `npm run test` 246 passed
+  in 36 files; `npm run test:db` 143 passed in 15 files, including
   `tests/db/product-labels.test.ts` (3: default supplier code, barcode search,
   archived filter, tenant boundary) and `tests/db/scan.test.ts` (5: duplicate-code
   chooser, case-insensitive SKU, QR URL, tenant boundary, unknown code).
@@ -177,20 +184,30 @@ Add date, task, verification method, and result.
   `/scan/[code]`); `npm run secrets:check` ok.
   **Browser walk (2026-11-25, visible local Chromium, signed in as
   `owner@cafe.test`):** the product header showed **Scan** and **Print labels**.
-  `/scan` on desktop showed "Camera scanning is available on Android" and kept the
-  manual form. Typing `CAF-020` opened Pork belly; then setting its barcode to
-  `9300675024235` in the product form saved, the panel displayed it, and
+  Typing `CAF-020` opened Pork belly; then setting its barcode to `9300675024235`
+  in the product form saved, the panel displayed it, and
   `/scan?code=9300675024235` plus the same search in the catalogue both resolved to
   Pork belly. `/scan/<pork-id>` redirected to its panel. A temporary duplicate
   barcode on Bacon showed the two-product chooser, and choosing Bacon opened it;
   Bacon's barcode was then cleared. The single-product label page rendered one
   63.5 × 38.1 mm label with a server-rendered SVG, and the panel's **Print label**
   link carried the product id.
-  **Not verified:** no camera scan ran on an Android device, so permission, focus,
-  decoding a real QR/barcode and the 350 ms detection loop are untested; the print
-  dialog and a physical print were not opened; multi-page label pagination, a
-  viewer, narrow widths, and anything deployed were not walked. `0020` is local
-  only and needs `npm run db:migrate:hosted` before this code ships.
+  **Headless scanner walk (2026-11-25, Playwright Chromium, signed in as
+  `owner@cafe.test`, canvas-fed fake camera):** desktop `/scan` showed the
+  Chrome-for-Android advisory and the start button; no `/zxing_reader.wasm`
+  request occurred before start. With `BarcodeDetector` removed, starting the
+  camera made exactly one wasm request and reached "Scanning with the on-device
+  fallback"; a generated QR frame then decoded to the Pork belly panel with no
+  console errors. A device with 2 GB and 2 CPU threads showed "This device may
+  struggle to scan" and **Try camera anyway**. An Android Chrome user agent showed
+  no advisory and kept the start button.
+  **Not verified:** no physical Android, iPhone or low-end device camera was used;
+  permission, focus, real label decoding and thermal/battery cost are untested.
+  The native worker path was not exercised because headless Chromium has no
+  `BarcodeDetector`; the WASM fallback was. The print dialog and a physical print
+  were not opened; multi-page label pagination, a viewer, narrow widths, and
+  anything deployed were not walked. `0020` is local only and needs
+  `npm run db:migrate:hosted` before this code ships.
 
 - **2026-11-25 — Slice F built: multiple suppliers per product (branch
   `feat/product-suppliers`, stacked on `feat/reorder-suggestions`, not merged or
