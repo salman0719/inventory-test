@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { recordActivity } from "./activity";
 import { runInTenant, withTenant } from "./db";
 import type { SupplierInput } from "./supplier-input";
 
@@ -193,7 +194,17 @@ export async function createSupplier(
         input.leadTimeDays,
       ],
     );
-    return result.rows[0].id;
+    const id = result.rows[0].id;
+
+    await recordActivity(client, {
+      actorUserId: userId,
+      businessId,
+      action: "supplier.created",
+      entityType: "supplier",
+      entityId: id,
+      summary: `Added supplier ${input.name}`,
+    });
+    return id;
   });
 }
 
@@ -210,7 +221,8 @@ export async function updateSupplier(
       `update suppliers
           set name = $3, contact_name = $4, email = $5, phone = $6,
               address = $7, notes = $8, lead_time_days = $9, updated_at = now()
-        where business_id = $1 and id = $2`,
+        where business_id = $1 and id = $2
+        returning id`,
       [
         businessId,
         supplierId,
@@ -223,7 +235,17 @@ export async function updateSupplier(
         input.leadTimeDays,
       ],
     );
-    return result.rowCount === 1;
+    if (result.rowCount !== 1) return false;
+
+    await recordActivity(client, {
+      actorUserId: userId,
+      businessId,
+      action: "supplier.updated",
+      entityType: "supplier",
+      entityId: supplierId,
+      summary: `Updated supplier ${input.name}`,
+    });
+    return true;
   });
 }
 
@@ -236,11 +258,23 @@ export async function setSupplierArchived(
   if (!UUID_PATTERN.test(supplierId)) return false;
 
   return withTenant(userId, async (client) => {
-    const result = await client.query(
+    const result = await client.query<{ name: string }>(
       `update suppliers set is_archived = $3, updated_at = now()
-        where business_id = $1 and id = $2`,
+        where business_id = $1 and id = $2
+        returning name`,
       [businessId, supplierId, archived],
     );
-    return result.rowCount === 1;
+    const name = result.rows[0]?.name;
+    if (name === undefined) return false;
+
+    await recordActivity(client, {
+      actorUserId: userId,
+      businessId,
+      action: archived ? "supplier.archived" : "supplier.restored",
+      entityType: "supplier",
+      entityId: supplierId,
+      summary: `${archived ? "Archived" : "Restored"} supplier ${name}`,
+    });
+    return true;
   });
 }

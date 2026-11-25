@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { recordActivity } from "./activity";
 import { runInTenant, withTenant } from "./db";
 import type {
   OrderStatus,
@@ -471,6 +472,20 @@ export async function createPurchaseOrder(
       if (!id) return { ok: false as const, error: "The order was not saved." };
 
       await insertLines(client, businessId, id, input);
+
+      const supplier = await client.query<{ name: string }>(
+        "select name from suppliers where business_id = $1 and id = $2",
+        [businessId, input.supplierId],
+      );
+      await recordActivity(client, {
+        actorUserId: userId,
+        businessId,
+        action: "purchase_order.created",
+        entityType: "purchase_order",
+        entityId: id,
+        summary: `Created ${orderNumber} for ${supplier.rows[0]?.name ?? "a supplier"}`,
+        detail: { supplier_id: input.supplierId },
+      });
       return { ok: true as const, id };
     });
   } catch (error) {
@@ -541,10 +556,18 @@ export async function setPurchaseOrderStatus(
   try {
     return await withTenant(userId, async (client) => {
       // Scope the id to this business first; the function re-derives it.
-      const owned = await client.query(
-        "select id from purchase_orders where business_id = $1 and id = $2",
+      const owned = await client.query<{
+        order_number: string;
+        supplier_name: string;
+      }>(
+        `select po.order_number, s.name as supplier_name
+           from purchase_orders po
+           join suppliers s
+             on s.business_id = po.business_id and s.id = po.supplier_id
+          where po.business_id = $1 and po.id = $2`,
         [businessId, orderId],
       );
+      const order = owned.rows[0];
       if (owned.rowCount !== 1) {
         return {
           ok: false as const,
@@ -556,6 +579,22 @@ export async function setPurchaseOrderStatus(
         orderId,
         status,
       ]);
+
+      await recordActivity(client, {
+        actorUserId: userId,
+        businessId,
+        action:
+          status === "ordered"
+            ? "purchase_order.ordered"
+            : "purchase_order.cancelled",
+        entityType: "purchase_order",
+        entityId: orderId,
+        summary:
+          status === "ordered"
+            ? `Ordered ${order.order_number} from ${order.supplier_name}`
+            : `Cancelled ${order.order_number}`,
+        detail: { status },
+      });
       return { ok: true as const };
     });
   } catch (error) {
@@ -581,8 +620,8 @@ export async function closePurchaseOrderShort(
   try {
     return await withTenant(userId, async (client) => {
       // Scope the id to this business first; the function re-derives it.
-      const owned = await client.query(
-        "select id from purchase_orders where business_id = $1 and id = $2",
+      const owned = await client.query<{ order_number: string }>(
+        "select order_number from purchase_orders where business_id = $1 and id = $2",
         [businessId, orderId],
       );
       if (owned.rowCount !== 1) {
@@ -596,6 +635,15 @@ export async function closePurchaseOrderShort(
         orderId,
         reason,
       ]);
+
+      await recordActivity(client, {
+        actorUserId: userId,
+        businessId,
+        action: "purchase_order.closed_short",
+        entityType: "purchase_order",
+        entityId: orderId,
+        summary: `Closed ${owned.rows[0]?.order_number} short: ${reason}`,
+      });
       return { ok: true as const };
     });
   } catch (error) {
@@ -626,8 +674,8 @@ export async function receiveDelivery(
 
   try {
     return await withTenant(userId, async (client) => {
-      const owned = await client.query(
-        "select id from purchase_orders where business_id = $1 and id = $2",
+      const owned = await client.query<{ order_number: string }>(
+        "select order_number from purchase_orders where business_id = $1 and id = $2",
         [businessId, input.orderId],
       );
       if (owned.rowCount !== 1) {
@@ -649,6 +697,16 @@ export async function receiveDelivery(
           error: "The delivery was not recorded.",
         };
       }
+
+      await recordActivity(client, {
+        actorUserId: userId,
+        businessId,
+        action: "receipt.recorded",
+        entityType: "receipt",
+        entityId: row.receipt_id,
+        summary: `Received a delivery on ${owned.rows[0]?.order_number}`,
+        detail: { order_id: input.orderId, status: row.status },
+      });
       return { ok: true as const, status: row.status as OrderStatus };
     });
   } catch (error) {

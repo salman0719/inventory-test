@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { recordActivity } from "./activity";
 import { runInTenant, withTenant } from "./db";
 import { parseProductSort, type ProductInput } from "./product-input";
 
@@ -408,7 +409,18 @@ export async function createProduct(
         input.reorderLevel,
       ],
     );
-    return result.rows[0].id;
+    const id = result.rows[0].id;
+
+    await recordActivity(client, {
+      actorUserId: userId,
+      businessId,
+      action: "product.created",
+      entityType: "product",
+      entityId: id,
+      summary: `Added ${input.name}`,
+      detail: { sku: input.sku },
+    });
+    return id;
   });
 }
 
@@ -428,7 +440,8 @@ export async function updateProduct(
               supplier_id = $7, supplier_sku = $8, unit_of_measure = $9,
               cost_price = $10, selling_price = $11, reorder_level = $12,
               updated_at = now()
-        where business_id = $1 and id = $2`,
+        where business_id = $1 and id = $2
+        returning id`,
       [
         businessId,
         productId,
@@ -444,7 +457,18 @@ export async function updateProduct(
         input.reorderLevel,
       ],
     );
-    return result.rowCount === 1;
+    if (result.rowCount !== 1) return false;
+
+    await recordActivity(client, {
+      actorUserId: userId,
+      businessId,
+      action: "product.updated",
+      entityType: "product",
+      entityId: productId,
+      summary: `Updated ${input.name}`,
+      detail: { sku: input.sku },
+    });
+    return true;
   });
 }
 
@@ -458,13 +482,26 @@ export async function setProductCost(
   if (!UUID_PATTERN.test(productId)) return false;
 
   return withTenant(userId, async (client) => {
-    const result = await client.query(
+    const result = await client.query<{ name: string }>(
       `update products
           set cost_price = $3::numeric, updated_at = now()
-        where business_id = $1 and id = $2`,
+        where business_id = $1 and id = $2
+        returning name`,
       [businessId, productId, costPrice],
     );
-    return result.rowCount === 1;
+    const name = result.rows[0]?.name;
+    if (name === undefined) return false;
+
+    await recordActivity(client, {
+      actorUserId: userId,
+      businessId,
+      action: "product.updated",
+      entityType: "product",
+      entityId: productId,
+      summary: `Changed the cost of ${name}`,
+      detail: { cost_price: costPrice },
+    });
+    return true;
   });
 }
 
@@ -477,12 +514,24 @@ export async function setProductArchived(
   if (!UUID_PATTERN.test(productId)) return false;
 
   return withTenant(userId, async (client) => {
-    const result = await client.query(
+    const result = await client.query<{ name: string }>(
       `update products set is_archived = $3, updated_at = now()
-        where business_id = $1 and id = $2`,
+        where business_id = $1 and id = $2
+        returning name`,
       [businessId, productId, archived],
     );
-    return result.rowCount === 1;
+    const name = result.rows[0]?.name;
+    if (name === undefined) return false;
+
+    await recordActivity(client, {
+      actorUserId: userId,
+      businessId,
+      action: archived ? "product.archived" : "product.restored",
+      entityType: "product",
+      entityId: productId,
+      summary: `${archived ? "Archived" : "Restored"} ${name}`,
+    });
+    return true;
   });
 }
 
