@@ -18,8 +18,8 @@ Keep this file current. Do not report a task as complete until it has been verif
   (public, no deployment protection; serves `main` through `e460b66`, with the
   hosted Supabase database seeded through `db:seed:hosted` and migrated through
   `0012` — 13 tracked)
-- Last updated: 2026-11-25 (Slice F built; browser panel API checked,
-  rendered panel not visually inspected because the preview tab was hidden)
+- Last updated: 2026-11-25 (Slice F built and its product-supplier panel walked
+  in a visible browser; not merged, pushed or deployed)
 
 ## Phase checklist
 
@@ -181,17 +181,28 @@ Add date, task, verification method, and result.
   draft created under the alternate. The tenant-isolation test also reads and writes
   links through RLS. `npm run db:seed` is idempotent (221 products, 3 orders);
   `npm run build` exit 0; `npm run secrets:check` ok.
-  **Browser/API check (2026-11-25, local signed-in tab):** `/products` served its
-  60-product list, and `/api/products/panel` for Pork belly returned 200 with
-  `Harbour Line Meats` as the default, one link and nine supplier options;
-  `/api/purchase-orders/panel?mode=create` returned 60 products, 9 suppliers and
-  each product's linked supplier ids. The preview tab reported
-  `document.visibilityState: hidden`, so React's streamed reveal stayed on "Loading
-  page" and the rendered panel was **not visually inspected**.
-  **Not verified:** adding, promoting and removing a link through the browser UI;
-  the duplicate-code message in the browser; the viewer panel; narrow widths; and
-  anything deployed. `0019` drops columns, so `npm run db:migrate:hosted` and the
-  matching code must ship together.
+  **Browser walk (2026-11-25, visible local Chromium tab, signed in as
+  `owner@cafe.test`):** the Pork belly panel showed `Harbour Line Meats` as the
+  only, default link with no code and no lead time, and eight addable suppliers.
+  Adding `Polar Line Frozen` with code `PLF-PORK-20` and a 4-day override saved
+  the link and kept Harbour as default; Polar then disappeared from the add list.
+  **Make default** moved the DEFAULT badge to Polar and left Harbour as an
+  alternate with **Make default** and **Remove** actions. Reorder listed Pork
+  belly under both groups with on hand 0, on order 0, target 4, and To order 4;
+  Harbour's header read "No lead time recorded" and Polar's read "Usually 4
+  calendar days". The new-order form included `Pork belly (CAF-020)` under
+  Harbour's meat list and under Polar's frozen list. Harbour was then promoted
+  back, and removing Polar left one default link; Reorder kept Pork belly only
+  under Harbour, and the order form removed it from Polar's list while keeping it
+  under Harbour. The native supplier popup did not accept the automation's
+  keyboard or option clicks, so its value was set with a DOM `change` event;
+  the code and lead fields and every action button were exercised through the
+  normal UI. No purchase order was saved.
+  **Not verified:** the duplicate-code refusal in the browser; removing a default
+  link or a link with an open order; creating or receiving a draft under an
+  alternate; the viewer role; narrow widths; and anything deployed. `0019` drops
+  columns, so `npm run db:migrate:hosted` and the matching code must ship
+  together.
 
 - **2026-11-25 — Slice E built: reorder suggestions (branch
   `feat/reorder-suggestions`, stacked on `feat/stocktake`, not merged or
