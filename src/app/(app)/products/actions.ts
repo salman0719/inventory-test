@@ -53,6 +53,7 @@ export async function saveProduct(
     costPrice: formValue(formData, "costPrice"),
     sellingPrice: formValue(formData, "sellingPrice"),
     reorderLevel: formValue(formData, "reorderLevel"),
+    targetStockLevel: formValue(formData, "targetStockLevel"),
     description: formValue(formData, "description"),
   });
 

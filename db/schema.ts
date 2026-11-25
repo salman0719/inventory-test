@@ -161,6 +161,11 @@ export const products = pgTable(
     reorderLevel: numeric("reorder_level", { precision: 12, scale: 3 })
       .notNull()
       .default("0"),
+    /** Reorder suggestions aim for this level; null means twice the reorder level. */
+    targetStockLevel: numeric("target_stock_level", {
+      precision: 12,
+      scale: 3,
+    }),
     imagePath: text("image_path"),
     isArchived: boolean("is_archived").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -194,6 +199,10 @@ export const products = pgTable(
       sql`${t.sellingPrice} is null or ${t.sellingPrice} >= 0`,
     ),
     check("products_reorder_level_check", sql`${t.reorderLevel} >= 0`),
+    check(
+      "products_target_stock_level_check",
+      sql`${t.targetStockLevel} is null or ${t.targetStockLevel} >= 0`,
+    ),
     foreignKey({
       name: "products_category_fk",
       columns: [t.businessId, t.categoryId],

@@ -24,6 +24,7 @@ export type ProductSummary = {
   costPrice: string;
   sellingPrice: string | null;
   reorderLevel: string;
+  targetStockLevel: string | null;
   onHand: string;
   description: string | null;
   isArchived: boolean;
@@ -63,8 +64,9 @@ const UUID_PATTERN =
 const SELECT_PRODUCT = `
   select p.id, p.name, p.sku, p.supplier_sku, p.unit_of_measure, p.category_id,
          c.name as category_name, p.supplier_id, s.name as supplier_name,
-         p.cost_price, p.selling_price, p.reorder_level, p.description,
-         p.is_archived, coalesce(st.on_hand, 0)::text as on_hand
+         p.cost_price, p.selling_price, p.reorder_level, p.target_stock_level,
+         p.description, p.is_archived,
+         coalesce(st.on_hand, 0)::text as on_hand
     from products p
     left join categories c on c.business_id = p.business_id and c.id = p.category_id
     left join suppliers s on s.business_id = p.business_id and s.id = p.supplier_id
@@ -92,6 +94,7 @@ type Row = {
   cost_price: string;
   selling_price: string | null;
   reorder_level: string;
+  target_stock_level: string | null;
   on_hand: string;
   description: string | null;
   is_archived: boolean;
@@ -111,6 +114,7 @@ function toSummary(row: Row): ProductSummary {
     costPrice: row.cost_price,
     sellingPrice: row.selling_price,
     reorderLevel: row.reorder_level,
+    targetStockLevel: row.target_stock_level,
     onHand: row.on_hand,
     description: row.description,
     isArchived: row.is_archived,
@@ -392,8 +396,9 @@ export async function createProduct(
     const result = await client.query<{ id: string }>(
       `insert into products
          (business_id, name, sku, description, category_id, supplier_id,
-          supplier_sku, unit_of_measure, cost_price, selling_price, reorder_level)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          supplier_sku, unit_of_measure, cost_price, selling_price, reorder_level,
+          target_stock_level)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        returning id`,
       [
         businessId,
@@ -407,6 +412,7 @@ export async function createProduct(
         input.costPrice,
         input.sellingPrice,
         input.reorderLevel,
+        input.targetStockLevel,
       ],
     );
     const id = result.rows[0].id;
@@ -439,7 +445,7 @@ export async function updateProduct(
           set name = $3, sku = $4, description = $5, category_id = $6,
               supplier_id = $7, supplier_sku = $8, unit_of_measure = $9,
               cost_price = $10, selling_price = $11, reorder_level = $12,
-              updated_at = now()
+              target_stock_level = $13, updated_at = now()
         where business_id = $1 and id = $2
         returning id`,
       [
@@ -455,6 +461,7 @@ export async function updateProduct(
         input.costPrice,
         input.sellingPrice,
         input.reorderLevel,
+        input.targetStockLevel,
       ],
     );
     if (result.rowCount !== 1) return false;

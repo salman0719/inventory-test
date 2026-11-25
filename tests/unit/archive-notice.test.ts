@@ -63,6 +63,7 @@ const product: ProductSummary = {
   costPrice: "3.80",
   sellingPrice: "5.00",
   reorderLevel: "4",
+  targetStockLevel: null,
   onHand: "14",
   description: null,
   isArchived: false,

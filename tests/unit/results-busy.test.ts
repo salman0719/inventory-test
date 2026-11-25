@@ -59,6 +59,7 @@ function tomato() {
     costPrice: "4.20",
     sellingPrice: null,
     reorderLevel: "2",
+    targetStockLevel: null,
     onHand: "18",
     description: null,
     isArchived: false,

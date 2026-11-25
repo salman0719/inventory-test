@@ -216,6 +216,7 @@ describe("the phone navigation", () => {
       "/stocktake",
       "/suppliers",
       "/purchase-orders",
+      "/reorder",
       "/reports",
       "/activity",
       "/settings",

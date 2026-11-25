@@ -166,6 +166,13 @@ function ProductBody({
             {formatQuantity(product.reorderLevel)}
           </span>
         </Value>
+        {product.targetStockLevel !== null ? (
+          <Value label="Target stock">
+            <span className="font-mono">
+              {formatQuantity(product.targetStockLevel)}
+            </span>
+          </Value>
+        ) : null}
         {canViewValues ? (
           <>
             <Value label="Cost">

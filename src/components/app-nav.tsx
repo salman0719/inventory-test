@@ -106,6 +106,18 @@ const ITEMS: Item[] = [
     ),
   },
   {
+    href: "/reorder",
+    label: "Reorder",
+    short: "Ord",
+    tab: "Reorder",
+    icon: (
+      <svg {...iconProps}>
+        <path d="M20 7h-9M20 7l-3-3M20 7l-3 3" />
+        <path d="M4 17h9M4 17l3-3M4 17l3 3" />
+      </svg>
+    ),
+  },
+  {
     href: "/reports",
     label: "Reports",
     short: "Rep",

@@ -11,6 +11,7 @@ export type ProductDefaults = {
   costPrice: string;
   sellingPrice: string | null;
   reorderLevel: string;
+  targetStockLevel: string | null;
   description: string | null;
   categoryId: string | null;
   supplierId: string | null;
@@ -25,6 +26,7 @@ export const EMPTY_PRODUCT: ProductDefaults = {
   costPrice: "0.00",
   sellingPrice: "",
   reorderLevel: "0",
+  targetStockLevel: "",
   description: "",
   categoryId: "",
   supplierId: "",

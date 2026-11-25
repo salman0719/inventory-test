@@ -99,6 +99,16 @@ export const productInputSchema = z
         QUANTITY_PATTERN,
         "Enter the reorder level as a number, for example 6 or 2.5.",
       ),
+    /** Blank means the reorder screen doubles the reorder level instead. */
+    targetStockLevel: z
+      .string()
+      .trim()
+      .default("")
+      .refine(
+        (value) => value === "" || QUANTITY_PATTERN.test(value),
+        "Enter the target stock as a number, for example 12 or 2.5.",
+      )
+      .transform((value) => (value === "" ? null : value)),
     description: z
       .string()
       .trim()

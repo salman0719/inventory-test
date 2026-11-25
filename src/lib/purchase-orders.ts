@@ -451,9 +451,10 @@ export async function createPurchaseOrder(
   userId: string,
   businessId: string,
   input: PurchaseOrderInput,
+  existingClient?: PoolClient,
 ): Promise<OrderWriteResult> {
   try {
-    return await withTenant(userId, async (client) => {
+    return await runInTenant(userId, existingClient, async (client) => {
       const orderNumber = await nextOrderNumber(client, businessId);
       const created = await client.query<{ id: string }>(
         `insert into purchase_orders
@@ -502,13 +503,14 @@ export async function updateDraftPurchaseOrder(
   businessId: string,
   orderId: string,
   input: PurchaseOrderInput,
+  existingClient?: PoolClient,
 ): Promise<OrderWriteResult> {
   if (!UUID_PATTERN.test(orderId)) {
     return { ok: false, error: "That order is not in this business." };
   }
 
   try {
-    return await withTenant(userId, async (client) => {
+    return await runInTenant(userId, existingClient, async (client) => {
       const updated = await client.query(
         `update purchase_orders
             set supplier_id = $3, expected_delivery_at = $4, notes = $5,

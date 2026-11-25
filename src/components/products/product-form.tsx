@@ -44,6 +44,7 @@ type Fields = {
   costPrice: string;
   sellingPrice: string;
   reorderLevel: string;
+  targetStockLevel: string;
   description: string;
 };
 
@@ -58,6 +59,7 @@ function initialFields(defaults: ProductDefaults): Fields {
     costPrice: defaults.costPrice,
     sellingPrice: toField(defaults.sellingPrice),
     reorderLevel: defaults.reorderLevel,
+    targetStockLevel: toField(defaults.targetStockLevel),
     description: toField(defaults.description),
   };
 }
@@ -204,6 +206,20 @@ export function ProductForm({
           />
         </label>
       </div>
+
+      <label className="flex flex-col gap-1">
+        <span className={LABEL}>Target stock</span>
+        <input
+          {...bind("targetStockLevel")}
+          inputMode="decimal"
+          placeholder="optional"
+          className={`${INPUT} font-mono`}
+        />
+        <span className="text-[11px] text-ink-faint">
+          Reorder suggestions aim for this level. Leave it blank to use twice
+          the reorder level.
+        </span>
+      </label>
 
       <label className="flex flex-col gap-1">
         <span className={LABEL}>Description</span>
