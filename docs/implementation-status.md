@@ -155,8 +155,17 @@ Add date, task, verification method, and result.
   (0 errors, the same 2 pre-existing warnings), `npm run test` 207 passed in 31 files, `npm run test:db` 94 passed in 9 files
   (`tests/db/supplier-facts.test.ts` adds 5), `npm run build` exit 0 and
   `npm run secrets:check` ok.
-  **Not verified:** no signed-in browser walk of the new panel sections or the
-  Use-as-cost action, and nothing is deployed to the stage.
+  **Browser walk (2026-11-25, local, signed in as `owner@cafe.test`):** recorded a
+  3-day lead time on Harbour Line Meats and the panel showed "3 calendar days"; set
+  supplier code `HLM-2201` on Pork belly and the panel showed it; a new order for
+  that supplier pre-filled the expected date as 2026-11-28 with the calendar-days
+  hint; received PO-0001 in full, after which Potatoes, washed showed "Last paid
+  $2.60 per kg on 25 Nov 2026 from Fresh Fields Produce"; changed its catalogue
+  cost, saw **Use as cost**, and confirmed it restored $2.60 with the receipt
+  untouched.
+  **Not verified:** price history with more than one receipt, lead times of 0 and 1,
+  the duplicate-code message in the browser, the viewer role, and anything deployed
+  to the stage.
 
 - **2026-11-25 — The stage caught up: migrations `0009`–`0012` applied and `main`
   deployed.** `npm run db:migrate:hosted` applied 4 migrations (9 → 13 tracked)
