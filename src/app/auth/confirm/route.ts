@@ -1,6 +1,7 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
+import { shimIdentityFromUser, syncDevAuthUser } from "@/lib/auth-shim";
 import { ensureSignupRequest } from "@/lib/signup";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -15,6 +16,11 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  * The identity used to write the registration row comes from the exchange itself,
  * not from a second `getUser()`: the cookies for a session created in this handler
  * are only guaranteed on the response that follows it.
+ *
+ * Local development reads a Postgres whose `auth.users` is a shim, while this exchange
+ * created the account in the hosted project, so the row has to be written here before
+ * the registration that references it. `syncDevAuthUser` does that and does nothing at
+ * all against a real Supabase database.
  */
 const OTP_TYPES = [
   "signup",
@@ -37,6 +43,8 @@ export async function GET(request: NextRequest) {
     id: string;
     email?: string;
     user_metadata: Record<string, unknown>;
+    email_confirmed_at?: string;
+    created_at?: string;
   } | null = null;
   let failed = false;
 
@@ -64,6 +72,12 @@ export async function GET(request: NextRequest) {
   }
 
   if (user) {
+    // First, and separately: a shim that cannot be written must not stop a confirmed
+    // account from reaching the app, and the registration below reports its own
+    // failure. Without the row, that insert fails its user foreign key.
+    const identity = shimIdentityFromUser(user);
+    if (identity) await syncDevAuthUser(identity);
+
     try {
       await ensureSignupRequest(
         user.id,

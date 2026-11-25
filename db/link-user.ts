@@ -1,15 +1,19 @@
 import { Client } from "pg";
 import { z } from "zod";
-import { loadEnv } from "./env";
+import { localDatabaseUrl, writeAuthIdentity } from "../src/lib/auth-shim";
+import { fetchHostedIdentities } from "./hosted-auth";
 
 /**
  * Development only: give a real Supabase Auth user access to a demo business in
  * the local database.
  *
- * Supabase Auth owns identity, so the app's user ids come from Supabase. The local
- * compose database is seeded with three fixed ids that exist nowhere else. To sign
- * in locally against seeded data, this inserts the Supabase user's id into the
- * local `auth.users` shim and adds an owner membership.
+ * Supabase Auth owns identity, so the app's user ids come from Supabase and the local
+ * compose database keeps them in the `auth.users` shim. A linked account used to be
+ * written as `(id, email)` and nothing else, which left `email_confirmed_at` empty and
+ * `created_at` at the moment of the link — the panel then described a working account
+ * as unconfirmed and newly joined. The four identity fields are now copied from the
+ * hosted row, so the local copy is the truth rather than a guess. The hosted row is
+ * read over `SUPABASE_DB_URL`; nothing here writes to the hosted project.
  *
  * It refuses anything that is not a loopback database, so it cannot touch a hosted
  * project. It is not authentication: it grants no password and sets no session.
@@ -33,8 +37,6 @@ const BUSINESS_IDS = {
 } as const;
 
 async function main(): Promise<void> {
-  loadEnv();
-
   const parsed = input.safeParse({
     userId: process.argv[2],
     email: process.argv[3],
@@ -46,13 +48,18 @@ async function main(): Promise<void> {
     );
   }
 
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL is not set.");
-
-  const host = new URL(url).hostname;
-  if (!["localhost", "127.0.0.1", "[::1]"].includes(host)) {
+  const [identity] = await fetchHostedIdentities(parsed.data.userId);
+  if (!identity) {
     throw new Error(
-      `link-user: refusing to write to a non-local database (${host}).`,
+      `no hosted auth.users row for ${parsed.data.userId}. ` +
+        "Check SUPABASE_DB_URL, and that the account has confirmed its address.",
+    );
+  }
+
+  const claimed = parsed.data.email.trim().toLowerCase();
+  if (identity.email !== claimed) {
+    console.warn(
+      `link-user: hosted address is ${identity.email}; using it instead of ${claimed}`,
     );
   }
 
@@ -61,21 +68,17 @@ async function main(): Promise<void> {
       ? (["cafe", "retail"] as const)
       : ([parsed.data.demo] as const);
 
-  const client = new Client({ connectionString: url });
+  const client = new Client({ connectionString: localDatabaseUrl() });
   await client.connect();
   try {
     await client.query("begin");
-    await client.query(
-      `insert into auth.users (id, email) values ($1, $2)
-       on conflict (id) do update set email = excluded.email`,
-      [parsed.data.userId, parsed.data.email],
-    );
+    await writeAuthIdentity(client, identity);
     for (const demo of demos) {
       await client.query(
         `insert into business_members (business_id, user_id, role)
          values ($1, $2, 'owner')
          on conflict (business_id, user_id) do update set role = excluded.role`,
-        [BUSINESS_IDS[demo], parsed.data.userId],
+        [BUSINESS_IDS[demo], identity.id],
       );
     }
     await client.query("commit");
@@ -87,12 +90,16 @@ async function main(): Promise<void> {
   }
 
   console.log(
-    `link-user: ${parsed.data.email} (${parsed.data.userId}) is now an owner of ${demos.join(" and ")}`,
+    `link-user: ${identity.email} (${identity.id}) — ${
+      identity.emailConfirmedAt
+        ? `confirmed ${identity.emailConfirmedAt.toISOString()}`
+        : "not confirmed"
+    }, joined ${identity.createdAt.toISOString()}`,
   );
   console.log(
     demos.length > 1
-      ? "link-user: sign in with that account; the selector lists both demo businesses."
-      : "link-user: sign in with that account; the selector will list that business only.",
+      ? `link-user: now an owner of ${demos.join(" and ")}; the selector lists both demo businesses.`
+      : `link-user: now an owner of ${demos[0]}; the selector lists that business only.`,
   );
 }
 

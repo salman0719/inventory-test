@@ -32,6 +32,7 @@
     "db:app-role": "tsx db/app-role.ts",
     "db:app-role:local": "tsx db/app-role.ts --local",
     "db:link-user": "tsx db/link-user.ts",
+    "db:sync-auth": "tsx db/sync-auth.ts",
     "db:seed": "tsx db/seed.ts",
     "db:seed:hosted": "tsx db/seed-hosted.ts",
     "new:ports": "tsx scripts/new-ports.ts"
