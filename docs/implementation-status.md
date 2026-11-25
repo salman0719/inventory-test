@@ -140,28 +140,36 @@ Add date, task, verification method, and result.
   deployed).**
   `0019_product_suppliers.sql` adds `product_suppliers` and makes it the single
   source of truth for a product's suppliers. Each row carries the supplier's own
-  code, an optional lead-time override, an active flag and a default flag. A
-  partial unique index permits one active default per product; another permits a
-  supplier code once per supplier, case-insensitively. The migration backfills one
+  code, an optional lead-time override and a default flag. A partial unique index
+  permits one default per product; another permits a supplier code once per
+  supplier, case-insensitively. The migration backfills one
   default link for every product that had `products.supplier_id`, preserving its
   `supplier_sku`, then drops both product columns. `suppliers.lead_time_days`
   remains the fallback when a link has no override. The demo reset function now
   writes the default links instead of the dropped columns.
   **Reads:** the catalogue, inventory, dashboard and stock report name the default
-  supplier. Reorder suggestions join active links, so a product appears once under
+  supplier. Reorder suggestions join the links, so a product appears once under
   every supplier that can supply it; sent-order quantities are netted per supplier,
   and a supplier card uses the longest effective lead time in its group. The order
   form lists each product under every linked supplier, and order creation/editing
   now refuses a line that the chosen supplier does not supply. Supplier product
   counts and lists also read links, so an alternate is counted once.
   **Screens:** the product form requires a default supplier and labels the code as
-  that supplier's. The product panel lists every active supplier with its code,
+  that supplier's. The product panel lists every linked supplier with its code,
   effective lead time and default badge; an alternate can be added with its own
   code and lead-time override, promoted to default, or removed. Removal is refused
   for the default and for a supplier with an open order containing the product.
+  **Simplification:** after a fresh-eyes review, the link table has no active flag:
+  a link is either present or removed, so there is one default state and no
+  activation path to test. The unused `(business_id, id)` index and the redundant
+  `(business_id, product_id)` index are gone; the unique
+  `(business_id, product_id, supplier_id)` index serves product lookups. The
+  product list no longer joins supplier links it never reads, and the edit form
+  takes the default supplier and code from the links payload instead of a second
+  copy on the product summary.
   **Verified:** `npm run db:migrate` applied 1 migration (20 tracked) and the
   backfill produced 221 links, 221 defaults and 0 active products without a default
-  in the local database. `npm run check` exit 0 (the same 2 pre-existing warnings in
+  in the local database; `npx drizzle-kit generate` reports no schema changes. `npm run check` exit 0 (the same 2 pre-existing warnings in
   `permissions.ts`); `npm run test` 230 passed in 33 files; `npm run test:db` 135
   passed in 13 files, including the new `tests/db/product-suppliers.test.ts` (6)
   which covers the no-default count and repair, link listing and supplier counts,

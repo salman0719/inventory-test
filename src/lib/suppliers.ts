@@ -34,11 +34,10 @@ const UUID_PATTERN =
 
 const SELECT_SUPPLIER = `
   select s.id, s.name, s.contact_name, s.email, s.phone, s.address, s.notes,
-         s.lead_time_days, s.is_archived, count(distinct p.id)::int as product_count
+         s.lead_time_days, s.is_archived, count(p.id)::int as product_count
     from suppliers s
     left join product_suppliers ps
       on ps.business_id = s.business_id and ps.supplier_id = s.id
-     and ps.is_active
     left join products p
       on p.business_id = ps.business_id and p.id = ps.product_id
      and p.is_archived = false
@@ -156,12 +155,12 @@ export async function listSuppliedProducts(
       sku: string;
       on_hand: string;
     }>(
-      `select distinct p.id, p.name, p.sku,
+      `select p.id, p.name, p.sku,
               coalesce(st.on_hand, 0)::text as on_hand
          from products p
          join product_suppliers ps
            on ps.business_id = p.business_id and ps.product_id = p.id
-          and ps.supplier_id = $2 and ps.is_active
+          and ps.supplier_id = $2
          left join product_stock st
            on st.business_id = p.business_id and st.product_id = p.id
         where p.business_id = $1 and p.is_archived = false

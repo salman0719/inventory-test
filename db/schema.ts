@@ -221,7 +221,6 @@ export const productSuppliers = pgTable(
     /** Overrides the supplier's default lead time for this product. */
     leadTimeDays: integer("lead_time_days"),
     isDefault: boolean("is_default").notNull().default(false),
-    isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -235,11 +234,10 @@ export const productSuppliers = pgTable(
       t.productId,
       t.supplierId,
     ),
-    uniqueIndex("product_suppliers_business_id_key").on(t.businessId, t.id),
-    // One active default per product. An inactive default is not a default.
+    // One default per product.
     uniqueIndex("product_suppliers_one_default")
       .on(t.businessId, t.productId)
-      .where(sql`${t.isDefault} and ${t.isActive}`),
+      .where(sql`${t.isDefault}`),
     // One supplier cannot use the same code for two of our products. The same
     // code at another supplier is a different code.
     uniqueIndex("product_suppliers_code_key")
@@ -248,16 +246,6 @@ export const productSuppliers = pgTable(
     index("product_suppliers_business_supplier_idx").on(
       t.businessId,
       t.supplierId,
-      t.isActive,
-    ),
-    index("product_suppliers_business_product_idx").on(
-      t.businessId,
-      t.productId,
-      t.isActive,
-    ),
-    check(
-      "product_suppliers_default_active_check",
-      sql`not ${t.isDefault} or ${t.isActive}`,
     ),
     check(
       "product_suppliers_lead_time_days_check",

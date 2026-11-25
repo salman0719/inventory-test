@@ -199,19 +199,12 @@ function ProductBody({
           </>
         ) : null}
         <Value label="Category">{product.categoryName ?? "—"}</Value>
-        <Value label="Supplier">{product.supplierName ?? "—"}</Value>
-        {product.supplierSku ? (
-          <Value label="Supplier code">
-            <span className="font-mono text-[12px]">{product.supplierSku}</span>
-          </Value>
-        ) : null}
       </dl>
 
       <ProductSuppliers
         productId={product.id}
         links={links}
         suppliers={suppliers}
-        unitOfMeasure={product.unitOfMeasure}
         canEdit={canViewValues}
       />
 

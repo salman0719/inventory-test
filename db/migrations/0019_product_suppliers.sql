@@ -18,11 +18,8 @@ CREATE TABLE "product_suppliers" (
   "supplier_sku" text,
   "lead_time_days" integer,
   "is_default" boolean DEFAULT false NOT NULL,
-  "is_active" boolean DEFAULT true NOT NULL,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
   "updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-  CONSTRAINT "product_suppliers_default_active_check"
-    CHECK (not "is_default" or "is_active"),
   CONSTRAINT "product_suppliers_lead_time_days_check"
     CHECK ("lead_time_days" is null or "lead_time_days" between 0 and 365)
 );--> statement-breakpoint
@@ -44,29 +41,23 @@ ALTER TABLE "product_suppliers"
 
 CREATE UNIQUE INDEX "product_suppliers_business_product_supplier_key"
   ON "product_suppliers" USING btree ("business_id","product_id","supplier_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "product_suppliers_business_id_key"
-  ON "product_suppliers" USING btree ("business_id","id");--> statement-breakpoint
 CREATE UNIQUE INDEX "product_suppliers_one_default"
   ON "product_suppliers" USING btree ("business_id","product_id")
-  WHERE "product_suppliers"."is_default" and "product_suppliers"."is_active";--> statement-breakpoint
+  WHERE "product_suppliers"."is_default";--> statement-breakpoint
 CREATE UNIQUE INDEX "product_suppliers_code_key"
   ON "product_suppliers" USING btree
     ("business_id","supplier_id",lower("supplier_sku"))
   WHERE "product_suppliers"."supplier_sku" is not null;--> statement-breakpoint
 CREATE INDEX "product_suppliers_business_supplier_idx"
   ON "product_suppliers" USING btree
-    ("business_id","supplier_id","is_active");--> statement-breakpoint
-CREATE INDEX "product_suppliers_business_product_idx"
-  ON "product_suppliers" USING btree
-    ("business_id","product_id","is_active");--> statement-breakpoint
+    ("business_id","supplier_id");--> statement-breakpoint
 
 -- Every product that named a supplier becomes that supplier's default link.
 -- Products that had no supplier keep none: the product form refuses to save one
 -- that way, but a legacy row is not invented into a relationship it never had.
 INSERT INTO "product_suppliers"
-  ("business_id", "product_id", "supplier_id", "supplier_sku", "is_default",
-   "is_active")
-SELECT p."business_id", p."id", p."supplier_id", p."supplier_sku", true, true
+  ("business_id", "product_id", "supplier_id", "supplier_sku", "is_default")
+SELECT p."business_id", p."id", p."supplier_id", p."supplier_sku", true
   FROM "products" p
  WHERE p."supplier_id" IS NOT NULL;--> statement-breakpoint
 
@@ -78,7 +69,7 @@ ALTER TABLE "products" DROP COLUMN "supplier_id";--> statement-breakpoint
 ALTER TABLE "products" DROP COLUMN "supplier_sku";--> statement-breakpoint
 
 COMMENT ON TABLE "product_suppliers" IS
-  'Which suppliers can supply a product; exactly one active row is the default.';--> statement-breakpoint
+  'Which suppliers can supply a product; exactly one row is the default.';--> statement-breakpoint
 COMMENT ON COLUMN "product_suppliers"."lead_time_days" IS
   'Overrides suppliers.lead_time_days for this product when set.';--> statement-breakpoint
 
@@ -192,8 +183,8 @@ BEGIN
   END IF;
 
   INSERT INTO product_suppliers
-    (business_id, product_id, supplier_id, is_default, is_active)
-  SELECT p_business_id, p.id, s.id, true, true
+    (business_id, product_id, supplier_id, is_default)
+  SELECT p_business_id, p.id, s.id, true
     FROM jsonb_to_recordset(p_payload->'products') AS x(
       sku text, supplier text
     )

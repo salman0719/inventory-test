@@ -41,6 +41,14 @@ function formValue(formData: FormData, key: string): string {
   return typeof value === "string" ? value : "";
 }
 
+/** A link change moves the product between supplier screens and order options. */
+function revalidateSupplierLinks(productId: string): never {
+  revalidatePath("/products");
+  revalidatePath("/reorder");
+  revalidatePath("/purchase-orders");
+  redirect(`/products?product=${productId}&saved=true`);
+}
+
 export async function saveProduct(
   _previous: ProductFormState,
   formData: FormData,
@@ -187,10 +195,7 @@ export async function addSupplierLink(
   }
   if (!result.ok) return { error: result.error };
 
-  revalidatePath("/products");
-  revalidatePath("/reorder");
-  revalidatePath("/purchase-orders");
-  redirect(`/products?product=${parsed.data.productId}&saved=true`);
+  return revalidateSupplierLinks(parsed.data.productId);
 }
 
 export async function removeSupplierLink(
@@ -217,10 +222,7 @@ export async function removeSupplierLink(
   );
   if (!result.ok) return { error: result.error };
 
-  revalidatePath("/products");
-  revalidatePath("/reorder");
-  revalidatePath("/purchase-orders");
-  redirect(`/products?product=${parsed.data.productId}&saved=true`);
+  return revalidateSupplierLinks(parsed.data.productId);
 }
 
 export async function makeDefaultSupplier(
@@ -247,10 +249,7 @@ export async function makeDefaultSupplier(
   );
   if (!result.ok) return { error: result.error };
 
-  revalidatePath("/products");
-  revalidatePath("/reorder");
-  revalidatePath("/purchase-orders");
-  redirect(`/products?product=${parsed.data.productId}&saved=true`);
+  return revalidateSupplierLinks(parsed.data.productId);
 }
 
 export async function setArchived(formData: FormData): Promise<void> {

@@ -23,21 +23,19 @@ function leadTimeLabel(days: number | null): string {
 
 /**
  * The product's supplier links. The default row is the one the catalogue and
- * stock screens name; every other active row is another wholesaler the product
- * can be ordered from. Only the default can be changed here by promoting an
- * alternate; the form's supplier select changes it from scratch.
+ * stock screens name; every other row is another wholesaler the product can be
+ * ordered from. Only the default can be changed here by promoting an alternate;
+ * the form's supplier select changes it from scratch.
  */
 export function ProductSuppliers({
   productId,
   links,
   suppliers,
-  unitOfMeasure,
   canEdit,
 }: {
   productId: string;
   links: ProductSupplierLink[];
   suppliers: SupplierOption[];
-  unitOfMeasure: string;
   canEdit: boolean;
 }) {
   const linked = new Set(links.map((link) => link.supplierId));
@@ -82,12 +80,11 @@ export function ProductSuppliers({
                   {leadTimeLabel(link.effectiveLeadTimeDays)}
                 </span>
               </div>
-              <p className="text-[10.5px] text-ink-faint">
-                {link.leadTimeDays === null
-                  ? "Using the supplier's lead time."
-                  : `Lead time override: ${leadTimeLabel(link.leadTimeDays)}.`}{" "}
-                Priced per {unitOfMeasure}.
-              </p>
+              {link.leadTimeDays === null ? null : (
+                <p className="text-[10.5px] text-ink-faint">
+                  Set on this link, overriding the supplier&apos;s default.
+                </p>
+              )}
               {canEdit && !link.isDefault ? (
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <DefaultLinkForm productId={productId} linkId={link.id} />

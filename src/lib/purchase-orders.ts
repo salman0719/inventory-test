@@ -394,7 +394,6 @@ export async function getOrderFormOptions(
          from products p
          join product_suppliers ps
            on ps.business_id = p.business_id and ps.product_id = p.id
-          and ps.is_active
         where p.business_id = $1 and p.is_archived = false
         group by p.id
         order by lower(p.name)`,
@@ -465,7 +464,7 @@ async function linesMatchSupplier(
   const linked = await client.query(
     `select 1
        from product_suppliers ps
-      where ps.business_id = $1 and ps.supplier_id = $2 and ps.is_active
+      where ps.business_id = $1 and ps.supplier_id = $2
         and ps.product_id = any($3::uuid[])`,
     [businessId, supplierId, productIds],
   );

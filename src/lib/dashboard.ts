@@ -128,7 +128,7 @@ export async function getDashboard(
          left join on_order oo on oo.product_id = p.id
          left join product_suppliers ps
            on ps.business_id = p.business_id and ps.product_id = p.id
-          and ps.is_default and ps.is_active
+          and ps.is_default
          left join suppliers s
            on s.business_id = p.business_id and s.id = ps.supplier_id
         where p.business_id = $1

@@ -121,10 +121,10 @@ export async function seedDemoCatalogue(
       );
       await pool.query(
         `insert into product_suppliers
-           (business_id, product_id, supplier_id, is_default, is_active)
-         values ($1, $2, $3, true, true)
+           (business_id, product_id, supplier_id, is_default)
+         values ($1, $2, $3, true)
          on conflict (business_id, product_id, supplier_id) do update
-           set is_default = true, is_active = true, updated_at = now()`,
+           set is_default = true, updated_at = now()`,
         [catalogue.businessId, saved.rows[0].id, supplierId],
       );
     }

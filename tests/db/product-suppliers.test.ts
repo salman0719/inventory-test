@@ -81,7 +81,7 @@ async function countProductsWithoutDefault(): Promise<number> {
         and not exists (
           select 1 from product_suppliers ps
            where ps.business_id = p.business_id and ps.product_id = p.id
-             and ps.is_default and ps.is_active
+             and ps.is_default
         )`,
     [ids.business],
   );

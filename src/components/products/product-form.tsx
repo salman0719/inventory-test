@@ -52,14 +52,18 @@ type Fields = {
   description: string;
 };
 
-function initialFields(defaults: ProductDefaults): Fields {
+function initialFields(
+  defaults: ProductDefaults,
+  links: ProductSupplierLink[],
+): Fields {
+  const defaultLink = links.find((link) => link.isDefault);
   return {
     name: defaults.name,
     sku: defaults.sku,
-    supplierSku: toField(defaults.supplierSku),
+    supplierSku: toField(defaultLink?.supplierSku ?? null),
     unitOfMeasure: defaults.unitOfMeasure,
     categoryId: defaults.categoryId ?? "",
-    supplierId: defaults.supplierId ?? "",
+    supplierId: defaultLink?.supplierId ?? "",
     costPrice: defaults.costPrice,
     sellingPrice: toField(defaults.sellingPrice),
     reorderLevel: defaults.reorderLevel,
@@ -88,7 +92,9 @@ export function ProductForm({
   // Controlled, because React resets an uncontrolled form after every action: a
   // rejected save (a duplicate SKU, a name that is too long) would otherwise wipe
   // everything the operator typed. MovementForm documents the same reason.
-  const [fields, setFields] = useState<Fields>(() => initialFields(defaults));
+  const [fields, setFields] = useState<Fields>(() =>
+    initialFields(defaults, links),
+  );
 
   function bind(key: keyof Fields) {
     return {

@@ -15,12 +15,9 @@ export type ProductSummary = {
   id: string;
   name: string;
   sku: string;
-  supplierSku: string | null;
   unitOfMeasure: string;
   categoryId: string | null;
   categoryName: string | null;
-  supplierId: string | null;
-  supplierName: string | null;
   costPrice: string;
   sellingPrice: string | null;
   reorderLevel: string;
@@ -75,17 +72,13 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const SELECT_PRODUCT = `
-  select p.id, p.name, p.sku, ps.supplier_sku, p.unit_of_measure,
-         p.category_id, c.name as category_name, ps.supplier_id,
-         s.name as supplier_name, p.cost_price, p.selling_price,
+  select p.id, p.name, p.sku, p.unit_of_measure,
+         p.category_id, c.name as category_name,
+         p.cost_price, p.selling_price,
          p.reorder_level, p.target_stock_level, p.description, p.is_archived,
          coalesce(st.on_hand, 0)::text as on_hand
     from products p
     left join categories c on c.business_id = p.business_id and c.id = p.category_id
-    left join product_suppliers ps
-      on ps.business_id = p.business_id and ps.product_id = p.id
-     and ps.is_default and ps.is_active
-    left join suppliers s on s.business_id = p.business_id and s.id = ps.supplier_id
     left join product_stock st on st.business_id = p.business_id and st.product_id = p.id
 `;
 
@@ -101,12 +94,9 @@ type Row = {
   id: string;
   name: string;
   sku: string;
-  supplier_sku: string | null;
   unit_of_measure: string;
   category_id: string | null;
   category_name: string | null;
-  supplier_id: string | null;
-  supplier_name: string | null;
   cost_price: string;
   selling_price: string | null;
   reorder_level: string;
@@ -121,12 +111,9 @@ function toSummary(row: Row): ProductSummary {
     id: row.id,
     name: row.name,
     sku: row.sku,
-    supplierSku: row.supplier_sku,
     unitOfMeasure: row.unit_of_measure,
     categoryId: row.category_id,
     categoryName: row.category_name,
-    supplierId: row.supplier_id,
-    supplierName: row.supplier_name,
     costPrice: row.cost_price,
     sellingPrice: row.selling_price,
     reorderLevel: row.reorder_level,
@@ -322,7 +309,7 @@ export async function listProductSupplierLinks(
          from product_suppliers ps
          join suppliers s
            on s.business_id = ps.business_id and s.id = ps.supplier_id
-        where ps.business_id = $1 and ps.product_id = $2 and ps.is_active
+        where ps.business_id = $1 and ps.product_id = $2
         order by ps.is_default desc, lower(s.name)`,
       [businessId, productId],
     );
@@ -477,12 +464,11 @@ async function setDefaultSupplierLink(
   );
   await client.query(
     `insert into product_suppliers
-       (business_id, product_id, supplier_id, supplier_sku, is_default, is_active)
-     values ($1, $2, $3, $4, true, true)
+       (business_id, product_id, supplier_id, supplier_sku, is_default)
+     values ($1, $2, $3, $4, true)
      on conflict (business_id, product_id, supplier_id) do update
        set supplier_sku = excluded.supplier_sku,
            is_default = true,
-           is_active = true,
            updated_at = now()`,
     [businessId, productId, supplierId, supplierSku],
   );
@@ -609,38 +595,31 @@ export async function addProductSupplier(
   }
 
   return withTenant(userId, async (client) => {
-    const product = await client.query<{ name: string }>(
-      "select name from products where business_id = $1 and id = $2",
-      [businessId, productId],
+    const target = await client.query<{
+      product_name: string;
+      supplier_name: string;
+    }>(
+      `select p.name as product_name, s.name as supplier_name
+         from products p
+         join suppliers s
+           on s.business_id = p.business_id and s.id = $3
+          and s.is_archived = false
+        where p.business_id = $1 and p.id = $2`,
+      [businessId, productId, input.supplierId],
     );
-    if (product.rowCount !== 1) {
+    const row = target.rows[0];
+    if (!row) {
       return {
         ok: false as const,
-        error: "That product is not in this business.",
-      };
-    }
-    const supplier = await client.query<{ name: string }>(
-      `select name from suppliers
-        where business_id = $1 and id = $2 and is_archived = false`,
-      [businessId, input.supplierId],
-    );
-    if (supplier.rowCount !== 1) {
-      return {
-        ok: false as const,
-        error: "That supplier is not active in this business.",
+        error: "That product or active supplier is not in this business.",
       };
     }
 
     await client.query(
       `insert into product_suppliers
          (business_id, product_id, supplier_id, supplier_sku, lead_time_days,
-          is_default, is_active)
-       values ($1, $2, $3, $4, $5, false, true)
-       on conflict (business_id, product_id, supplier_id) do update
-         set supplier_sku = excluded.supplier_sku,
-             lead_time_days = excluded.lead_time_days,
-             is_active = true,
-             updated_at = now()`,
+          is_default)
+       values ($1, $2, $3, $4, $5, false)`,
       [
         businessId,
         productId,
@@ -656,7 +635,7 @@ export async function addProductSupplier(
       action: "product.updated",
       entityType: "product",
       entityId: productId,
-      summary: `Added ${supplier.rows[0].name} to ${product.rows[0].name}`,
+      summary: `Added ${row.supplier_name} to ${row.product_name}`,
       detail: { supplier_id: input.supplierId },
     });
     return { ok: true as const };
@@ -677,26 +656,27 @@ export async function setDefaultProductSupplier(
     const link = await client.query<{
       supplier_id: string;
       supplier_name: string;
+      product_name: string;
+      is_default: boolean;
     }>(
-      `select ps.supplier_id, s.name as supplier_name
+      `select ps.supplier_id, s.name as supplier_name, p.name as product_name,
+              ps.is_default
          from product_suppliers ps
          join suppliers s
            on s.business_id = ps.business_id and s.id = ps.supplier_id
-        where ps.business_id = $1 and ps.product_id = $2 and ps.id = $3
-          and ps.is_active`,
+         join products p
+           on p.business_id = ps.business_id and p.id = ps.product_id
+        where ps.business_id = $1 and ps.product_id = $2 and ps.id = $3`,
       [businessId, productId, linkId],
     );
     const row = link.rows[0];
-    const product = await client.query<{ name: string }>(
-      "select name from products where business_id = $1 and id = $2",
-      [businessId, productId],
-    );
-    if (!row || product.rowCount !== 1) {
+    if (!row) {
       return {
         ok: false as const,
         error: "That supplier link is not in this business.",
       };
     }
+    if (row.is_default) return { ok: true as const };
 
     await client.query(
       `update product_suppliers set is_default = false, updated_at = now()
@@ -715,7 +695,7 @@ export async function setDefaultProductSupplier(
       action: "product.updated",
       entityType: "product",
       entityId: productId,
-      summary: `Made ${row.supplier_name} the default supplier for ${product.rows[0].name}`,
+      summary: `Made ${row.supplier_name} the default supplier for ${row.product_name}`,
       detail: { supplier_id: row.supplier_id },
     });
     return { ok: true as const };
@@ -738,9 +718,21 @@ export async function removeProductSupplier(
       supplier_name: string;
       is_default: boolean;
       product_name: string;
+      has_open_order: boolean;
     }>(
       `select ps.supplier_id, s.name as supplier_name, ps.is_default,
-              p.name as product_name
+              p.name as product_name,
+              exists (
+                select 1
+                  from purchase_order_lines l
+                  join purchase_orders po
+                    on po.business_id = l.business_id
+                   and po.id = l.purchase_order_id
+                 where l.business_id = ps.business_id
+                   and l.product_id = ps.product_id
+                   and po.supplier_id = ps.supplier_id
+                   and po.status in ('draft', 'ordered', 'partially_received')
+              ) as has_open_order
          from product_suppliers ps
          join suppliers s
            on s.business_id = ps.business_id and s.id = ps.supplier_id
@@ -762,19 +754,7 @@ export async function removeProductSupplier(
         error: "Choose another default supplier before removing this one.",
       };
     }
-
-    const openOrder = await client.query(
-      `select 1
-         from purchase_order_lines l
-         join purchase_orders po
-           on po.business_id = l.business_id
-          and po.id = l.purchase_order_id
-        where l.business_id = $1 and l.product_id = $2 and po.supplier_id = $3
-          and po.status in ('draft', 'ordered', 'partially_received')
-        limit 1`,
-      [businessId, productId, row.supplier_id],
-    );
-    if (openOrder.rowCount === 1) {
+    if (row.has_open_order) {
       return {
         ok: false as const,
         error: `${row.supplier_name} has an open order with this product. Receive or close it before removing the supplier.`,

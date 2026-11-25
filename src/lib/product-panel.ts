@@ -25,7 +25,7 @@ export type ProductPanelPayload = {
   product: ProductSummary | null;
   categories: CategoryOption[];
   suppliers: SupplierOption[];
-  /** Active supplier links, default first; empty unless the detail view. */
+  /** Supplier links, default first; empty for the create form. */
   links: ProductSupplierLink[];
   /** What was paid, from receipts; empty for a create form or a viewer. */
   price: ProductPriceHistory;

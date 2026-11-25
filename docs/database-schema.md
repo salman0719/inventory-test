@@ -85,14 +85,13 @@ Which suppliers can supply a product, and on what terms. This replaced
   case-insensitive)
 - lead_time_days (nullable, 0–365; overrides `suppliers.lead_time_days`)
 - is_default
-- is_active
 - created_at
 - updated_at
 
-Exactly one active default is allowed per product, enforced by the partial unique
-index `product_suppliers_one_default`. The default link is what the catalogue,
-inventory, dashboard and stock report name. Every active link is a supplier the
-product can be ordered from, including alternates. `supplier_sku` lives here, not
+Exactly one default is allowed per product, enforced by the partial unique index
+`product_suppliers_one_default`. The default link is what the catalogue, inventory,
+dashboard and stock report name. Every link is a supplier the product can be
+ordered from, including alternates. `supplier_sku` lives here, not
 on `products`, because the same product has a different code at each wholesaler.
 The supplier's lead time remains the fallback when a link's value is null.
 

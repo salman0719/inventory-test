@@ -120,7 +120,6 @@ export async function getReorderPage(
          from products p
          join product_suppliers ps
            on ps.business_id = p.business_id and ps.product_id = p.id
-          and ps.is_active
          join suppliers s
            on s.business_id = p.business_id and s.id = ps.supplier_id
          left join product_stock st
@@ -227,7 +226,6 @@ export async function getReorderPage(
           and not exists (
             select 1 from product_suppliers ps
              where ps.business_id = p.business_id and ps.product_id = p.id
-               and ps.is_active
           )`,
       [businessId],
     );
@@ -283,7 +281,7 @@ export async function saveReorderSelection(
          from suppliers s
          left join product_suppliers ps
            on ps.business_id = s.business_id and ps.supplier_id = s.id
-          and ps.is_active and ps.product_id = any($3::uuid[])
+          and ps.product_id = any($3::uuid[])
         where s.business_id = $1 and s.id = $2 and s.is_archived = false
         group by s.id`,
       [businessId, input.supplierId, productIds],
@@ -301,7 +299,7 @@ export async function saveReorderSelection(
          from products p
          join product_suppliers ps
            on ps.business_id = p.business_id and ps.product_id = p.id
-          and ps.supplier_id = $2 and ps.is_active
+          and ps.supplier_id = $2
         where p.business_id = $1 and p.is_archived = false
           and p.id = any($3::uuid[])`,
       [businessId, input.supplierId, productIds],

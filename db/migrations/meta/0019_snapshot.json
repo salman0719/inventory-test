@@ -444,13 +444,6 @@
           "notNull": true,
           "default": false
         },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -494,27 +487,6 @@
           "method": "btree",
           "with": {}
         },
-        "product_suppliers_business_id_key": {
-          "name": "product_suppliers_business_id_key",
-          "columns": [
-            {
-              "expression": "business_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "product_suppliers_one_default": {
           "name": "product_suppliers_one_default",
           "columns": [
@@ -532,7 +504,7 @@
             }
           ],
           "isUnique": true,
-          "where": "\"product_suppliers\".\"is_default\" and \"product_suppliers\".\"is_active\"",
+          "where": "\"product_suppliers\".\"is_default\"",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -579,39 +551,6 @@
               "isExpression": false,
               "asc": true,
               "nulls": "last"
-            },
-            {
-              "expression": "is_active",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "product_suppliers_business_product_idx": {
-          "name": "product_suppliers_business_product_idx",
-          "columns": [
-            {
-              "expression": "business_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "product_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "is_active",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -653,10 +592,6 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "product_suppliers_default_active_check": {
-          "name": "product_suppliers_default_active_check",
-          "value": "not \"product_suppliers\".\"is_default\" or \"product_suppliers\".\"is_active\""
-        },
         "product_suppliers_lead_time_days_check": {
           "name": "product_suppliers_lead_time_days_check",
           "value": "\"product_suppliers\".\"lead_time_days\" is null or \"product_suppliers\".\"lead_time_days\" between 0 and 365"
