@@ -220,12 +220,61 @@ export function normaliseHeader(value: string): string {
     .trim();
 }
 
-const FIELD_ALIASES = IMPORT_FIELDS.flatMap((field) =>
-  field.aliases.map((alias) => ({
-    alias: normaliseHeader(alias),
-    field: field.key,
-  })),
-);
+type FieldDefinitionLike<F extends string> = {
+  key: F;
+  label: string;
+  aliases: readonly string[];
+};
+
+type FieldMatch<F extends string> = {
+  index: number;
+  field: F | null;
+  source: "header" | "alias" | null;
+};
+
+/**
+ * Deterministic mapping shared by every import kind: exact label/key first, then
+ * the alias table. Each target is used once, so two columns never claim the same
+ * field.
+ */
+function matchHeaderFields<F extends string>(
+  fields: readonly FieldDefinitionLike<F>[],
+  headers: readonly string[],
+): FieldMatch<F>[] {
+  const aliasTable = fields.flatMap((field) =>
+    field.aliases.map((alias) => ({
+      alias: normaliseHeader(alias),
+      field: field.key,
+    })),
+  );
+  const used = new Set<F>();
+
+  return headers.map((header, index) => {
+    const normal = normaliseHeader(header);
+    if (normal === "") return { index, field: null, source: null };
+
+    const exact = fields.find(
+      (field) =>
+        !used.has(field.key) &&
+        (normaliseHeader(field.label) === normal ||
+          field.key.toLowerCase() === normal),
+    );
+    if (exact) {
+      used.add(exact.key);
+      return { index, field: exact.key, source: "header" as const };
+    }
+
+    const alias = aliasTable.find(
+      (entry) => !used.has(entry.field) && entry.alias === normal,
+    );
+    if (alias) {
+      used.add(alias.field);
+      return { index, field: alias.field, source: "alias" as const };
+    }
+
+    return { index, field: null, source: null };
+  });
+}
 
 export type ColumnMatch = {
   index: number;
@@ -253,32 +302,7 @@ export type HeaderSuggestion = {
  * using it as the product name, so it moves there when no name column exists.
  */
 export function mapHeaders(headers: readonly string[]): ColumnMatch[] {
-  const used = new Set<ImportField>();
-  const result: ColumnMatch[] = headers.map((header, index) => {
-    const normal = normaliseHeader(header);
-    if (normal === "") return { index, field: null, source: null };
-
-    const exact = IMPORT_FIELDS.find(
-      (field) =>
-        !used.has(field.key) &&
-        (normaliseHeader(field.label) === normal ||
-          field.key.toLowerCase() === normal),
-    );
-    if (exact) {
-      used.add(exact.key);
-      return { index, field: exact.key, source: "header" };
-    }
-
-    const alias = FIELD_ALIASES.find(
-      (entry) => !used.has(entry.field) && entry.alias === normal,
-    );
-    if (alias) {
-      used.add(alias.field);
-      return { index, field: alias.field, source: "alias" };
-    }
-
-    return { index, field: null, source: null };
-  });
+  const result: ColumnMatch[] = matchHeaderFields(IMPORT_FIELDS, headers);
 
   const description = result.find((match) => match.field === "description");
   const hasName = result.some((match) => match.field === "name");
@@ -303,10 +327,12 @@ export function mapHeaders(headers: readonly string[]): ColumnMatch[] {
  * candidate score above an empty shell. The operator still sees the picker and can
  * choose any other row.
  */
-export function suggestHeaderRow(
+function bestHeaderRow<F extends string>(
   rows: readonly (readonly string[])[],
-  limit = HEADER_ROW_LIMIT,
-): HeaderSuggestion | null {
+  limit: number,
+  required: readonly F[],
+  mappingFor: (headers: readonly string[]) => FieldMatch<F>[],
+): { rowNumber: number; mapping: FieldMatch<F>[]; score: number } | null {
   const candidateCount = Math.min(limit, rows.length - 1);
   if (candidateCount < 1) return null;
 
@@ -314,17 +340,21 @@ export function suggestHeaderRow(
     (widest, row) => Math.max(widest, row.length),
     1,
   );
-  let best: HeaderSuggestion | null = null;
+  let best: {
+    rowNumber: number;
+    mapping: FieldMatch<F>[];
+    score: number;
+  } | null = null;
 
   for (let index = 0; index < candidateCount; index += 1) {
     const row = rows[index] ?? [];
-    const mapping = mapHeaders(row);
+    const mapping = mappingFor(row);
     const fields = new Set(
       mapping
         .map((match) => match.field)
-        .filter((field): field is ImportField => field !== null),
+        .filter((field): field is F => field !== null),
     );
-    if (!fields.has("name") || !fields.has("sku")) continue;
+    if (!required.every((field) => fields.has(field))) continue;
 
     const nonEmpty = row.filter(
       (cell) => normaliseCell(cell ?? "") !== "",
@@ -355,6 +385,13 @@ export function suggestHeaderRow(
   }
 
   return best;
+}
+
+export function suggestHeaderRow(
+  rows: readonly (readonly string[])[],
+  limit = HEADER_ROW_LIMIT,
+): HeaderSuggestion | null {
+  return bestHeaderRow<ImportField>(rows, limit, ["name", "sku"], mapHeaders);
 }
 
 /** Up to three distinct non-empty values, for the mapping table's samples. */
@@ -974,3 +1011,431 @@ export function importableRows(evaluation: ImportEvaluation): ImportValues[] {
     .map((row) => row.values)
     .filter((values): values is ImportValues => values !== null);
 }
+
+/* -------------------------------------------------------------------------
+ * Supplier import (Slice H2)
+ *
+ * The same contract as products, against `suppliers`: seven columns, the same
+ * deterministic mapping, and a review that names every row before a write. The
+ * difference is the key: a supplier is matched by name, so duplicates are the
+ * hazard, and an update never clears a field the file leaves blank.
+ * ---------------------------------------------------------------------- */
+
+export const SUPPLIER_FIELD_KEYS = [
+  "name",
+  "contactName",
+  "email",
+  "phone",
+  "address",
+  "leadTimeDays",
+  "notes",
+] as const;
+
+export type SupplierField = (typeof SUPPLIER_FIELD_KEYS)[number];
+
+/**
+ * Labels, aliases and limits mirror the supplier panel form (`supplier-input.ts`),
+ * so a file that imports cleanly can also be typed by hand without surprises.
+ */
+export const SUPPLIER_FIELDS: readonly {
+  key: SupplierField;
+  label: string;
+  required: boolean;
+  aliases: readonly string[];
+  example: string;
+  help: string;
+}[] = [
+  {
+    key: "name",
+    label: "Supplier name",
+    required: true,
+    aliases: ["supplier", "vendor", "wholesaler", "name", "business name"],
+    example: "Polar Line Frozen",
+    help: "1–120 characters. Matched by name; a new name creates a supplier.",
+  },
+  {
+    key: "contactName",
+    label: "Contact",
+    required: false,
+    aliases: ["contact name", "contact person", "rep", "sales rep"],
+    example: "Priya Nair",
+    help: "Optional; the person you deal with.",
+  },
+  {
+    key: "email",
+    label: "Email",
+    required: false,
+    aliases: ["e-mail", "email address", "order email"],
+    example: "orders@polarline.example",
+    help: "Optional; a malformed address blocks the row.",
+  },
+  {
+    key: "phone",
+    label: "Phone",
+    required: false,
+    aliases: ["tel", "telephone", "mobile", "phone number"],
+    example: "02 5550 1188",
+    help: "Optional; text, so leading zeros are kept.",
+  },
+  {
+    key: "address",
+    label: "Address",
+    required: false,
+    aliases: ["street address", "postal address", "address line"],
+    example: "12 Basin Rd, Sydney NSW",
+    help: "Optional; up to 200 characters.",
+  },
+  {
+    key: "leadTimeDays",
+    label: "Lead time (days)",
+    required: false,
+    aliases: ["lead time", "lead time days", "delivery days", "leadtime"],
+    example: "2",
+    help: "Whole days from ordering to delivery.",
+  },
+  {
+    key: "notes",
+    label: "Notes",
+    required: false,
+    aliases: ["note", "comments", "comment", "delivery notes"],
+    example: "Delivers Tue and Fri",
+    help: "Optional; up to 2,000 characters.",
+  },
+];
+
+export const SUPPLIER_FIELD_LABELS: Record<SupplierField, string> =
+  Object.fromEntries(
+    SUPPLIER_FIELDS.map((field) => [field.key, field.label]),
+  ) as Record<SupplierField, string>;
+
+export const SUPPLIER_TEMPLATE_HEADERS = SUPPLIER_FIELDS.map(
+  (field) => field.label,
+);
+
+const SUPPLIER_TEMPLATE_EXAMPLE = [
+  "Polar Line Frozen",
+  "Priya Nair",
+  "orders@polarline.example",
+  "02 5550 1188",
+  "12 Basin Rd, Sydney NSW",
+  "2",
+  "Delivers Tue and Fri",
+];
+
+export function supplierTemplateRows(): string[][] {
+  return [
+    SUPPLIER_TEMPLATE_HEADERS,
+    SUPPLIER_TEMPLATE_HEADERS.map(
+      (_, index) => SUPPLIER_TEMPLATE_EXAMPLE[index] ?? "",
+    ),
+  ];
+}
+
+export type SupplierColumnMatch = FieldMatch<SupplierField>;
+
+export function mapSupplierHeaders(
+  headers: readonly string[],
+): SupplierColumnMatch[] {
+  return matchHeaderFields(SUPPLIER_FIELDS, headers);
+}
+
+export function suggestSupplierHeaderRow(
+  rows: readonly (readonly string[])[],
+  limit = HEADER_ROW_LIMIT,
+): { rowNumber: number; mapping: SupplierColumnMatch[]; score: number } | null {
+  return bestHeaderRow<SupplierField>(
+    rows,
+    limit,
+    ["name"],
+    mapSupplierHeaders,
+  );
+}
+
+export type SupplierValues = {
+  name: string;
+  contactName: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  leadTimeDays: number | null;
+  notes: string | null;
+};
+
+export function normaliseSupplierRow(
+  source: Partial<Record<SupplierField, string>>,
+): { values: SupplierValues | null; errors: string[] } {
+  const errors: string[] = [];
+  const text = (field: SupplierField) => normaliseCell(source[field] ?? "");
+
+  const name = text("name").replace(/\s+/g, " ");
+  if (name === "") errors.push("Enter a supplier name.");
+  else if (name.length > 120)
+    errors.push("Keep the name to 120 characters or fewer.");
+
+  const contactName = text("contactName");
+  if (contactName.length > 80) {
+    errors.push("Keep the contact name to 80 characters or fewer.");
+  }
+
+  const email = text("email");
+  if (email.length > 120) {
+    errors.push("Keep the email to 120 characters or fewer.");
+  } else if (email !== "" && !z.email().safeParse(email).success) {
+    errors.push(`“${email}” is not an email address.`);
+  }
+
+  const phone = text("phone");
+  if (phone.length > 40)
+    errors.push("Keep the phone to 40 characters or fewer.");
+
+  const address = text("address");
+  if (address.length > 200) {
+    errors.push("Keep the address to 200 characters or fewer.");
+  }
+
+  const notes = text("notes");
+  if (notes.length > IMPORT_LIMITS.cell) {
+    errors.push("Keep the notes to 2000 characters or fewer.");
+  }
+
+  const lead = text("leadTimeDays");
+  if (lead !== "" && (!/^\d{1,3}$/.test(lead) || Number(lead) > 365)) {
+    errors.push("Enter the lead time as a whole number of days from 0 to 365.");
+  }
+
+  if (errors.length > 0) return { values: null, errors };
+
+  return {
+    values: {
+      name,
+      contactName: contactName || null,
+      email: email || null,
+      phone: phone || null,
+      address: address || null,
+      leadTimeDays: lead === "" ? null : Number(lead),
+      notes: notes || null,
+    },
+    errors: [],
+  };
+}
+
+export type SupplierRowCandidate = {
+  rowNumber: number;
+  source: Partial<Record<SupplierField, string>>;
+};
+
+export function mapSupplierRows(
+  rows: readonly (readonly string[])[],
+  mapping: readonly { index: number; field: SupplierField | null }[],
+  rowOffset: number,
+): SupplierRowCandidate[] {
+  const columns = new Map<SupplierField, number>();
+  for (const entry of mapping) {
+    if (entry.field !== null && !columns.has(entry.field)) {
+      columns.set(entry.field, entry.index);
+    }
+  }
+
+  return rows.map((row, index) => {
+    const source: Partial<Record<SupplierField, string>> = {};
+    for (const [field, column] of columns) {
+      source[field] = row[column] ?? "";
+    }
+    return { rowNumber: rowOffset + index, source };
+  });
+}
+
+export type SupplierEvaluatedRow = {
+  rowNumber: number;
+  name: string;
+  status: "new" | "update" | "error" | "skip";
+  errors: string[];
+  warnings: string[];
+  values: SupplierValues | null;
+};
+
+export type SupplierEvaluation = {
+  rows: SupplierEvaluatedRow[];
+  counts: {
+    totalRows: number;
+    newRows: number;
+    updateRows: number;
+    skippedRows: number;
+    errorRows: number;
+    warningRows: number;
+  };
+  valid: boolean;
+};
+
+/**
+ * Evaluate every mapped supplier row against the business. Advisory only:
+ * confirm re-runs this, and `private.import_suppliers` checks again.
+ */
+export function evaluateSupplierImport(input: {
+  candidates: readonly SupplierRowCandidate[];
+  updateExisting: boolean;
+  lookups: { suppliers: string[]; archivedSuppliers: string[] };
+}): SupplierEvaluation {
+  const existing = new Set(
+    input.lookups.suppliers.map((name) => name.toLowerCase()),
+  );
+  const archived = new Set(
+    input.lookups.archivedSuppliers.map((name) => name.toLowerCase()),
+  );
+
+  const rows: SupplierEvaluatedRow[] = [];
+  const seen = new Map<string, number>();
+
+  for (const candidate of input.candidates) {
+    const isBlank = Object.values(candidate.source).every(
+      (value) => normaliseCell(value ?? "") === "",
+    );
+    if (isBlank) {
+      rows.push({
+        rowNumber: candidate.rowNumber,
+        name: "",
+        status: "skip",
+        errors: [],
+        warnings: [],
+        values: null,
+      });
+      continue;
+    }
+
+    const { values, errors } = normaliseSupplierRow(candidate.source);
+    if (values === null) {
+      rows.push({
+        rowNumber: candidate.rowNumber,
+        name: normaliseCell(candidate.source.name ?? "").replace(/\s+/g, " "),
+        status: "error",
+        errors,
+        warnings: [],
+        values: null,
+      });
+      continue;
+    }
+
+    const warnings: string[] = [];
+    const key = values.name.toLowerCase();
+    const firstSeen = seen.get(key);
+    if (firstSeen !== undefined) {
+      rows.push({
+        rowNumber: candidate.rowNumber,
+        name: values.name,
+        status: "error",
+        errors: [
+          `“${values.name}” appears earlier in this file (row ${firstSeen}).`,
+        ],
+        warnings,
+        values,
+      });
+      continue;
+    }
+    seen.set(key, candidate.rowNumber);
+
+    if (archived.has(key)) {
+      rows.push({
+        rowNumber: candidate.rowNumber,
+        name: values.name,
+        status: "error",
+        errors: [
+          `“${values.name}” is archived in this business. Restore it before importing.`,
+        ],
+        warnings,
+        values,
+      });
+      continue;
+    }
+
+    const exists = existing.has(key);
+    if (exists && !input.updateExisting) {
+      rows.push({
+        rowNumber: candidate.rowNumber,
+        name: values.name,
+        status: "error",
+        errors: [
+          `“${values.name}” is already a supplier. Tick “Update existing suppliers”, or remove the row.`,
+        ],
+        warnings,
+        values,
+      });
+      continue;
+    }
+
+    if (exists) {
+      warnings.push(
+        `“${values.name}” exists; blank fields in the file leave the current values alone.`,
+      );
+    }
+    if (values.email === null) {
+      warnings.push(
+        "No email address; the supplier can still be ordered from.",
+      );
+    }
+    if (values.leadTimeDays === null) {
+      warnings.push("No lead time; reorder advice cannot use it.");
+    }
+
+    rows.push({
+      rowNumber: candidate.rowNumber,
+      name: values.name,
+      status: exists ? "update" : "new",
+      errors: [],
+      warnings,
+      values,
+    });
+  }
+
+  const counts = {
+    totalRows: rows.length,
+    newRows: rows.filter((row) => row.status === "new").length,
+    updateRows: rows.filter((row) => row.status === "update").length,
+    skippedRows: rows.filter((row) => row.status === "skip").length,
+    errorRows: rows.filter((row) => row.status === "error").length,
+    warningRows: rows.filter((row) => row.warnings.length > 0).length,
+  };
+
+  return { rows, counts, valid: counts.errorRows === 0 };
+}
+
+export const supplierImportRequestSchema = z
+  .object({
+    filename: z.string().trim().min(1).max(200),
+    rowOffset: z.number().int().min(2).max(10),
+    rows: z
+      .array(
+        z.array(z.string().max(IMPORT_LIMITS.cell)).max(IMPORT_LIMITS.columns),
+      )
+      .min(1)
+      .max(IMPORT_LIMITS.rows),
+    mapping: z
+      .array(
+        z.object({
+          index: z
+            .number()
+            .int()
+            .min(0)
+            .max(IMPORT_LIMITS.columns - 1),
+          field: z.enum(SUPPLIER_FIELD_KEYS).nullable(),
+        }),
+      )
+      .min(1)
+      .max(IMPORT_LIMITS.columns),
+    updateExisting: z.boolean(),
+    partial: z.boolean(),
+    idempotencyKey: z.uuid(),
+  })
+  .superRefine((value, context) => {
+    const fields = value.mapping
+      .map((entry) => entry.field)
+      .filter((field): field is SupplierField => field !== null);
+    if (new Set(fields).size !== fields.length) {
+      context.addIssue({
+        code: "custom",
+        message: "Each supplier field can be mapped once.",
+        path: ["mapping"],
+      });
+    }
+  });
+
+export type SupplierImportRequest = z.infer<typeof supplierImportRequestSchema>;

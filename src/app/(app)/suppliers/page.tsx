@@ -79,6 +79,12 @@ export default async function SuppliersPage({
             {suppliers.length} supplier{suppliers.length === 1 ? "" : "s"}
             {filtered ? " match these filters" : ""} · {active.name}
           </p>
+          <PendingLink
+            href="/import?kind=suppliers"
+            className="ml-auto inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-2.5 text-[12px] font-medium hover:border-accent hover:text-accent"
+          >
+            Import
+          </PendingLink>
           {creating ? null : (
             <PanelLink
               href={hrefFor({
@@ -86,7 +92,7 @@ export default async function SuppliersPage({
                 supplier: undefined,
                 edit: undefined,
               })}
-              className="ml-auto inline-flex min-h-[36px] items-center rounded bg-accent px-3 text-[12px] font-semibold text-on-accent"
+              className="inline-flex min-h-[36px] items-center rounded bg-accent px-3 text-[12px] font-semibold text-on-accent"
             >
               New supplier
             </PanelLink>
@@ -122,12 +128,20 @@ export default async function SuppliersPage({
                     Clear filters
                   </PendingLink>
                 ) : (
-                  <PanelLink
-                    href={hrefFor({ new: "true" })}
-                    className="mt-4 inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
-                  >
-                    New supplier
-                  </PanelLink>
+                  <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                    <PanelLink
+                      href={hrefFor({ new: "true" })}
+                      className="inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
+                    >
+                      New supplier
+                    </PanelLink>
+                    <PendingLink
+                      href="/import?kind=suppliers"
+                      className="inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
+                    >
+                      Import a CSV
+                    </PendingLink>
+                  </div>
                 )}
               </div>
             )}

@@ -110,8 +110,8 @@ export default async function SettingsPage() {
             Import and export
           </h2>
           <p className="text-[11px] text-ink-muted">
-            Bring products in from a CSV, or download the template that matches
-            the import exactly.
+            Bring products or suppliers in from a CSV, or download the template
+            that matches the import exactly.
           </p>
         </header>
         <div className="flex flex-wrap items-center gap-2 px-3 py-3">
@@ -121,8 +121,14 @@ export default async function SettingsPage() {
           >
             Import products
           </Link>
+          <Link
+            href="/import?kind=suppliers"
+            className="inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
+          >
+            Import suppliers
+          </Link>
           <span className="text-[11px] text-ink-muted">
-            Suppliers and exports follow in the next slice.
+            Supplier export and the round-trip follow in the next slice.
           </span>
         </div>
       </section>

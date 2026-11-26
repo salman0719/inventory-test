@@ -1,6 +1,10 @@
 import type { PoolClient } from "pg";
 import { runInTenant, withTenant } from "./db";
-import type { ImportOptions, ImportValues } from "./import-input";
+import type {
+  ImportOptions,
+  ImportValues,
+  SupplierValues,
+} from "./import-input";
 
 /**
  * CSV import reads and the one write.
@@ -32,6 +36,8 @@ export type CsvImportSummary = {
 
 export type ImportPageData = {
   suppliers: ImportSupplier[];
+  /** Archived names, so a supplier import can explain why a row is refused. */
+  archivedSuppliers: string[];
   categories: string[];
   products: ImportProductLookup[];
   history: CsvImportSummary[];
@@ -89,6 +95,12 @@ export async function getImportPage(
         order by lower(name)`,
       [businessId],
     );
+    const archivedSuppliers = await client.query<{ name: string }>(
+      `select name from suppliers
+        where business_id = $1 and is_archived = true
+        order by lower(name)`,
+      [businessId],
+    );
     const categories = await client.query<{ name: string }>(
       `select name from categories where business_id = $1 order by lower(name)`,
       [businessId],
@@ -101,6 +113,7 @@ export async function getImportPage(
 
     return {
       suppliers: suppliers.rows,
+      archivedSuppliers: archivedSuppliers.rows.map((row) => row.name),
       categories: categories.rows.map((row) => row.name),
       products: products.rows,
       history,
@@ -189,6 +202,70 @@ export async function importProducts(
   }
 }
 
+export type ImportSuppliersResult =
+  | {
+      ok: true;
+      importId: string;
+      imported: number;
+      updated: number;
+      skipped: number;
+    }
+  | { ok: false; error: string };
+
+/**
+ * Write a supplier import, filling in the fields the file carries. The function
+ * keeps any existing value the file leaves blank, so this cannot wipe contact
+ * details someone typed by hand.
+ */
+export async function importSuppliers(
+  userId: string,
+  businessId: string,
+  input: {
+    filename: string;
+    rows: (SupplierValues & { rowNumber: number })[];
+    totalRows: number;
+    updateExisting: boolean;
+    idempotencyKey: string;
+  },
+): Promise<ImportSuppliersResult> {
+  try {
+    return await withTenant(userId, async (client) => {
+      const result = await client.query<{
+        import_id: string;
+        imported: number;
+        updated: number;
+        skipped: number;
+      }>(
+        `select import_id, imported, updated, skipped
+           from private.import_suppliers($1, $2::jsonb, $3, $4, $5, $6)`,
+        [
+          businessId,
+          JSON.stringify(input.rows),
+          input.updateExisting,
+          input.idempotencyKey,
+          input.filename,
+          input.totalRows,
+        ],
+      );
+
+      const row = result.rows[0];
+      if (!row) {
+        return { ok: false as const, error: "The import was not recorded." };
+      }
+
+      return {
+        ok: true as const,
+        importId: row.import_id,
+        imported: row.imported,
+        updated: row.updated,
+        skipped: row.skipped,
+      };
+    });
+  } catch (error) {
+    return describeSupplierImportError(error);
+  }
+}
+
 /**
  * Only the function's own raised messages reach the operator. A unique violation
  * from a concurrent import is explained; anything else is a bug and is rethrown.
@@ -228,6 +305,47 @@ function describeImportError(error: unknown): {
         ok: false,
         error:
           "A supplier or category changed while you were reviewing. Reload the page and try again.",
+      };
+    default:
+      throw error;
+  }
+}
+
+function describeSupplierImportError(error: unknown): {
+  ok: false;
+  error: string;
+} {
+  const code = (error as { code?: string } | null)?.code;
+  const message = (error as { message?: string } | null)?.message;
+  const constraint = (error as { constraint?: string } | null)?.constraint;
+
+  switch (code) {
+    case "22023":
+      return {
+        ok: false,
+        error: message ?? "The import could not be applied.",
+      };
+    case "42501":
+      return {
+        ok: false,
+        error:
+          "You do not have permission to import suppliers in this business.",
+      };
+    case "P0002":
+      return { ok: false, error: "That business is not yours." };
+    case "23505":
+      return {
+        ok: false,
+        error:
+          constraint === "csv_imports_business_idempotency_key"
+            ? "This import was already saved."
+            : "That supplier already exists.",
+      };
+    case "23503":
+      return {
+        ok: false,
+        error:
+          "A supplier changed while you were reviewing. Reload the page and try again.",
       };
     default:
       throw error;

@@ -600,9 +600,10 @@ export const stocktakeLines = pgTable(
  * One row per completed CSV import: the history the import screen shows, and the
  * idempotency lock that stops a double submit writing twice.
  *
- * Read-only for the application role; `private.import_products` is the only
- * writer. `summary` holds the names created by the run (categories, suppliers),
- * never copies of names that already existed. `created_by` references auth.users
+ * Read-only for the application role; `private.import_products` and
+ * `private.import_suppliers` are the only writers. `summary` holds the names
+ * created by the run (categories, suppliers), never copies of names that already
+ * existed. `created_by` references auth.users
  * in the migration rather than here, as elsewhere in this file.
  */
 export const csvImports = pgTable(

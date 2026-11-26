@@ -9,15 +9,13 @@ import {
   type ConfirmImportResult,
 } from "@/app/(app)/import/actions";
 import { toCsv } from "@/lib/csv";
-import type { CsvImportSummary, ImportPageData } from "@/lib/csv-import";
+import type { ImportPageData } from "@/lib/csv-import";
 import {
-  decodeCsvBytes,
   HEADER_ROW_LIMIT,
   IMPORT_FIELDS,
   IMPORT_LIMITS,
   mapHeaders,
   productTemplateRows,
-  trimTrailingBlankRows,
   sampleValues,
   suggestHeaderRow,
   type ColumnMatch,
@@ -26,6 +24,8 @@ import {
   type ImportOptions,
 } from "@/lib/import-input";
 import { formatMoney } from "@/lib/product-input";
+import { ImportHistory } from "./import-history";
+import { readCsvFile } from "./read-csv-file";
 
 const INPUT = "h-9 rounded border border-line bg-surface px-2 text-[13px]";
 const LABEL = "text-[10px] uppercase tracking-[0.07em] text-ink-muted";
@@ -46,15 +46,6 @@ const DEFAULT_OPTIONS: ImportOptions = {
 };
 
 type ImportResult = Extract<ConfirmImportResult, { ok: true }>;
-
-function describeReadError(
-  error: { code?: string; message?: string } | undefined,
-): string {
-  if (error?.code === "UndetectableDelimiter") {
-    return "That file is not a comma, semicolon or tab separated text file. Save it as a CSV and try again.";
-  }
-  return `The CSV could not be read: ${error?.message ?? "unknown error"}.`;
-}
 
 export function ImportWorkbench({
   data,
@@ -120,88 +111,28 @@ export function ImportWorkbench({
 
     setError(null);
     setNotice(null);
-    if (file.size > IMPORT_LIMITS.bytes) {
-      setError(
-        `That file is ${(file.size / 1_000_000).toFixed(1)} MB. The limit is 1 MB.`,
-      );
+
+    const read = await readCsvFile(file);
+    if (!read.ok) {
+      setError(read.error);
       return;
     }
 
-    try {
-      const decoded = decodeCsvBytes(new Uint8Array(await file.arrayBuffer()));
-      if (decoded.text.trim() === "") {
-        setError(
-          "The file is empty. Add a header row and at least one product row.",
-        );
-        return;
-      }
-      if (decoded.encoding !== "utf-8") {
-        setNotice(
-          decoded.encoding === "windows-1252"
-            ? "This file is not UTF-8. It was read as Windows-1252; check names with accents."
-            : `This file was read as ${decoded.encoding.toUpperCase()}.`,
-        );
-      }
-
-      const text = decoded.text;
-      const Papa = (await import("papaparse")).default;
-      // Detect the delimiter with blank rows removed, then parse again with the
-      // detected delimiter and no skipping. This keeps interior blank rows for
-      // the review's skipped count; the final line terminator is trimmed below.
-      const detection = Papa.parse<string[]>(text, {
-        skipEmptyLines: "greedy",
-      });
-      if (detection.errors.length > 0) {
-        setError(describeReadError(detection.errors[0]));
-        return;
-      }
-      const parsed = Papa.parse<string[]>(text, {
-        delimiter: detection.meta.delimiter || ",",
-      });
-      if (parsed.errors.length > 0) {
-        setError(describeReadError(parsed.errors[0]));
-        return;
-      }
-
-      const parsedRows = trimTrailingBlankRows(
-        parsed.data.map((row) => row.map((cell) => String(cell ?? ""))),
-      );
-      if (parsedRows.length < 2) {
-        setError("The file needs a header row and at least one product row.");
-        return;
-      }
-
-      const columns = Math.max(...parsedRows.map((row) => row.length));
-      if (columns > IMPORT_LIMITS.columns) {
-        setError(
-          `The file has ${columns} columns. The limit is ${IMPORT_LIMITS.columns}.`,
-        );
-        return;
-      }
-      if (parsedRows.length > 600) {
-        setError(
-          "That file has more than 500 product rows. Split it before importing.",
-        );
-        return;
-      }
-
-      const suggestion = suggestHeaderRow(parsedRows);
-      setRows(parsedRows);
-      setFilename(file.name);
-      setHeaderRow(suggestion?.rowNumber ?? 1);
-      setSuggestedHeaderRow(
-        suggestion && suggestion.rowNumber > 1 ? suggestion.rowNumber : null,
-      );
-      setMapping(suggestion?.mapping ?? mapHeaders(parsedRows[0] ?? []));
-      setDefaultSupplierId("");
-      setOptions(DEFAULT_OPTIONS);
-      setEvaluation(null);
-      setResult(null);
-      setIdempotencyKey(crypto.randomUUID());
-      setStep(2);
-    } catch {
-      setError("The file could not be read. Save it as a CSV and try again.");
-    }
+    setNotice(read.notice);
+    const suggestion = suggestHeaderRow(read.rows);
+    setRows(read.rows);
+    setFilename(read.filename);
+    setHeaderRow(suggestion?.rowNumber ?? 1);
+    setSuggestedHeaderRow(
+      suggestion && suggestion.rowNumber > 1 ? suggestion.rowNumber : null,
+    );
+    setMapping(suggestion?.mapping ?? mapHeaders(read.rows[0] ?? []));
+    setDefaultSupplierId("");
+    setOptions(DEFAULT_OPTIONS);
+    setEvaluation(null);
+    setResult(null);
+    setIdempotencyKey(crypto.randomUUID());
+    setStep(2);
   }
 
   function chooseHeaderRow(value: number) {
@@ -411,7 +342,7 @@ export function ImportWorkbench({
             </section>
           </div>
 
-          <History history={data.history} />
+          <ImportHistory history={data.history} />
         </>
       ) : null}
 
@@ -639,7 +570,7 @@ export function ImportWorkbench({
             </div>
           </section>
 
-          <History history={data.history} />
+          <ImportHistory history={data.history} />
         </>
       ) : null}
     </div>
@@ -948,40 +879,5 @@ function Figure({
         {value}
       </dd>
     </div>
-  );
-}
-
-function History({ history }: { history: CsvImportSummary[] }) {
-  if (history.length === 0) return null;
-
-  return (
-    <section className="rounded border border-line bg-surface">
-      <header className="border-b border-line px-3 py-2">
-        <h2 className="text-[13px] font-semibold">Recent imports</h2>
-        <p className="text-[11px] text-ink-muted">
-          The last eight runs in this business.
-        </p>
-      </header>
-      <ul className="divide-y divide-line">
-        {history.map((entry) => (
-          <li
-            key={entry.id}
-            className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-3 py-1.5 text-[12px]"
-          >
-            <span className="font-medium">{entry.filename}</span>
-            <span className="font-mono text-[11px] text-ink-faint">
-              {entry.createdAt.slice(0, 10)}
-            </span>
-            <span className="ml-auto text-[11px] text-ink-muted">
-              {entry.importedRows} new · {entry.updatedRows} updated ·{" "}
-              {entry.skippedRows} skipped
-              {entry.openingMovements > 0
-                ? ` · ${entry.openingMovements} opening`
-                : ""}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }
