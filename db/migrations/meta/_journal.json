@@ -169,6 +169,13 @@
       "when": 1796448000000,
       "tag": "0023_import_update_preserves_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1796534400000,
+      "tag": "0024_reset_clears_import_history",
+      "breakpoints": true
     }
   ]
 }

@@ -403,4 +403,29 @@ describe("private.reset_demo_business", () => {
       expect(error.code).toBe("22023");
     });
   });
+
+  it("clears import history for this business and leaves another business alone", async () => {
+    await pool.query(
+      `insert into csv_imports
+         (business_id, kind, filename, idempotency_key, total_rows, created_by)
+       values ($1, 'products', 'reset-history.csv', $2, 1, $3),
+              ($4, 'products', 'other-history.csv', $5, 1, $3)`,
+      [ids.business, randomUUID(), ids.owner, ids.otherBusiness, randomUUID()],
+    );
+
+    await asUser(ids.owner, async (client) => {
+      await reset(client);
+      const left = await client.query<{ n: number }>(
+        `select count(*)::int as n from csv_imports where business_id = $1`,
+        [ids.business],
+      );
+      expect(left.rows[0]?.n).toBe(0);
+    });
+
+    const other = await pool.query<{ n: number }>(
+      `select count(*)::int as n from csv_imports where business_id = $1`,
+      [ids.otherBusiness],
+    );
+    expect(other.rows[0]?.n).toBe(1);
+  });
 });
