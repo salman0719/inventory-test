@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  decodeCsvBytes,
   evaluateImport,
   importRequestSchema,
   mapHeaders,
@@ -8,6 +9,7 @@ import {
   normaliseHeader,
   normaliseImportRow,
   parseMoneyText,
+  trimTrailingBlankRows,
   parseQuantityText,
   type ImportLookups,
   type ImportOptions,
@@ -150,6 +152,56 @@ describe("cell and number normalisation", () => {
   });
 });
 
+describe("CSV file text", () => {
+  it("decodes UTF-8 and removes a BOM", () => {
+    const bytes = new Uint8Array([
+      0xef,
+      0xbb,
+      0xbf,
+      ...new TextEncoder().encode("Product,SKU"),
+    ]);
+    expect(decodeCsvBytes(bytes)).toEqual({
+      text: "Product,SKU",
+      encoding: "utf-8",
+    });
+  });
+
+  it("decodes Windows-1252 accents instead of replacing them", () => {
+    const bytes = new Uint8Array([0x43, 0x61, 0x66, 0xe9]);
+    expect(decodeCsvBytes(bytes)).toEqual({
+      text: "Café",
+      encoding: "windows-1252",
+    });
+  });
+
+  it("decodes UTF-16LE with a BOM", () => {
+    const bytes = new Uint8Array([0xff, 0xfe, 0x4e, 0x00, 0x61, 0x00]);
+    expect(decodeCsvBytes(bytes)).toEqual({
+      text: "Na",
+      encoding: "utf-16le",
+    });
+  });
+
+  it("keeps interior blank rows and trims trailing ones", () => {
+    expect(
+      trimTrailingBlankRows([
+        ["Product", "SKU"],
+        ["Coffee", "CAF-001"],
+        [""],
+        ["   "],
+        ["Tea", "CAF-002"],
+        [""],
+      ]),
+    ).toEqual([
+      ["Product", "SKU"],
+      ["Coffee", "CAF-001"],
+      [""],
+      ["   "],
+      ["Tea", "CAF-002"],
+    ]);
+  });
+});
+
 describe("row normalisation", () => {
   it("uppercases the SKU but keeps leading zeros and barcode text", () => {
     const { values, errors } = normaliseImportRow({
@@ -224,7 +276,7 @@ describe("evaluation", () => {
     ]);
     expect(result.counts.newRows).toBe(1);
     expect(result.counts.errorRows).toBe(1);
-    expect(result.rows[1]?.errors[0]).toContain("line 2");
+    expect(result.rows[1]?.errors[0]).toContain("row 2");
   });
 
   it("blocks an existing SKU unless update is chosen", () => {
@@ -383,7 +435,7 @@ describe("request schema", () => {
 });
 
 describe("mapping rows", () => {
-  it("keeps the file's line numbers", () => {
+  it("keeps the file's row numbers", () => {
     const mapped = mapRows(
       [
         ["Coffee", "CAF-001"],

@@ -11,10 +11,12 @@ import {
 import { toCsv } from "@/lib/csv";
 import type { CsvImportSummary, ImportPageData } from "@/lib/csv-import";
 import {
+  decodeCsvBytes,
   IMPORT_FIELDS,
   IMPORT_LIMITS,
   mapHeaders,
   productTemplateRows,
+  trimTrailingBlankRows,
   sampleValues,
   type ColumnMatch,
   type ImportEvaluation,
@@ -43,6 +45,15 @@ const DEFAULT_OPTIONS: ImportOptions = {
 
 type ImportResult = Extract<ConfirmImportResult, { ok: true }>;
 
+function describeReadError(
+  error: { code?: string; message?: string } | undefined,
+): string {
+  if (error?.code === "UndetectableDelimiter") {
+    return "That file is not a comma, semicolon or tab separated text file. Save it as a CSV and try again.";
+  }
+  return `The CSV could not be read: ${error?.message ?? "unknown error"}.`;
+}
+
 export function ImportWorkbench({
   data,
   currency,
@@ -56,6 +67,7 @@ export function ImportWorkbench({
   const [step, setStep] = useState<Step>(1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [filename, setFilename] = useState("");
   const [rows, setRows] = useState<string[][]>([]);
   const [headerRow, setHeaderRow] = useState(1);
@@ -102,6 +114,7 @@ export function ImportWorkbench({
     if (!file) return;
 
     setError(null);
+    setNotice(null);
     if (file.size > IMPORT_LIMITS.bytes) {
       setError(
         `That file is ${(file.size / 1_000_000).toFixed(1)} MB. The limit is 1 MB.`,
@@ -110,20 +123,43 @@ export function ImportWorkbench({
     }
 
     try {
-      const text = await file.text();
-      const Papa = (await import("papaparse")).default;
-      const parsed = Papa.parse<string[]>(text, {
-        skipEmptyLines: "greedy",
-      });
-      if (parsed.errors.length > 0) {
+      const decoded = decodeCsvBytes(new Uint8Array(await file.arrayBuffer()));
+      if (decoded.text.trim() === "") {
         setError(
-          `The CSV could not be read: ${parsed.errors[0]?.message ?? "unknown error"}.`,
+          "The file is empty. Add a header row and at least one product row.",
         );
         return;
       }
+      if (decoded.encoding !== "utf-8") {
+        setNotice(
+          decoded.encoding === "windows-1252"
+            ? "This file is not UTF-8. It was read as Windows-1252; check names with accents."
+            : `This file was read as ${decoded.encoding.toUpperCase()}.`,
+        );
+      }
 
-      const parsedRows = parsed.data.map((row) =>
-        row.map((cell) => String(cell ?? "")),
+      const text = decoded.text;
+      const Papa = (await import("papaparse")).default;
+      // Detect the delimiter with blank rows removed, then parse again with the
+      // detected delimiter and no skipping. This keeps interior blank rows for
+      // the review's skipped count; the final line terminator is trimmed below.
+      const detection = Papa.parse<string[]>(text, {
+        skipEmptyLines: "greedy",
+      });
+      if (detection.errors.length > 0) {
+        setError(describeReadError(detection.errors[0]));
+        return;
+      }
+      const parsed = Papa.parse<string[]>(text, {
+        delimiter: detection.meta.delimiter || ",",
+      });
+      if (parsed.errors.length > 0) {
+        setError(describeReadError(parsed.errors[0]));
+        return;
+      }
+
+      const parsedRows = trimTrailingBlankRows(
+        parsed.data.map((row) => row.map((cell) => String(cell ?? ""))),
       );
       if (parsedRows.length < 2) {
         setError("The file needs a header row and at least one product row.");
@@ -246,6 +282,7 @@ export function ImportWorkbench({
     setEvaluation(null);
     setResult(null);
     setError(null);
+    setNotice(null);
     setIdempotencyKey(crypto.randomUUID());
   }
 
@@ -298,12 +335,23 @@ export function ImportWorkbench({
         </p>
       ) : null}
 
+      {notice ? (
+        <p
+          role="status"
+          className="rounded border border-warning/40 bg-warning-soft px-3 py-2 text-[12px] text-warning"
+        >
+          {notice}
+        </p>
+      ) : null}
+
       {step === 1 ? (
         <>
           <div className="grid gap-3 min-[760px]:grid-cols-2">
             <section className="rounded border border-line bg-surface">
               <header className="border-b border-line px-3 py-2">
-                <h2 className="text-[13px] font-semibold">Upload a CSV</h2>
+                <h2 className="text-[13px] font-semibold">
+                  Upload a CSV or TSV
+                </h2>
                 <p className="text-[11px] text-ink-muted">
                   One row per product. The file is read in this browser; only
                   the mapped rows are sent to be checked.
@@ -311,11 +359,11 @@ export function ImportWorkbench({
               </header>
               <div className="flex flex-col gap-2 px-3 py-3">
                 <label className={`${PRIMARY} w-fit cursor-pointer`}>
-                  Choose a CSV
+                  Choose a file
                   <input
                     ref={fileRef}
                     type="file"
-                    accept=".csv,text/csv"
+                    accept=".csv,.tsv,text/csv,text/tab-separated-values"
                     className="sr-only"
                     onChange={readFile}
                   />
@@ -393,7 +441,7 @@ export function ImportWorkbench({
                   (_, index) => index + 1,
                 ).map((number) => (
                   <option key={number} value={number}>
-                    Line {number}
+                    Row {number}
                   </option>
                 ))}
               </select>
@@ -630,7 +678,7 @@ function ReviewStep({
           <ul className="mt-1 space-y-0.5 text-[11px] text-danger">
             {errors.slice(0, 30).map(({ row, message }, index) => (
               <li key={`${row.rowNumber}-${index}`}>
-                Line {row.rowNumber}: {message}
+                Row {row.rowNumber}: {message}
               </li>
             ))}
           </ul>
@@ -652,7 +700,7 @@ function ReviewStep({
           <ul className="mt-1 space-y-0.5 text-[11px] text-warning">
             {warnings.slice(0, 8).map(({ row, message }, index) => (
               <li key={`${row.rowNumber}-warning-${index}`}>
-                Line {row.rowNumber}: {message}
+                Row {row.rowNumber}: {message}
               </li>
             ))}
           </ul>
@@ -686,7 +734,7 @@ function ReviewStep({
         <table className="w-full min-w-[560px] text-[12px]">
           <thead>
             <tr className="border-b border-line bg-panel text-left text-[10px] uppercase tracking-[0.07em] text-ink-muted">
-              <th className="px-2 py-1.5 font-medium">Line</th>
+              <th className="px-2 py-1.5 font-medium">Row</th>
               <th className="px-2 py-1.5 font-medium">Product</th>
               <th className="px-2 py-1.5 font-medium">SKU</th>
               <th className="px-2 py-1.5 text-right font-medium">Opening</th>

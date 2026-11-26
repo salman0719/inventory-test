@@ -307,6 +307,69 @@ export function normaliseCell(value: string): string {
     .trim();
 }
 
+export type CsvEncoding = "utf-8" | "utf-16le" | "utf-16be" | "windows-1252";
+
+function startsWithBytes(
+  bytes: Uint8Array,
+  signature: readonly number[],
+): boolean {
+  return signature.every((byte, index) => bytes[index] === byte);
+}
+
+/**
+ * Decode a CSV file without silently replacing characters. UTF-8 is strict; an
+ * invalid byte sequence is read as Windows-1252, the common Excel fallback, and
+ * the caller shows which encoding was used. UTF-16 files with a BOM are decoded
+ * as well. UTF-16 without a BOM remains unsupported rather than guessed.
+ */
+export function decodeCsvBytes(bytes: Uint8Array): {
+  text: string;
+  encoding: CsvEncoding;
+} {
+  if (startsWithBytes(bytes, [0xff, 0xfe])) {
+    return {
+      text: new TextDecoder("utf-16le").decode(bytes),
+      encoding: "utf-16le",
+    };
+  }
+  if (startsWithBytes(bytes, [0xfe, 0xff])) {
+    return {
+      text: new TextDecoder("utf-16be").decode(bytes),
+      encoding: "utf-16be",
+    };
+  }
+
+  try {
+    return {
+      text: new TextDecoder("utf-8", { fatal: true }).decode(bytes),
+      encoding: "utf-8",
+    };
+  } catch {
+    return {
+      text: new TextDecoder("windows-1252").decode(bytes),
+      encoding: "windows-1252",
+    };
+  }
+}
+
+/**
+ * Papa's delimiter guess lowers the average field count when blank rows are
+ * present, so the caller detects the delimiter on a blank-skipping pass and
+ * reparses with it. This removes only the final line terminator's empty record:
+ * interior blank rows stay so the evaluator can count them.
+ */
+export function trimTrailingBlankRows(
+  rows: readonly (readonly string[])[],
+): string[][] {
+  let end = rows.length;
+  while (end > 0) {
+    const row = rows[end - 1];
+    if (!row || !row.every((cell) => normaliseCell(cell) === "")) break;
+    end -= 1;
+  }
+  return rows.slice(0, end).map((row) => row.map((cell) => String(cell ?? "")));
+}
+
 export type TextValue =
   { ok: true; value: string | null } | { ok: false; error: string };
 
@@ -492,7 +555,7 @@ export type RowCandidate = {
   source: Partial<Record<ImportField, string>>;
 };
 
-/** One mapped row per CSV row, keeping the file's line number for messages. */
+/** One mapped row per CSV row, keeping the file's row number for messages. */
 export function mapRows(
   rows: readonly (readonly string[])[],
   mapping: readonly { index: number; field: ImportField | null }[],
@@ -678,7 +741,7 @@ export function evaluateImport(input: {
         sku: values.sku,
         status: "error",
         errors: [
-          `SKU ${values.sku} already appears on line ${firstSeen} of this file.`,
+          `SKU ${values.sku} already appears on row ${firstSeen} of this file.`,
         ],
         warnings,
         values,
