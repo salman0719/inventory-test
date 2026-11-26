@@ -234,6 +234,16 @@ export type ColumnMatch = {
   source: "header" | "alias" | null;
 };
 
+/** Header rows are offered from the first five records, matching the picker. */
+export const HEADER_ROW_LIMIT = 5;
+
+export type HeaderSuggestion = {
+  rowNumber: number;
+  mapping: ColumnMatch[];
+  /** Internal ordering score; not shown to the operator. */
+  score: number;
+};
+
 /**
  * Deterministic mapping: exact label/key first, then the alias table. Each target
  * is used once, so two columns never claim the same field.
@@ -282,6 +292,69 @@ export function mapHeaders(headers: readonly string[]): ColumnMatch[] {
   }
 
   return result;
+}
+
+/**
+ * Suggest the row that looks most like column names.
+ *
+ * This is deliberately a proposal, not a parse decision. A row must map both
+ * required fields before it can win; exact labels score above aliases, a full-width
+ * row scores above a one-cell title, and mapped columns that contain data below the
+ * candidate score above an empty shell. The operator still sees the picker and can
+ * choose any other row.
+ */
+export function suggestHeaderRow(
+  rows: readonly (readonly string[])[],
+  limit = HEADER_ROW_LIMIT,
+): HeaderSuggestion | null {
+  const candidateCount = Math.min(limit, rows.length - 1);
+  if (candidateCount < 1) return null;
+
+  const maxColumns = rows.reduce(
+    (widest, row) => Math.max(widest, row.length),
+    1,
+  );
+  let best: HeaderSuggestion | null = null;
+
+  for (let index = 0; index < candidateCount; index += 1) {
+    const row = rows[index] ?? [];
+    const mapping = mapHeaders(row);
+    const fields = new Set(
+      mapping
+        .map((match) => match.field)
+        .filter((field): field is ImportField => field !== null),
+    );
+    if (!fields.has("name") || !fields.has("sku")) continue;
+
+    const nonEmpty = row.filter(
+      (cell) => normaliseCell(cell ?? "") !== "",
+    ).length;
+    if (nonEmpty < 2) continue;
+
+    const exact = mapping.filter((match) => match.source === "header").length;
+    const aliases = mapping.filter((match) => match.source === "alias").length;
+    const following = rows.slice(index + 1, index + 6);
+    const mappedColumns = mapping
+      .filter((match) => match.field !== null)
+      .map((match) => match.index);
+    const populatedColumns = mappedColumns.filter((column) =>
+      following.some((dataRow) => normaliseCell(dataRow[column] ?? "") !== ""),
+    ).length;
+    const dataCoverage =
+      mappedColumns.length === 0 ? 0 : populatedColumns / mappedColumns.length;
+    const score =
+      exact * 4 +
+      aliases * 3 +
+      4 +
+      (nonEmpty / maxColumns) * 4 +
+      dataCoverage * 3;
+
+    if (!best || score > best.score) {
+      best = { rowNumber: index + 1, mapping, score };
+    }
+  }
+
+  return best;
 }
 
 /** Up to three distinct non-empty values, for the mapping table's samples. */

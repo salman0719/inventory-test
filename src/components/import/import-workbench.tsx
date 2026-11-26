@@ -12,12 +12,14 @@ import { toCsv } from "@/lib/csv";
 import type { CsvImportSummary, ImportPageData } from "@/lib/csv-import";
 import {
   decodeCsvBytes,
+  HEADER_ROW_LIMIT,
   IMPORT_FIELDS,
   IMPORT_LIMITS,
   mapHeaders,
   productTemplateRows,
   trimTrailingBlankRows,
   sampleValues,
+  suggestHeaderRow,
   type ColumnMatch,
   type ImportEvaluation,
   type ImportField,
@@ -71,6 +73,9 @@ export function ImportWorkbench({
   const [filename, setFilename] = useState("");
   const [rows, setRows] = useState<string[][]>([]);
   const [headerRow, setHeaderRow] = useState(1);
+  const [suggestedHeaderRow, setSuggestedHeaderRow] = useState<number | null>(
+    null,
+  );
   const [mapping, setMapping] = useState<ColumnMatch[]>([]);
   const [defaultSupplierId, setDefaultSupplierId] = useState("");
   const [options, setOptions] = useState<ImportOptions>(DEFAULT_OPTIONS);
@@ -180,11 +185,14 @@ export function ImportWorkbench({
         return;
       }
 
-      const firstMapping = mapHeaders(parsedRows[0] ?? []);
+      const suggestion = suggestHeaderRow(parsedRows);
       setRows(parsedRows);
       setFilename(file.name);
-      setHeaderRow(1);
-      setMapping(firstMapping);
+      setHeaderRow(suggestion?.rowNumber ?? 1);
+      setSuggestedHeaderRow(
+        suggestion && suggestion.rowNumber > 1 ? suggestion.rowNumber : null,
+      );
+      setMapping(suggestion?.mapping ?? mapHeaders(parsedRows[0] ?? []));
       setDefaultSupplierId("");
       setOptions(DEFAULT_OPTIONS);
       setEvaluation(null);
@@ -277,6 +285,7 @@ export function ImportWorkbench({
     setFilename("");
     setMapping([]);
     setHeaderRow(1);
+    setSuggestedHeaderRow(null);
     setDefaultSupplierId("");
     setOptions(DEFAULT_OPTIONS);
     setEvaluation(null);
@@ -428,7 +437,14 @@ export function ImportWorkbench({
 
           <div className="flex flex-wrap items-end gap-3 border-b border-line px-3 py-2.5">
             <label className="flex flex-col gap-1">
-              <span className={LABEL}>Header row</span>
+              <span className={`${LABEL} flex items-center gap-1.5`}>
+                Header row
+                {suggestedHeaderRow === headerRow ? (
+                  <span className="rounded bg-success-soft px-1.5 py-0.5 text-[10px] font-medium normal-case tracking-normal text-success">
+                    Suggested
+                  </span>
+                ) : null}
+              </span>
               <select
                 value={headerRow}
                 onChange={(event) =>
@@ -437,7 +453,12 @@ export function ImportWorkbench({
                 className={INPUT}
               >
                 {Array.from(
-                  { length: Math.min(5, Math.max(rows.length - 1, 1)) },
+                  {
+                    length: Math.min(
+                      HEADER_ROW_LIMIT,
+                      Math.max(rows.length - 1, 1),
+                    ),
+                  },
                   (_, index) => index + 1,
                 ).map((number) => (
                   <option key={number} value={number}>
@@ -462,6 +483,13 @@ export function ImportWorkbench({
                 ))}
               </select>
             </label>
+
+            {suggestedHeaderRow !== null && suggestedHeaderRow === headerRow ? (
+              <p className="basis-full text-[11px] text-success">
+                Column names found on row {suggestedHeaderRow}. Check the
+                mapping before continuing, or choose another header row.
+              </p>
+            ) : null}
           </div>
 
           <div className="table-wrap overflow-x-auto">

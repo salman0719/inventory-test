@@ -9,6 +9,7 @@ import {
   normaliseHeader,
   normaliseImportRow,
   parseMoneyText,
+  suggestHeaderRow,
   trimTrailingBlankRows,
   parseQuantityText,
   type ImportLookups,
@@ -109,6 +110,70 @@ describe("header mapping", () => {
   it("normalises case, punctuation and currency marks in headers", () => {
     expect(normaliseHeader("  $Cost Price ")).toBe("cost price");
     expect(normaliseHeader("Qty_on-hand")).toBe("qty on hand");
+  });
+
+  it("suggests a header below title and blank rows", () => {
+    const suggestion = suggestHeaderRow([
+      ["Product catalogue export"],
+      ["Exported 2026-11-26"],
+      [""],
+      ["Product name", "SKU", "Cost price", "Opening stock"],
+      ["House blend", "CAF-001", "18.50", "12"],
+    ]);
+    expect(suggestion?.rowNumber).toBe(4);
+    expect(suggestion?.mapping.map((entry) => entry.field)).toEqual([
+      "name",
+      "sku",
+      "costPrice",
+      "opening",
+    ]);
+  });
+
+  it("suggests an alias-only header", () => {
+    const suggestion = suggestHeaderRow([
+      ["Catalogue"],
+      ["Item", "Our Ref", "Trade Price"],
+      ["Coffee", "CAF-001", "18.50"],
+      ["Tea", "CAF-002", "12.00"],
+    ]);
+    expect(suggestion?.rowNumber).toBe(2);
+    expect(suggestion?.mapping.map((entry) => entry.field)).toEqual([
+      "name",
+      "sku",
+      "costPrice",
+    ]);
+  });
+
+  it("does not invent a header in a headerless file", () => {
+    expect(
+      suggestHeaderRow([
+        ["House blend", "CAF-001"],
+        ["Tea", "CAF-002"],
+      ]),
+    ).toBeNull();
+  });
+
+  it("does not let a one-column title outrank the real header", () => {
+    const suggestion = suggestHeaderRow([
+      ["Product"],
+      ["Item", "SKU", "Cost"],
+      ["Coffee", "CAF-001", "18.50"],
+    ]);
+    expect(suggestion?.rowNumber).toBe(2);
+  });
+
+  it("only scores the first five rows", () => {
+    expect(
+      suggestHeaderRow([
+        ["One"],
+        ["Two"],
+        ["Three"],
+        ["Four"],
+        ["Five"],
+        ["Product name", "SKU"],
+        ["Coffee", "CAF-001"],
+      ]),
+    ).toBeNull();
   });
 });
 
