@@ -143,6 +143,12 @@ export default async function ProductsPage({
             >
               Print labels
             </PendingLink>
+            <PendingLink
+              href="/import"
+              className="inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-2.5 text-[12px] font-medium hover:border-accent hover:text-accent"
+            >
+              Import
+            </PendingLink>
             {creating ? null : (
               <PanelLink
                 href={hrefFor({
@@ -195,12 +201,20 @@ export default async function ProductsPage({
                     Clear filters
                   </PendingLink>
                 ) : (
-                  <PanelLink
-                    href={hrefFor({ new: "true" })}
-                    className="mt-4 inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
-                  >
-                    New product
-                  </PanelLink>
+                  <div className="mt-4 flex flex-wrap justify-center gap-2">
+                    <PanelLink
+                      href={hrefFor({ new: "true" })}
+                      className="inline-flex min-h-[36px] items-center rounded bg-accent px-3 text-[12px] font-semibold text-on-accent"
+                    >
+                      New product
+                    </PanelLink>
+                    <PendingLink
+                      href="/import"
+                      className="inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
+                    >
+                      Import a CSV
+                    </PendingLink>
+                  </div>
                 )}
               </div>
             )}

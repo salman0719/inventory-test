@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CategoryForm } from "@/components/products/category-form";
 import { ResetDemoPanel } from "@/components/settings/reset-demo-panel";
 import { NoBusinessNotice } from "@/components/no-business-notice";
@@ -97,6 +98,32 @@ export default async function SettingsPage() {
 
         <div className="border-t border-line px-3 py-2.5">
           <CategoryForm />
+        </div>
+      </section>
+
+      <section
+        aria-labelledby="import-heading"
+        className="max-w-[560px] rounded border border-line bg-surface"
+      >
+        <header className="border-b border-line px-3 py-2">
+          <h2 id="import-heading" className="text-[13px] font-semibold">
+            Import and export
+          </h2>
+          <p className="text-[11px] text-ink-muted">
+            Bring products in from a CSV, or download the template that matches
+            the import exactly.
+          </p>
+        </header>
+        <div className="flex flex-wrap items-center gap-2 px-3 py-3">
+          <Link
+            href="/import"
+            className="inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
+          >
+            Import products
+          </Link>
+          <span className="text-[11px] text-ink-muted">
+            Suppliers and exports follow in the next slice.
+          </span>
         </div>
       </section>
 
