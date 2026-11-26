@@ -181,6 +181,18 @@ Add date, task, verification method, and result.
   walked. Value-shape mapping proposals from the prototype are not in H1; mapping
   is header/alias plus manual. Supplier import/export (H2) is not built. `0021` is
   local only; hosted is still at 13 tracked migrations.
+  **Follow-up fixes (2026-11-26):** interior blank rows now reach the evaluator
+  and count as skipped, while only the final line terminator is trimmed. Empty
+  files and undetectable delimiters get plain sentences instead of Papa errors.
+  CSV bytes decode as strict UTF-8, UTF-16 with a BOM, or Windows-1252 with a
+  visible notice. The picker offers `.tsv`, and messages say Row rather than Line.
+  The 16-file lab re-ran every fixture: the messy file reports 10 rows, 3 new, 6
+  errors and 1 skipped; empty and JSON files explain the problem; the Latin-1 file
+  reviews `Café beans` as new; the title-row file maps at Row 4. No confirm was
+  clicked. **Verified:** `npm run check` exit 0 (0 errors, the same 2 pre-existing
+  warnings in `src/lib/permissions.ts`); `npm run test` 278 passed in 37 files,
+  including 32 import contract tests; `npm run build` exit 0 with `/import`;
+  `npm run secrets:check` ok.
 
 - **2026-11-25 — Slice G built: optional barcodes, printable QR labels and
   Android scanning (branch `feat/barcode-qr`, stacked on `feat/product-suppliers`,

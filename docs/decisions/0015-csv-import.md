@@ -49,6 +49,11 @@ per-import request is involved.
 - **DR9 — No AI, no third-party processing.** The file is read locally; mapped rows
   go only to this application's server. Revisiting suggestions requires a new
   decision, a provider review and Gate D approval.
+- **DR10 — Text decoding and blank rows are explicit.** UTF-8 is strict; UTF-16
+  with a BOM is decoded; invalid UTF-8 falls back to Windows-1252 with a visible
+  notice. Interior blank rows are preserved and counted; the final line terminator
+  is not a row. Delimiter detection runs on a blank-skipping pass, then the file is
+  reparsed with that delimiter so the blanks survive.
 
 ## Consequences
 
@@ -61,5 +66,5 @@ per-import request is involved.
 - The demo reset deletes products and the ledger but not `csv_imports`; the import
   history therefore survives a reset. This is recorded as a known limitation, not
   hidden.
-- The database function and its 12 tests are the authority; the 28 contract tests
-  cover parsing, mapping and row evaluation.
+- The database function and its 12 tests are the authority; the 32 contract tests
+  cover decoding, parsing, mapping and row evaluation.
