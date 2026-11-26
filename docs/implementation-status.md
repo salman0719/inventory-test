@@ -23,8 +23,9 @@ Keep this file current. Do not report a task as complete until it has been verif
   hosted Supabase database seeded through `db:seed:hosted` and migrated through
   `0012` — 13 tracked)
 - Last updated: 2026-11-26 (Slice H1 built on `feat/csv-import`; deterministic
-  mapping, preview, product import function, history, entry points and browser
-  walk; supplier import/export (H2) not built; not merged, pushed or deployed)
+  mapping, header-row suggestion, preview, product import function, history, entry
+  points and browser walk; supplier import/export (H2) not built; not merged,
+  pushed or deployed)
 
 ## Phase checklist
 
@@ -179,8 +180,9 @@ Add date, task, verification method, and result.
   driven through the screen (they are covered by the contract and DB tests); the
   viewer role, the empty-catalogue entry link and a hosted deployment were not
   walked. Value-shape mapping proposals from the prototype are not in H1; mapping
-  is header/alias plus manual. Supplier import/export (H2) is not built. `0021` is
-  local only; hosted is still at 13 tracked migrations.
+  is header/alias, a suggested header row and manual override. Supplier
+  import/export (H2) is not built. `0021` is local only; hosted is still at 13
+  tracked migrations.
   **Follow-up fixes (2026-11-26):** interior blank rows now reach the evaluator
   and count as skipped, while only the final line terminator is trimmed. Empty
   files and undetectable delimiters get plain sentences instead of Papa errors.
@@ -189,10 +191,15 @@ Add date, task, verification method, and result.
   The 16-file lab re-ran every fixture: the messy file reports 10 rows, 3 new, 6
   errors and 1 skipped; empty and JSON files explain the problem; the Latin-1 file
   reviews `Café beans` as new; the title-row file maps at Row 4. No confirm was
-  clicked. **Verified:** `npm run check` exit 0 (0 errors, the same 2 pre-existing
-  warnings in `src/lib/permissions.ts`); `npm run test` 278 passed in 37 files,
-  including 32 import contract tests; `npm run build` exit 0 with `/import`;
-  `npm run secrets:check` ok.
+  clicked. **Header suggestion (2026-11-26):** the first five records are scored;
+  a row must map Product name and SKU, exact labels beat aliases, full-width rows
+  beat one-cell titles, and mapped columns with data below beat an empty shell. The
+  best row is preselected with a “Suggested” label and remains changeable. The
+  title-row fixture selects Row 4 without the manual step; a headerless file gets
+  no suggestion. **Verified:** `npm run check` exit 0 (0 errors, the same 2
+  pre-existing warnings in `src/lib/permissions.ts`); `npm run test` 283 passed in
+  37 files, including 37 import contract tests; `npm run build` exit 0 with
+  `/import`; `npm run secrets:check` ok.
 
 - **2026-11-25 — Slice G built: optional barcodes, printable QR labels and
   Android scanning (branch `feat/barcode-qr`, stacked on `feat/product-suppliers`,

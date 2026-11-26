@@ -54,6 +54,12 @@ per-import request is involved.
   notice. Interior blank rows are preserved and counted; the final line terminator
   is not a row. Delimiter detection runs on a blank-skipping pass, then the file is
   reparsed with that delimiter so the blanks survive.
+- **DR11 — The header row is suggested, not assumed.** The first five records are
+  scored as header candidates. A row must map both Product name and SKU; exact
+  labels outweigh aliases, a full-width row outweighs a one-cell title, and mapped
+  columns with data beneath them outweigh an empty shell. The highest score is
+  preselected and labelled “Suggested”; the Header row selector remains available,
+  and a headerless file gets no suggestion. No model is involved.
 
 ## Consequences
 
@@ -66,5 +72,5 @@ per-import request is involved.
 - The demo reset deletes products and the ledger but not `csv_imports`; the import
   history therefore survives a reset. This is recorded as a known limitation, not
   hidden.
-- The database function and its 12 tests are the authority; the 32 contract tests
-  cover decoding, parsing, mapping and row evaluation.
+- The database function and its 12 tests are the authority; the 37 contract tests
+  cover decoding, parsing, header suggestion, mapping and row evaluation.
