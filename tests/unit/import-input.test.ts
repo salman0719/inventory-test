@@ -282,9 +282,9 @@ describe("row normalisation", () => {
       sku: "CAF-0012",
       barcode: "0012345678905",
       costPrice: "4.50",
-      unit: "ea",
+      unit: null,
       opening: "0",
-      reorderLevel: "0",
+      reorderLevel: null,
     });
   });
 

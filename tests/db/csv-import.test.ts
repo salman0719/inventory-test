@@ -73,10 +73,10 @@ type ImportRow = {
   category: string | null;
   supplier: string | null;
   supplierSku: string | null;
-  unit: string;
-  costPrice: string;
+  unit: string | null;
+  costPrice: string | null;
   sellingPrice: string | null;
-  reorderLevel: string;
+  reorderLevel: string | null;
   targetStockLevel: string | null;
   opening: string;
   description: string | null;
@@ -167,6 +167,13 @@ async function productBySku(sku: string): Promise<
       on_hand: number;
       supplier_id: string | null;
       supplier_sku: string | null;
+      barcode: string | null;
+      category_id: string | null;
+      unit_of_measure: string;
+      selling_price: string | null;
+      reorder_level: string;
+      target_stock_level: string | null;
+      description: string | null;
     }
   | undefined
 > {
@@ -177,8 +184,20 @@ async function productBySku(sku: string): Promise<
     on_hand: string;
     supplier_id: string | null;
     supplier_sku: string | null;
+    barcode: string | null;
+    category_id: string | null;
+    unit_of_measure: string;
+    selling_price: string | null;
+    reorder_level: string;
+    target_stock_level: string | null;
+    description: string | null;
   }>(
-    `select p.id, p.name, p.cost_price::text,
+    `select p.id, p.name, p.cost_price::text, p.barcode,
+            p.category_id, p.unit_of_measure,
+            p.selling_price::text as selling_price,
+            p.reorder_level::text as reorder_level,
+            p.target_stock_level::text as target_stock_level,
+            p.description,
             coalesce((
               select sum(m.quantity_delta) from stock_movements m
                where m.product_id = p.id
@@ -388,6 +407,106 @@ describe("private.import_products", () => {
     expect(product?.cost_price).toBe("6.50");
     expect(product?.on_hand).toBe(10);
     expect(product?.supplier_sku).toBe("NEW-CODE");
+  });
+
+  it("keeps every field a partial update does not carry", async () => {
+    await pool.query(
+      `update products
+          set barcode = '9300675024235', unit_of_measure = 'kg',
+              selling_price = 9.90, reorder_level = 3,
+              target_stock_level = 12, description = 'Roasted weekly'
+        where business_id = $1 and sku = 'CAF-001'`,
+      [ids.business],
+    );
+
+    const result = await callImport(
+      ids.owner,
+      ids.business,
+      [
+        row("CAF-001", 0, {
+          name: "Coffee beans, partial price list",
+          barcode: null,
+          category: null,
+          supplierSku: null,
+          unit: null,
+          costPrice: null,
+          sellingPrice: null,
+          reorderLevel: null,
+          targetStockLevel: null,
+          description: null,
+        }),
+      ],
+      { updateExisting: true },
+    );
+
+    expect(result.updated).toBe(1);
+    const product = await productBySku("CAF-001");
+    expect(product).toMatchObject({
+      name: "Coffee beans, partial price list",
+      cost_price: "6.50",
+      on_hand: 10,
+      supplier_id: ids.supplier,
+      supplier_sku: "NEW-CODE",
+      barcode: "9300675024235",
+      category_id: ids.category,
+      unit_of_measure: "kg",
+      selling_price: "9.90",
+      reorder_level: "3.000",
+      target_stock_level: "12.000",
+      description: "Roasted weekly",
+    });
+  });
+
+  it("applies a value the file does carry", async () => {
+    const result = await callImport(
+      ids.owner,
+      ids.business,
+      [
+        row("CAF-001", 0, {
+          name: "Coffee beans, partial price list",
+          barcode: "111",
+          unit: "bag",
+          costPrice: "7.25",
+          sellingPrice: "12.00",
+          reorderLevel: "2",
+          targetStockLevel: "6",
+          description: "Updated description",
+        }),
+      ],
+      { updateExisting: true },
+    );
+
+    expect(result.updated).toBe(1);
+    const product = await productBySku("CAF-001");
+    expect(product).toMatchObject({
+      barcode: "111",
+      unit_of_measure: "bag",
+      cost_price: "7.25",
+      selling_price: "12.00",
+      reorder_level: "2.000",
+      target_stock_level: "6.000",
+      description: "Updated description",
+      on_hand: 10,
+    });
+  });
+
+  it("gives a new product defaults when optional cells are blank", async () => {
+    const result = await callImport(ids.owner, ids.business, [
+      row("CAF-180", 0, {
+        unit: null,
+        costPrice: null,
+        reorderLevel: null,
+      }),
+    ]);
+
+    expect(result.imported).toBe(1);
+    const product = await productBySku("CAF-180");
+    expect(product).toMatchObject({
+      unit_of_measure: "ea",
+      cost_price: "0.00",
+      reorder_level: "0.000",
+      on_hand: 0,
+    });
   });
 
   it("refuses opening stock on an existing SKU", async () => {

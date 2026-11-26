@@ -716,7 +716,10 @@ function ReviewStep({
                   {row.values?.opening ?? "0"}
                 </td>
                 <td className="px-2 py-1.5 text-right font-mono">
-                  {formatMoney(row.values?.costPrice ?? "0", currency)}
+                  {row.values?.costPrice === null ||
+                  row.values?.costPrice === undefined
+                    ? "—"
+                    : formatMoney(row.values.costPrice, currency)}
                 </td>
                 <td className="px-2 py-1.5">
                   <span

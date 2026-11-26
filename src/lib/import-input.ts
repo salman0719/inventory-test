@@ -559,10 +559,15 @@ export type ImportValues = {
   category: string | null;
   supplier: string | null;
   supplierSku: string | null;
-  unit: string;
-  costPrice: string;
+  /**
+   * Null means the cell was blank. For a new product the database applies its
+   * default; for an existing SKU the stored value is kept, so a price list cannot
+   * wipe a unit, cost or reorder level it does not carry.
+   */
+  unit: string | null;
+  costPrice: string | null;
   sellingPrice: string | null;
-  reorderLevel: string;
+  reorderLevel: string | null;
   targetStockLevel: string | null;
   opening: string;
   description: string | null;
@@ -613,8 +618,10 @@ export function normaliseImportRow(
     errors.push("Keep the supplier SKU to 60 characters or fewer.");
   }
 
-  const unit = text("unit") || "ea";
-  if (unit.length > 12) errors.push("Keep the unit to 12 characters or fewer.");
+  const unit = text("unit") || null;
+  if (unit !== null && unit.length > 12) {
+    errors.push("Keep the unit to 12 characters or fewer.");
+  }
 
   const cost = parseMoneyText(text("costPrice"), "the cost price");
   if (!cost.ok) errors.push(cost.error);
@@ -649,9 +656,9 @@ export function normaliseImportRow(
       supplier: supplier || null,
       supplierSku: supplierSku || null,
       unit,
-      costPrice: cost.ok && cost.value !== null ? cost.value : "0",
+      costPrice: cost.ok ? cost.value : null,
       sellingPrice: selling.ok ? selling.value : null,
-      reorderLevel: reorder.ok && reorder.value !== null ? reorder.value : "0",
+      reorderLevel: reorder.ok ? reorder.value : null,
       targetStockLevel: target.ok ? target.value : null,
       opening: opening.ok && opening.value !== null ? opening.value : "0",
       description: description || null,
