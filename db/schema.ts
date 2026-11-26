@@ -597,6 +597,65 @@ export const stocktakeLines = pgTable(
 );
 
 /**
+ * One row per completed CSV import: the history the import screen shows, and the
+ * idempotency lock that stops a double submit writing twice.
+ *
+ * Read-only for the application role; `private.import_products` is the only
+ * writer. `summary` holds the names created by the run (categories, suppliers),
+ * never copies of names that already existed. `created_by` references auth.users
+ * in the migration rather than here, as elsewhere in this file.
+ */
+export const csvImports = pgTable(
+  "csv_imports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    filename: text("filename").notNull(),
+    idempotencyKey: uuid("idempotency_key").notNull(),
+    totalRows: integer("total_rows").notNull(),
+    importedRows: integer("imported_rows").notNull().default(0),
+    updatedRows: integer("updated_rows").notNull().default(0),
+    skippedRows: integer("skipped_rows").notNull().default(0),
+    openingMovements: integer("opening_movements").notNull().default(0),
+    summary: jsonb("summary").notNull().default({}),
+    createdBy: uuid("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("csv_imports_business_idempotency_key").on(
+      t.businessId,
+      t.idempotencyKey,
+    ),
+    uniqueIndex("csv_imports_business_id_key").on(t.businessId, t.id),
+    index("csv_imports_business_created_idx").on(t.businessId, t.createdAt),
+    check(
+      "csv_imports_kind_check",
+      sql`${t.kind} in ('products', 'suppliers')`,
+    ),
+    check(
+      "csv_imports_filename_check",
+      sql`char_length(${t.filename}) between 1 and 200`,
+    ),
+    check(
+      "csv_imports_total_rows_check",
+      sql`${t.totalRows} between 1 and 500`,
+    ),
+    check("csv_imports_imported_rows_check", sql`${t.importedRows} >= 0`),
+    check("csv_imports_updated_rows_check", sql`${t.updatedRows} >= 0`),
+    check("csv_imports_skipped_rows_check", sql`${t.skippedRows} >= 0`),
+    check(
+      "csv_imports_opening_movements_check",
+      sql`${t.openingMovements} >= 0`,
+    ),
+  ],
+);
+
+/**
  * Who changed what. Append-only: the application role may insert and read, never
  * update or delete. An event is written inside the transaction that makes the
  * change, so the two cannot exist apart.
