@@ -52,6 +52,6 @@ The prototype's code may be discarded. Preserve the learning that should inform 
 
 1. Revisit the validated requirements.
 2. Reassess architecture for production scale and support.
-3. Define migration/import needs.
+3. Define migration/import needs. Product CSV import is now built (H1); decide whether supplier import and a round-trip export are needed before onboarding real businesses.
 4. Define security, backup, monitoring, and recovery requirements.
 5. Prioritise a production MVP based on evidence, not prototype completeness.

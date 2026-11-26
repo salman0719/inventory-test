@@ -11,9 +11,10 @@ Keep this file current. Do not report a task as complete until it has been verif
   Supabase account `owner@cafe.test` is linked to the local Demo Cafe, so signing in
   with it renders real catalogue data. Slice 2 (the demo reset workflow) is
   committed as `906a7c2`; every Phase 5 slice is now built apart from product
-  images and CSV import. Extension slices A–G are built on stacked feature
-  branches: supplier facts, receiving discrepancies, the activity log, stocktake,
-  reorder suggestions, multiple suppliers per product, and barcode/QR scanning.
+  images, with product CSV import built on `feat/csv-import` (H1). Extension
+  slices A–H are built on stacked feature branches: supplier facts, receiving
+  discrepancies, the activity log, stocktake, reorder suggestions, multiple
+  suppliers per product, barcode/QR scanning, and product CSV import.
   Phase 6a is committed as `a392ca2`, and the product,
   supplier, stock and purchase-order journeys were walked in the browser on
   2026-11-22: defects D1–D3 are fixed (`0ef1b41`, `b368be9`, `1219908`)
@@ -21,9 +22,9 @@ Keep this file current. Do not report a task as complete until it has been verif
   (public, no deployment protection; serves `main` through `e460b66`, with the
   hosted Supabase database seeded through `db:seed:hosted` and migrated through
   `0012` — 13 tracked)
-- Last updated: 2026-11-25 (Slice G built on `feat/barcode-qr`; barcode search,
-  QR labels, manual scanning, the worker/WASM fallback and device warnings walked;
-  camera scanning not tested on an Android device; not merged, pushed or deployed)
+- Last updated: 2026-11-26 (Slice H1 built on `feat/csv-import`; deterministic
+  mapping, preview, product import function, history, entry points and browser
+  walk; supplier import/export (H2) not built; not merged, pushed or deployed)
 
 ## Phase checklist
 
@@ -83,7 +84,8 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [x] Dashboard (committed `0291bad`; live figures, needs attention, movements)
 - [x] Reports (committed `d2d0149`; stock, low stock, movements, order status, valuation)
 - [x] CSV export (committed `d2d0149`; every report, filters respected)
-- [ ] CSV import (P2: not started, no decision to build it)
+- [x] Product CSV import (Slice H1, `feat/csv-import`; products only)
+- [ ] Supplier CSV import and import/export round-trip (Slice H2)
 - [ ] Image upload
 - [x] Barcode and QR scanning (Slice G, `feat/barcode-qr`; built and walked in a
       browser, Android camera path not tested on a device)
@@ -140,6 +142,45 @@ Keep this file current. Do not report a task as complete until it has been verif
 ## Recently completed
 
 Add date, task, verification method, and result.
+
+- **2026-11-26 — Slice H1 built: product CSV import (branch `feat/csv-import`,
+  stacked on `feat/barcode-qr`, not merged or deployed).**
+  `0021_csv_import.sql` adds `csv_imports` (history and the idempotency lock,
+  read-only for the application role) and `private.import_products`. The function
+  checks membership and owner/staff, returns the first counts on a replay,
+  validates every field again, resolves suppliers case-insensitively and refuses
+  ambiguity, creates categories and suppliers only when allowed, writes one
+  default `product_suppliers` link, and writes one `opening` movement per new
+  product with a positive balance. Existing SKUs update catalogue fields only;
+  opening stock on an existing SKU is refused. One `import.completed` event is
+  written per run.
+  `/import` is a four-step page reached from the Products header and empty state
+  and from Settings: upload a CSV or the template, map columns, review every row
+  and its errors, choose update/create/partial options, then confirm. Mapping,
+  limits and evaluation live in `src/lib/import-input.ts`; the browser parses with
+  Papa Parse but posts only mapped rows. Preview and confirm share one evaluator;
+  the database function is the final authority.
+  **Verified:** `npm run db:migrate` applied 1 migration (22 tracked locally);
+  `npm run check` exit 0 (0 errors, the same 2 pre-existing warnings in
+  `src/lib/permissions.ts`); `npm run test` 274 passed in 37 files, including 28
+  import contract tests; `npm run test:db` 155 passed in 16 files, including 12 in
+  `tests/db/csv-import.test.ts`; `npm run build` exit 0 with `/import` in the route
+  table; `npm run secrets:check` ok.
+  **Browser walk (2026-11-26, local, signed in as `owner@cafe.test`):** the
+  Products header showed **Import**; `/import` accepted a two-row CSV, mapped
+  both columns by Header, selected the file supplier, reviewed 2 new products
+  with 0 errors and 1 opening balance, confirmed, and showed **Import complete**.
+  The catalogue search then rendered Walk coffee with 5 on hand, and `/import`
+  listed the history row. The walk rows were deleted afterwards and Demo Cafe is
+  back to its baseline. At 390px the choose, mapping and review views each had 0px
+  horizontal overflow (the file was set at desktop width).
+  **Not verified:** the native file dialog and the template download were not
+  clicked; update, create-supplier, create-category and partial options were not
+  driven through the screen (they are covered by the contract and DB tests); the
+  viewer role, the empty-catalogue entry link and a hosted deployment were not
+  walked. Value-shape mapping proposals from the prototype are not in H1; mapping
+  is header/alias plus manual. Supplier import/export (H2) is not built. `0021` is
+  local only; hosted is still at 13 tracked migrations.
 
 - **2026-11-25 — Slice G built: optional barcodes, printable QR labels and
   Android scanning (branch `feat/barcode-qr`, stacked on `feat/product-suppliers`,
