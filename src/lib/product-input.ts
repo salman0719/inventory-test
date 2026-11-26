@@ -27,9 +27,11 @@ export function parseProductSort(
   return PRODUCT_SORTS.find((sort) => sort === value) ?? "name";
 }
 
-const SKU_PATTERN = /^[A-Za-z0-9._-]+$/;
-const MONEY_PATTERN = /^\d{1,10}(\.\d{1,2})?$/;
-const QUANTITY_PATTERN = /^\d{1,9}(\.\d{1,3})?$/;
+// Exported so the CSV import validates the same shapes as the form: a limit
+// changed here applies to both, instead of drifting in a second copy.
+export const SKU_PATTERN = /^[A-Za-z0-9._-]+$/;
+export const MONEY_PATTERN = /^\d{1,10}(\.\d{1,2})?$/;
+export const QUANTITY_PATTERN = /^\d{1,9}(\.\d{1,3})?$/;
 
 /** A select whose empty option means "none", not "invalid". */
 function optionalUuid(label: string) {
