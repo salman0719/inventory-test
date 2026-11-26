@@ -94,12 +94,8 @@
           "name": "activity_log_business_id_businesses_id_fk",
           "tableFrom": "activity_log",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -203,12 +199,8 @@
           "name": "business_members_business_id_businesses_id_fk",
           "tableFrom": "business_members",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -366,12 +358,8 @@
           "name": "categories_business_id_businesses_id_fk",
           "tableFrom": "categories",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -542,12 +530,8 @@
           "name": "csv_imports_business_id_businesses_id_fk",
           "tableFrom": "csv_imports",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -781,12 +765,8 @@
           "name": "product_suppliers_business_id_businesses_id_fk",
           "tableFrom": "product_suppliers",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -794,14 +774,8 @@
           "name": "product_suppliers_product_fk",
           "tableFrom": "product_suppliers",
           "tableTo": "products",
-          "columnsFrom": [
-            "business_id",
-            "product_id"
-          ],
-          "columnsTo": [
-            "business_id",
-            "id"
-          ],
+          "columnsFrom": ["business_id", "product_id"],
+          "columnsTo": ["business_id", "id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -809,14 +783,8 @@
           "name": "product_suppliers_supplier_fk",
           "tableFrom": "product_suppliers",
           "tableTo": "suppliers",
-          "columnsFrom": [
-            "business_id",
-            "supplier_id"
-          ],
-          "columnsTo": [
-            "business_id",
-            "id"
-          ],
+          "columnsFrom": ["business_id", "supplier_id"],
+          "columnsTo": ["business_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1038,12 +1006,8 @@
           "name": "products_business_id_businesses_id_fk",
           "tableFrom": "products",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1051,14 +1015,8 @@
           "name": "products_category_fk",
           "tableFrom": "products",
           "tableTo": "categories",
-          "columnsFrom": [
-            "business_id",
-            "category_id"
-          ],
-          "columnsTo": [
-            "business_id",
-            "id"
-          ],
+          "columnsFrom": ["business_id", "category_id"],
+          "columnsTo": ["business_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1198,12 +1156,8 @@
           "name": "purchase_order_lines_business_id_businesses_id_fk",
           "tableFrom": "purchase_order_lines",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1211,14 +1165,8 @@
           "name": "purchase_order_lines_order_fk",
           "tableFrom": "purchase_order_lines",
           "tableTo": "purchase_orders",
-          "columnsFrom": [
-            "business_id",
-            "purchase_order_id"
-          ],
-          "columnsTo": [
-            "business_id",
-            "id"
-          ],
+          "columnsFrom": ["business_id", "purchase_order_id"],
+          "columnsTo": ["business_id", "id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1226,14 +1174,8 @@
           "name": "purchase_order_lines_product_fk",
           "tableFrom": "purchase_order_lines",
           "tableTo": "products",
-          "columnsFrom": [
-            "business_id",
-            "product_id"
-          ],
-          "columnsTo": [
-            "business_id",
-            "id"
-          ],
+          "columnsFrom": ["business_id", "product_id"],
+          "columnsTo": ["business_id", "id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1405,12 +1347,8 @@
           "name": "purchase_orders_business_id_businesses_id_fk",
           "tableFrom": "purchase_orders",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1418,14 +1356,8 @@
           "name": "purchase_orders_supplier_fk",
           "tableFrom": "purchase_orders",
           "tableTo": "suppliers",
-          "columnsFrom": [
-            "business_id",
-            "supplier_id"
-          ],
-          "columnsTo": [
-            "business_id",
-            "id"
-          ],
+          "columnsFrom": ["business_id", "supplier_id"],
+          "columnsTo": ["business_id", "id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1516,12 +1448,8 @@
           "name": "purchase_receipt_lines_business_id_businesses_id_fk",
           "tableFrom": "purchase_receipt_lines",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1529,14 +1457,8 @@
           "name": "purchase_receipt_lines_receipt_fk",
           "tableFrom": "purchase_receipt_lines",
           "tableTo": "purchase_receipts",
-          "columnsFrom": [
-            "business_id",
-            "receipt_id"
-          ],
-          "columnsTo": [
-            "business_id",
-            "id"
-          ],
+          "columnsFrom": ["business_id", "receipt_id"],
+          "columnsTo": ["business_id", "id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1544,14 +1466,8 @@
           "name": "purchase_receipt_lines_order_line_fk",
           "tableFrom": "purchase_receipt_lines",
           "tableTo": "purchase_order_lines",
-          "columnsFrom": [
-            "business_id",
-            "purchase_order_line_id"
-          ],
-          "columnsTo": [
-            "business_id",
-            "id"
-          ],
+          "columnsFrom": ["business_id", "purchase_order_line_id"],
+          "columnsTo": ["business_id", "id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1680,12 +1596,8 @@
           "name": "purchase_receipts_business_id_businesses_id_fk",
           "tableFrom": "purchase_receipts",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1693,14 +1605,8 @@
           "name": "purchase_receipts_order_fk",
           "tableFrom": "purchase_receipts",
           "tableTo": "purchase_orders",
-          "columnsFrom": [
-            "business_id",
-            "purchase_order_id"
-          ],
-          "columnsTo": [
-            "business_id",
-            "id"
-          ],
+          "columnsFrom": ["business_id", "purchase_order_id"],
+          "columnsTo": ["business_id", "id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1834,12 +1740,8 @@
           "name": "signup_requests_business_id_businesses_id_fk",
           "tableFrom": "signup_requests",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1994,12 +1896,8 @@
           "name": "stock_movements_business_id_businesses_id_fk",
           "tableFrom": "stock_movements",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2007,14 +1905,8 @@
           "name": "stock_movements_product_fk",
           "tableFrom": "stock_movements",
           "tableTo": "products",
-          "columnsFrom": [
-            "business_id",
-            "product_id"
-          ],
-          "columnsTo": [
-            "business_id",
-            "id"
-          ],
+          "columnsFrom": ["business_id", "product_id"],
+          "columnsTo": ["business_id", "id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2129,14 +2021,8 @@
           "name": "stocktake_lines_session_fk",
           "tableFrom": "stocktake_lines",
           "tableTo": "stocktake_sessions",
-          "columnsFrom": [
-            "business_id",
-            "session_id"
-          ],
-          "columnsTo": [
-            "business_id",
-            "id"
-          ],
+          "columnsFrom": ["business_id", "session_id"],
+          "columnsTo": ["business_id", "id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2144,14 +2030,8 @@
           "name": "stocktake_lines_product_fk",
           "tableFrom": "stocktake_lines",
           "tableTo": "products",
-          "columnsFrom": [
-            "business_id",
-            "product_id"
-          ],
-          "columnsTo": [
-            "business_id",
-            "id"
-          ],
+          "columnsFrom": ["business_id", "product_id"],
+          "columnsTo": ["business_id", "id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2294,12 +2174,8 @@
           "name": "stocktake_sessions_business_id_businesses_id_fk",
           "tableFrom": "stocktake_sessions",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2453,12 +2329,8 @@
           "name": "suppliers_business_id_businesses_id_fk",
           "tableFrom": "suppliers",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
