@@ -20,15 +20,16 @@ Keep this file current. Do not report a task as complete until it has been verif
   supplier, stock and purchase-order journeys were walked in the browser on
   2026-11-22: defects D1–D3 are fixed (`0ef1b41`, `b368be9`, `1219908`)
 - Current deployment: Vercel stage at `https://inventory-stage.vercel.app`
-  (public, no deployment protection; serves `main` through `e460b66`, with the
-  hosted Supabase database seeded through `db:seed:hosted` and migrated through
-  `0012` — 13 tracked)
-- Last updated: 2026-11-26 (Slices H1 and H2 built on `feat/csv-import`; product
-  and supplier CSV import with deterministic mapping, header-row suggestion,
-  preview, database functions and shared history. Review fixes `0023`–`0024` make
-  a partial product update keep fields the file does not carry, and make the demo
-  reset clear import history. Supplier export and the round-trip remain unbuilt;
-  not merged, pushed or deployed)
+  (public, no deployment protection; serves `main` at `fca2d18`, with the hosted
+  Supabase database seeded through `db:seed:hosted` and migrated through `0024` —
+  25 tracked)
+- Last updated: 2026-11-26 (Slices H1 and H2 merged to `main` as `fca2d18` and
+  deployed; product and supplier CSV import with deterministic mapping,
+  header-row suggestion, preview, database functions and shared history. Review
+  fixes `0023`–`0024` make a partial product update keep fields the file does not
+  carry, and make the demo reset clear import history. Hosted migrations
+  `0013`–`0024` were applied on 2026-11-26, 13 → 25 tracked. Supplier export and
+  the round-trip remain unbuilt)
 
 ## Phase checklist
 
@@ -148,8 +149,28 @@ Keep this file current. Do not report a task as complete until it has been verif
 
 Add date, task, verification method, and result.
 
+- **2026-11-26 — Hosted migrations `0013`–`0024` applied; stage on `main`
+  `fca2d18`.**
+  `npm run db:migrate:hosted` moved the hosted database from 13 to **25 tracked
+  migrations**. Read-only verification found every new object: `product_suppliers`,
+  `csv_imports`, `activity_log`, `stocktake_sessions`, `product_last_price`, the
+  `0015` receipt breakdown columns, `0018` target stock, `0020` barcode and its
+  index, and the activity, stocktake, import and reset functions. The `0015`
+  backfill had no receipt rows to change. `0019` dropped `products.supplier_id`
+  and `supplier_sku` after leaving **220 default links for 220 products**, with no
+  product holding two defaults and none without one. The function bodies carry the
+  `0023` coalesce update, the `0024` `csv_imports` delete and the supplier
+  blank-cell rule. Through `SUPABASE_DB_URL_APP`, `app_user` connects, is a member
+  of `authenticated`, cannot bypass RLS, can read `csv_imports` and
+  `product_suppliers`, and can execute `import_products`, `import_suppliers` and
+  `reset_demo_business`; `INSERT` on `csv_imports` is correctly denied. The stage
+  serves the new build (`/zxing/zxing_reader.wasm` 200) and `/` and `/import` send a
+  signed-out visitor to `/sign-in`. `activity_log`, `csv_imports` and
+  `stocktake_sessions` are empty on hosted, as expected before first use.
+  **Not verified:** a signed-in stage walk; no hosted account credentials here.
+
 - **2026-11-26 — Slice H review fixes: partial product updates and reset history
-  (branch `feat/csv-import`, uncommitted with H2).**
+  (merged to `main` as `fca2d18`; H2 included).**
   `0023_import_update_preserves_fields.sql` re-creates `private.import_products`
   so an existing SKU applies only the values the file carries: a blank cell, or a
   column that is not mapped, keeps the stored barcode, category, unit, cost,
@@ -184,7 +205,8 @@ Add date, task, verification method, and result.
   showed no Recent imports and Demo Cafe held no `csv_imports` rows. An
   existing-SKU row still needs a supplier, and choosing one moves the default
   link: that is the documented import rule, not a regression.
-  `0022`–`0024` are local only; hosted remains at 13 tracked migrations.
+  `0022`–`0024` were local only until the hosted migration on 2026-11-26, which
+  moved the stage to 25 tracked migrations.
 
 - **2026-11-26 — Slice H2 built: supplier CSV import (branch `feat/csv-import`,
   stacked on H1; not merged or deployed).**
