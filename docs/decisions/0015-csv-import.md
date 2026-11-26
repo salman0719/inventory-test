@@ -31,8 +31,15 @@ per-import request is involved.
 - **DR3 — Opening stock is creation-only.** A positive `Opening stock` writes one
   `opening` movement per new product, referencing the import. An existing SKU with
   a non-zero opening quantity is refused; stock corrections go through the ledger.
-- **DR4 — Update is a separate, opt-in choice.** SKU is the key. In update mode
-  catalogue fields and the default supplier link change; the SKU and stock do not.
+- **DR4 — Update is a separate, opt-in choice.** SKU is the key, and the SKU and
+  stock never change. Update mode applies only the values the file carries: a
+  mapped column with a blank cell, or a column that is absent, keeps the stored
+  value. The default supplier link is applied from the row's supplier, or from the
+  supplier chosen for the file. **Revised 2026-11-26:** the original rule wrote
+  every product column, so a four-column price list cleared the barcode, category,
+  description, selling price and target stock and reset unit/reorder to their
+  defaults. `0023_import_update_preserves_fields.sql` makes products match the
+  supplier import's blank-cell rule.
 - **DR5 — Categories may be created by default; suppliers only when ticked.** Both
   are matched case-insensitively, created at most once per run, and an ambiguous
   supplier name is refused rather than guessed. The preview lists every proposed
@@ -65,12 +72,19 @@ per-import request is involved.
 
 - H1 imports products only. Supplier import, product/supplier exports and the
   round-trip template are H2 and remain unbuilt.
+  **Update 2026-11-26:** supplier import shipped as H2 in
+  `0022_supplier_import.sql` (name is the key; an update fills only the fields the
+  file carries). Supplier export and the round-trip template are still unbuilt.
 - The screen is reached from Products (header and empty catalogue) and Settings;
   there is no tenth rail item.
 - `0021_csv_import.sql` is local only. Hosted remains at 13 tracked migrations
   until `0013`–`0021` ship together before the code.
-- The demo reset deletes products and the ledger but not `csv_imports`; the import
-  history therefore survives a reset. This is recorded as a known limitation, not
-  hidden.
-- The database function and its 12 tests are the authority; the 37 contract tests
+- The demo reset clears `csv_imports` with the rest of the business's demo data
+  (`0024_reset_clears_import_history.sql`). Before that, Recent imports still
+  listed runs whose products the reset had deleted; the manual checklist surfaced
+  the gap.
+- An import cannot blank an optional product field: a blank cell keeps the stored
+  value. Clearing a value is done in the product form. This is deliberate and
+  matches the supplier rule.
+- The database function and its 15 tests are the authority; the 37 contract tests
   cover decoding, parsing, header suggestion, mapping and row evaluation.

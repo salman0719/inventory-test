@@ -11,10 +11,11 @@ Keep this file current. Do not report a task as complete until it has been verif
   Supabase account `owner@cafe.test` is linked to the local Demo Cafe, so signing in
   with it renders real catalogue data. Slice 2 (the demo reset workflow) is
   committed as `906a7c2`; every Phase 5 slice is now built apart from product
-  images, with product CSV import built on `feat/csv-import` (H1). Extension
-  slices A–H are built on stacked feature branches: supplier facts, receiving
-  discrepancies, the activity log, stocktake, reorder suggestions, multiple
-  suppliers per product, barcode/QR scanning, and product CSV import.
+  images, with product and supplier CSV import built on `feat/csv-import` (H1 and
+  H2). Extension slices A–H are built on stacked feature branches: supplier facts,
+  receiving discrepancies, the activity log, stocktake, reorder suggestions,
+  multiple suppliers per product, barcode/QR scanning, and product and supplier
+  CSV import.
   Phase 6a is committed as `a392ca2`, and the product,
   supplier, stock and purchase-order journeys were walked in the browser on
   2026-11-22: defects D1–D3 are fixed (`0ef1b41`, `b368be9`, `1219908`)
@@ -22,10 +23,12 @@ Keep this file current. Do not report a task as complete until it has been verif
   (public, no deployment protection; serves `main` through `e460b66`, with the
   hosted Supabase database seeded through `db:seed:hosted` and migrated through
   `0012` — 13 tracked)
-- Last updated: 2026-11-26 (Slice H1 built on `feat/csv-import`; deterministic
-  mapping, header-row suggestion, preview, product import function, history, entry
-  points and browser walk; supplier import/export (H2) not built; not merged,
-  pushed or deployed)
+- Last updated: 2026-11-26 (Slices H1 and H2 built on `feat/csv-import`; product
+  and supplier CSV import with deterministic mapping, header-row suggestion,
+  preview, database functions and shared history. Review fixes `0023`–`0024` make
+  a partial product update keep fields the file does not carry, and make the demo
+  reset clear import history. Supplier export and the round-trip remain unbuilt;
+  not merged, pushed or deployed)
 
 ## Phase checklist
 
@@ -86,7 +89,8 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [x] Reports (committed `d2d0149`; stock, low stock, movements, order status, valuation)
 - [x] CSV export (committed `d2d0149`; every report, filters respected)
 - [x] Product CSV import (Slice H1, `feat/csv-import`; products only)
-- [ ] Supplier CSV import and import/export round-trip (Slice H2)
+- [x] Supplier CSV import (Slice H2, `feat/csv-import`; `private.import_suppliers`)
+- [ ] Supplier export and the import/export round-trip (Slice H2)
 - [ ] Image upload
 - [x] Barcode and QR scanning (Slice G, `feat/barcode-qr`; built and walked in a
       browser, Android camera path not tested on a device)
@@ -143,6 +147,75 @@ Keep this file current. Do not report a task as complete until it has been verif
 ## Recently completed
 
 Add date, task, verification method, and result.
+
+- **2026-11-26 — Slice H review fixes: partial product updates and reset history
+  (branch `feat/csv-import`, uncommitted with H2).**
+  `0023_import_update_preserves_fields.sql` re-creates `private.import_products`
+  so an existing SKU applies only the values the file carries: a blank cell, or a
+  column that is not mapped, keeps the stored barcode, category, unit, cost,
+  selling price, reorder level, target stock and description. A new product still
+  gets the defaults (unit `ea`, cost 0, reorder 0). `ImportValues` keeps a blank
+  unit, cost and reorder level as `null`, and the review shows “—” for a blank cost
+  instead of $0.00. This is DR4 in `docs/decisions/0015-csv-import.md`, revised
+  after the manual checklist found that a four-column price list cleared the rest
+  of the product.
+  `0024_reset_clears_import_history.sql` adds one DELETE to
+  `private.reset_demo_business`, so a demo reset clears `csv_imports` with the rest
+  of the business data; Recent imports is empty afterwards. The reset's counts and
+  all other behaviour are unchanged.
+  **Verified:** `npm run db:migrate` applied 2 migrations (25 tracked locally);
+  `npm run check` exit 0 (0 errors, the same 2 pre-existing warnings in
+  `src/lib/permissions.ts`); `npm run test` 299 passed in 38 files;
+  `npm run test:db` 168 passed in 17 files, including 3 new tests in
+  `tests/db/csv-import.test.ts` (a partial update keeps every uncarried field and a
+  blank barcode, a carried value still applies, a new product gets defaults from
+  blank cells) and 1 in `tests/db/reset-demo.test.ts` (the target business's
+  history is cleared, another business's row remains); `npm run build` exit 0 with
+  `/import`; `npm run secrets:check` ok.
+  **Verified live (2026-11-26):** signed in as `owner@cafe.test` in Demo Cafe and
+  uploaded `partial-update.csv` (SKU, Product name, Selling price, Barcode, Unit of
+  measure) with the barcode and unit cells blank, chose Fresh Fields Produce for
+  the file and ticked “Update existing products”. Review showed “—” for the blank
+  cost and 1 update; the confirmed run reported “1 updated” and listed the file
+  under Recent imports. Before and after SQL showed the selling price move 4.50 →
+  6.20 while the barcode, category Produce, unit kg, cost 2.10, reorder 6, target
+  25 and the description were unchanged. Settings → RESET then reported “Demo data
+  restored: 60 products, 9 suppliers, 2 orders and 59 opening movements”; `/import`
+  showed no Recent imports and Demo Cafe held no `csv_imports` rows. An
+  existing-SKU row still needs a supplier, and choosing one moves the default
+  link: that is the documented import rule, not a regression.
+  `0022`–`0024` are local only; hosted remains at 13 tracked migrations.
+
+- **2026-11-26 — Slice H2 built: supplier CSV import (branch `feat/csv-import`,
+  stacked on H1; not merged or deployed).**
+  `0022_supplier_import.sql` adds `private.import_suppliers`. The function checks
+  membership and owner/staff, returns the first counts on a replay, and validates
+  every row again: name 1–120 and unique inside the file, contact 80, email 120
+  and syntactically valid, phone 40, address 200, notes 2,000, lead time a whole
+  0–365 days. A name already in the business is refused unless “Update existing
+  suppliers” was chosen, and an update never clears a stored field: each optional
+  column is `coalesce(new, existing)`, so a names-only list cannot wipe a phone
+  number. The name itself never changes. An archived supplier is refused rather
+  than resurrected, and the run writes one `import.completed` event.
+  `/import` gained a Products | Suppliers switch (`/import?kind=suppliers`) and the
+  Suppliers screen links to it from its header and empty state. Supplier columns,
+  aliases, limits, mapping, header suggestion, evaluation and the payload schema
+  live in `src/lib/import-input.ts`, sharing the deterministic mapper with
+  products. The CSV reading path moved to
+  `src/components/import/read-csv-file.ts` and the history list to
+  `src/components/import/import-history.tsx`; the product screen uses both, with
+  its behaviour unchanged.
+  **Verified:** `npm run db:migrate` applied 1 migration (23 tracked locally);
+  `npm run check` exit 0 (0 errors, the same 2 pre-existing warnings in
+  `src/lib/permissions.ts`); `npm run test` 299 passed in 38 files, including 16
+  supplier contract tests; `npm run test:db` 164 passed in 17 files, including 9
+  in `tests/db/supplier-import.test.ts`; `npm run build` exit 0;
+  `npm run secrets:check` ok.
+  **Not verified:** the supplier screen was not walked in a browser and no real
+  file was chosen through the dialog; the template download and the update /
+  partial toggles were not clicked (they are covered by the contract and database
+  tests). Supplier export and the import/export round-trip remain unbuilt.
+  `0021`–`0022` are local only; hosted is still at 13 tracked migrations.
 
 - **2026-11-26 — Slice H1 built: product CSV import (branch `feat/csv-import`,
   stacked on `feat/barcode-qr`, not merged or deployed).**
