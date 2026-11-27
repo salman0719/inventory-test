@@ -81,7 +81,7 @@ export default async function ProductLabelsPage({
   const filtered = q !== "" || categoryId !== "" || archived;
 
   return (
-    <div className="label-page flex flex-col gap-4">
+    <div className="label-page @container flex flex-col gap-4">
       <header className="label-toolbar flex flex-wrap items-center gap-x-3 gap-y-2">
         <div className="min-w-0">
           <h1 className="text-[15px] font-semibold tracking-tight">
@@ -120,39 +120,48 @@ export default async function ProductLabelsPage({
       ) : null}
 
       {printed.length > 0 ? (
-        <div className="max-w-full overflow-x-auto">
-          {pages.map((page, pageIndex) => (
-            <div className="label-sheet" key={pageIndex}>
-              {page.map((label) => (
-                <div className="label" key={label.id}>
-                  <div
-                    className="label-qr"
-                    aria-hidden
-                    dangerouslySetInnerHTML={{ __html: label.qr }}
-                  />
-                  <div className="min-w-0">
-                    <p className="line-clamp-2 text-[10.5px] leading-tight font-semibold">
-                      {label.name}
-                    </p>
-                    <p className="mt-1 font-mono text-[8.5px] text-ink-muted">
-                      {label.sku}
-                    </p>
-                    {label.supplierSku ? (
-                      <p className="mt-0.5 truncate font-mono text-[8px] text-ink-faint">
-                        {label.supplierSku}
+        // Gated on the page column's width, not a breakpoint: the 190.5 mm sheet
+        // only needs panning once the column is narrower than it.
+        <>
+          <p className="label-toolbar hidden rounded border border-line bg-panel px-3 py-2 text-[12px] text-ink-muted @max-[720px]:block">
+            This is the A4 sheet at full size — wider than this screen, so pan
+            sideways to read it. Printing uses the whole page, so no label is
+            cropped.
+          </p>
+          <div className="max-w-full overflow-x-auto">
+            {pages.map((page, pageIndex) => (
+              <div className="label-sheet" key={pageIndex}>
+                {page.map((label) => (
+                  <div className="label" key={label.id}>
+                    <div
+                      className="label-qr"
+                      aria-hidden
+                      dangerouslySetInnerHTML={{ __html: label.qr }}
+                    />
+                    <div className="min-w-0">
+                      <p className="line-clamp-2 text-[10.5px] leading-tight font-semibold">
+                        {label.name}
                       </p>
-                    ) : null}
-                    {label.barcode ? (
-                      <p className="mt-0.5 truncate font-mono text-[8px] text-ink-faint">
-                        {label.barcode}
+                      <p className="mt-1 font-mono text-[8.5px] text-ink-muted">
+                        {label.sku}
                       </p>
-                    ) : null}
+                      {label.supplierSku ? (
+                        <p className="mt-0.5 truncate font-mono text-[8px] text-ink-faint">
+                          {label.supplierSku}
+                        </p>
+                      ) : null}
+                      {label.barcode ? (
+                        <p className="mt-0.5 truncate font-mono text-[8px] text-ink-faint">
+                          {label.barcode}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </>
       ) : (
         <div className="rounded border border-dashed border-line bg-panel px-4 py-12 text-center">
           <p className="text-[13px] font-medium">No products to label</p>
