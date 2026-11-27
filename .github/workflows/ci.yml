@@ -22,6 +22,13 @@ jobs:
       PORT: 3000
       APP_URL: http://localhost:3000
       DATABASE_URL: postgresql://app:app@localhost:5432/app
+      # The request middleware builds a Supabase client on every route and throws
+      # when these are empty, which 500s the app before the local auth shim can
+      # answer. CI has no hosted project, so they only have to be well-formed:
+      # no request carries a session cookie here, so nothing is verified against
+      # the dummy origin and every visitor is signed out.
+      NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-key
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
