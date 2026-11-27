@@ -2,6 +2,7 @@ import { PendingLink } from "@/components/pending-link";
 import { ResultsBusy } from "@/components/results-busy";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { PanelGrid, PanelProvider } from "@/components/panel-host";
+import { PageHeader, headerActionPrimary } from "@/components/page-header";
 import { PanelLink } from "@/components/panel-link";
 import { PurchaseOrderFilters } from "@/components/purchase-orders/purchase-order-filters";
 import { OrderPanelColumn } from "@/components/purchase-orders/order-panel-column";
@@ -81,38 +82,40 @@ export default async function PurchaseOrdersPage({
   return (
     <PanelProvider initialHref={hrefFor({})}>
       <section className="flex flex-col gap-4">
-        <header className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <h1 className="text-[15px] font-semibold tracking-tight">
-            Purchase orders
-          </h1>
-          <p className="text-[12px] text-ink-muted">
-            {filtered
-              ? `${orders.length} match these filters`
-              : `${summary.total} order${summary.total === 1 ? "" : "s"}`}{" "}
-            · {summary.awaiting} awaiting delivery
-            {canViewValues ? (
-              <>
-                {" "}
-                · {formatMoney(summary.onOrderValue, active.currencyCode)} on
-                order
-              </>
-            ) : null}{" "}
-            · {active.name}
-          </p>
-          {creating ? null : (
-            <PanelLink
-              href={hrefFor({
-                new: "true",
-                order: undefined,
-                edit: undefined,
-                saved: undefined,
-              })}
-              className="ml-auto inline-flex min-h-[36px] items-center rounded bg-accent px-3 text-[12px] font-semibold text-on-accent"
-            >
-              New order
-            </PanelLink>
-          )}
-        </header>
+        <PageHeader
+          title="Purchase orders"
+          summary={
+            <>
+              {filtered
+                ? `${orders.length} match these filters`
+                : `${summary.total} order${summary.total === 1 ? "" : "s"}`}{" "}
+              · {summary.awaiting} awaiting delivery
+              {canViewValues ? (
+                <>
+                  {" "}
+                  · {formatMoney(summary.onOrderValue, active.currencyCode)} on
+                  order
+                </>
+              ) : null}{" "}
+              · {active.name}
+            </>
+          }
+          actions={
+            creating ? null : (
+              <PanelLink
+                href={hrefFor({
+                  new: "true",
+                  order: undefined,
+                  edit: undefined,
+                  saved: undefined,
+                })}
+                className={headerActionPrimary}
+              >
+                New order
+              </PanelLink>
+            )
+          }
+        />
 
         <ResultsBusy>
           <PurchaseOrderFilters q={q} status={filter} />

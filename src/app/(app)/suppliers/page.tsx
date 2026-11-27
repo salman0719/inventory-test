@@ -2,6 +2,11 @@ import { PendingLink } from "@/components/pending-link";
 import { ResultsBusy } from "@/components/results-busy";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { PanelGrid, PanelProvider } from "@/components/panel-host";
+import {
+  PageHeader,
+  headerActionPrimary,
+  headerActionSecondary,
+} from "@/components/page-header";
 import { PanelLink } from "@/components/panel-link";
 import { SupplierFilters } from "@/components/suppliers/supplier-filters";
 import { SupplierPanelColumn } from "@/components/suppliers/supplier-panel-column";
@@ -71,33 +76,37 @@ export default async function SuppliersPage({
   return (
     <PanelProvider initialHref={hrefFor({})}>
       <section className="flex flex-col gap-4">
-        <header className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <h1 className="text-[15px] font-semibold tracking-tight">
-            Suppliers
-          </h1>
-          <p className="text-[12px] text-ink-muted">
-            {suppliers.length} supplier{suppliers.length === 1 ? "" : "s"}
-            {filtered ? " match these filters" : ""} · {active.name}
-          </p>
-          <PendingLink
-            href="/import?kind=suppliers"
-            className="ml-auto inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-2.5 text-[12px] font-medium hover:border-accent hover:text-accent"
-          >
-            Import
-          </PendingLink>
-          {creating ? null : (
-            <PanelLink
-              href={hrefFor({
-                new: "true",
-                supplier: undefined,
-                edit: undefined,
-              })}
-              className="inline-flex min-h-[36px] items-center rounded bg-accent px-3 text-[12px] font-semibold text-on-accent"
-            >
-              New supplier
-            </PanelLink>
-          )}
-        </header>
+        <PageHeader
+          title="Suppliers"
+          summary={
+            <>
+              {suppliers.length} supplier{suppliers.length === 1 ? "" : "s"}
+              {filtered ? " match these filters" : ""} · {active.name}
+            </>
+          }
+          actions={
+            <>
+              <PendingLink
+                href="/import?kind=suppliers"
+                className={headerActionSecondary}
+              >
+                Import
+              </PendingLink>
+              {creating ? null : (
+                <PanelLink
+                  href={hrefFor({
+                    new: "true",
+                    supplier: undefined,
+                    edit: undefined,
+                  })}
+                  className={headerActionPrimary}
+                >
+                  New supplier
+                </PanelLink>
+              )}
+            </>
+          }
+        />
 
         <ResultsBusy>
           <SupplierFilters q={q} archived={archived} />

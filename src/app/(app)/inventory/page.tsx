@@ -3,6 +3,7 @@ import { InventoryFilters } from "@/components/inventory/inventory-filters";
 import { InventoryPanelColumn } from "@/components/inventory/inventory-panel-column";
 import { InventoryTable } from "@/components/inventory/inventory-table";
 import { NoBusinessNotice } from "@/components/no-business-notice";
+import { PageHeader } from "@/components/page-header";
 import { Pagination } from "@/components/pagination";
 import { PanelGrid, PanelProvider } from "@/components/panel-host";
 import { ResultsBusy } from "@/components/results-busy";
@@ -106,24 +107,25 @@ export default async function InventoryPage({
   return (
     <PanelProvider initialHref={hrefFor({})}>
       <section className="flex flex-col gap-4">
-        <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h1 className="text-[15px] font-semibold tracking-tight">
-            Inventory
-          </h1>
-          <p className="text-[12px] text-ink-muted">
-            {filtered
-              ? `${total} match these filters`
-              : `${summary.products} product${summary.products === 1 ? "" : "s"}`}{" "}
-            · {summary.outCount} out · {summary.lowCount} low
-            {canViewValues ? (
-              <>
-                {" "}
-                · {formatMoney(summary.stockValue, active.currencyCode)} at cost
-              </>
-            ) : null}{" "}
-            · {active.name}
-          </p>
-        </header>
+        <PageHeader
+          title="Inventory"
+          summary={
+            <>
+              {filtered
+                ? `${total} match these filters`
+                : `${summary.products} product${summary.products === 1 ? "" : "s"}`}{" "}
+              · {summary.outCount} out · {summary.lowCount} low
+              {canViewValues ? (
+                <>
+                  {" "}
+                  · {formatMoney(summary.stockValue, active.currencyCode)} at
+                  cost
+                </>
+              ) : null}{" "}
+              · {active.name}
+            </>
+          }
+        />
 
         <ResultsBusy>
           <InventoryFilters

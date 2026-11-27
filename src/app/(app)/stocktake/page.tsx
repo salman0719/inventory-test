@@ -2,6 +2,7 @@ import { CountForm } from "@/components/stocktake/count-form";
 import { StartStocktakeForm } from "@/components/stocktake/start-form";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { DataCard, ListCard } from "@/components/list-card";
+import { PageHeader } from "@/components/page-header";
 import { PendingLink } from "@/components/pending-link";
 import { getActiveBusiness } from "@/lib/businesses";
 import { formatQuantity } from "@/lib/product-input";
@@ -101,13 +102,15 @@ export default async function StocktakePage({
 
   return (
     <section className="flex flex-col gap-5">
-      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h1 className="text-[15px] font-semibold tracking-tight">Stocktake</h1>
-        <p className="text-[12px] text-ink-muted">
-          {sessions.length} sheet{sessions.length === 1 ? "" : "s"}
-          {open > 0 ? ` · ${open} open` : ""} · {active.name}
-        </p>
-      </header>
+      <PageHeader
+        title="Stocktake"
+        summary={
+          <>
+            {sessions.length} sheet{sessions.length === 1 ? "" : "s"}
+            {open > 0 ? ` · ${open} open` : ""} · {active.name}
+          </>
+        }
+      />
 
       {savedMessage ? (
         <p

@@ -1,4 +1,5 @@
 import { ActivityRow } from "@/components/activity/activity-row";
+import { PageHeader } from "@/components/page-header";
 import { PendingLink } from "@/components/pending-link";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import {
@@ -63,15 +64,17 @@ export default async function ActivityPage({
 
   return (
     <section className="flex flex-col gap-4">
-      <header>
-        <h1 className="text-[15px] font-semibold tracking-tight">Activity</h1>
-        <p className="text-[12px] text-ink-muted">
-          {filtered
-            ? "Changes of this kind, newest first."
-            : "Everything changed in this business, newest first."}{" "}
-          · {active.name}
-        </p>
-      </header>
+      <PageHeader
+        title="Activity"
+        summary={
+          <>
+            {filtered
+              ? "Changes of this kind, newest first."
+              : "Everything changed in this business, newest first."}{" "}
+            · {active.name}
+          </>
+        }
+      />
 
       <nav aria-label="Activity filters" className="flex flex-wrap gap-1">
         {ACTIVITY_FILTERS.map((option) => {

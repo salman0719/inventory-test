@@ -1,4 +1,5 @@
 import { PendingLink } from "@/components/pending-link";
+import { PageHeader, headerActionSecondary } from "@/components/page-header";
 import type { ReactNode } from "react";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { Pagination } from "@/components/pagination";
@@ -212,27 +213,21 @@ export default async function ReportsPage({
 
   return (
     <section className="flex flex-col gap-4">
-      <header className="flex flex-wrap items-start gap-x-3 gap-y-2">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.08em] text-ink-muted">
-            Reports
-          </p>
-          <h1 className="mt-0.5 text-[15px] font-semibold tracking-tight">
-            {REPORT_LABELS[kind]}
-          </h1>
-          <p className="text-[12px] text-ink-muted">
-            {REPORT_NOTES[kind]} · {active.name}
-          </p>
-        </div>
-        {canViewValues ? (
-          <a
-            href={reportExportHref(kind, { ...filters, page: 1 })}
-            className="ml-auto inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-3 text-[12px] font-medium hover:border-accent hover:text-accent"
-          >
-            Export CSV
-          </a>
-        ) : null}
-      </header>
+      <PageHeader
+        eyebrow="Reports"
+        title={REPORT_LABELS[kind]}
+        summary={`${REPORT_NOTES[kind]} · ${active.name}`}
+        actions={
+          canViewValues ? (
+            <a
+              href={reportExportHref(kind, { ...filters, page: 1 })}
+              className={headerActionSecondary}
+            >
+              Export CSV
+            </a>
+          ) : undefined
+        }
+      />
 
       <ReportTabs kind={kind} />
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CategoryForm } from "@/components/products/category-form";
 import { ResetDemoPanel } from "@/components/settings/reset-demo-panel";
 import { NoBusinessNotice } from "@/components/no-business-notice";
+import { PageHeader } from "@/components/page-header";
 import { getActiveBusiness } from "@/lib/businesses";
 import { canResetDemoData, getDemoCounts } from "@/lib/demo";
 import { listCategories } from "@/lib/products";
@@ -22,12 +23,7 @@ export default async function SettingsPage() {
 
   return (
     <section className="flex flex-col gap-4">
-      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h1 className="text-[15px] font-semibold tracking-tight">Settings</h1>
-        <p className="text-[12px] text-ink-muted">
-          Business profile, categories and demo reset.
-        </p>
-      </header>
+      <PageHeader title="Settings" summary="Business profile and categories." />
 
       <dl className="grid max-w-[560px] grid-cols-1 gap-2 min-[600px]:grid-cols-2">
         <div className="rounded border border-line bg-panel px-3 py-2">

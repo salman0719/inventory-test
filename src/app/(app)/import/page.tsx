@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ImportWorkbench } from "@/components/import/import-workbench";
 import { SupplierImportWorkbench } from "@/components/import/supplier-import-workbench";
 import { NoBusinessNotice } from "@/components/no-business-notice";
+import { PageHeader } from "@/components/page-header";
 import { getActiveBusiness } from "@/lib/businesses";
 import { getImportPage } from "@/lib/csv-import";
 import { getSessionUser } from "@/lib/session";
@@ -44,10 +45,7 @@ export default async function ImportPage({
 
   return (
     <section className="flex flex-col gap-4">
-      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h1 className="text-[15px] font-semibold tracking-tight">Import</h1>
-        <p className="text-[12px] text-ink-muted">{current.blurb}</p>
-      </header>
+      <PageHeader title="Import" summary={current.blurb} />
 
       <nav aria-label="What to import" className="flex flex-wrap gap-1.5">
         {KINDS.map((entry) => {

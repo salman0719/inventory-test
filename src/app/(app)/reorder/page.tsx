@@ -1,4 +1,5 @@
 import { NoBusinessNotice } from "@/components/no-business-notice";
+import { PageHeader, headerActionSecondary } from "@/components/page-header";
 import { PendingLink } from "@/components/pending-link";
 import { ReorderGroup } from "@/components/reorder/reorder-group";
 import { getActiveBusiness } from "@/lib/businesses";
@@ -28,19 +29,21 @@ export default async function ReorderPage() {
 
   return (
     <section className="flex flex-col gap-4">
-      <header className="flex flex-wrap items-start gap-x-3 gap-y-2">
-        <div>
-          <h1 className="text-[15px] font-semibold tracking-tight">Reorder</h1>
-          <p className="text-[12px] text-ink-muted">
+      <PageHeader
+        title="Reorder"
+        summary={
+          <>
             {data.productCount} product{data.productCount === 1 ? "" : "s"} ·{" "}
             {data.supplierCount} supplier{data.supplierCount === 1 ? "" : "s"} ·{" "}
             {active.name}
-          </p>
-        </div>
-        <PendingLink href="/products" className={`${BUTTON} ml-auto`}>
-          Edit target stock
-        </PendingLink>
-      </header>
+          </>
+        }
+        actions={
+          <PendingLink href="/products" className={headerActionSecondary}>
+            Edit target stock
+          </PendingLink>
+        }
+      />
 
       <div className="rounded border border-line bg-panel px-3 py-2.5">
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.07em] text-ink-muted">

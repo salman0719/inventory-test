@@ -4,6 +4,7 @@ import { DashboardStats } from "@/components/dashboard/dashboard-stats";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
 import { RecentMovements } from "@/components/dashboard/recent-movements";
 import { NoBusinessNotice } from "@/components/no-business-notice";
+import { PageHeader } from "@/components/page-header";
 import { getActiveBusiness } from "@/lib/businesses";
 import { ATTENTION_LIMIT, getDashboard } from "@/lib/dashboard";
 import { getSessionUser } from "@/lib/session";
@@ -30,19 +31,17 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <header>
-        <p className="text-[10px] uppercase tracking-[0.08em] text-ink-muted">
-          Dashboard
-        </p>
-        <h1 className="mt-0.5 text-[17px] font-semibold tracking-tight">
-          {active.name}
-        </h1>
-        <p className="text-[12px] text-ink-muted">
-          {active.businessType === "cafe" ? "Cafe" : "Retail"} ·{" "}
-          {active.currencyCode} · Live from the catalogue, orders and stock
-          ledger.
-        </p>
-      </header>
+      <PageHeader
+        eyebrow="Dashboard"
+        title={active.name}
+        summary={
+          <>
+            {active.businessType === "cafe" ? "Cafe" : "Retail"} ·{" "}
+            {active.currencyCode} · Live from the catalogue, orders and stock
+            ledger.
+          </>
+        }
+      />
 
       <DashboardStats
         summary={summary}

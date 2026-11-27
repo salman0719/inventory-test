@@ -2,6 +2,11 @@ import { PendingLink } from "@/components/pending-link";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { Pagination } from "@/components/pagination";
 import { PanelGrid, PanelProvider } from "@/components/panel-host";
+import {
+  PageHeader,
+  headerActionPrimary,
+  headerActionSecondary,
+} from "@/components/page-header";
 import { PanelLink } from "@/components/panel-link";
 import { ProductFilters } from "@/components/products/product-filters";
 import { ProductPanelColumn } from "@/components/products/product-panel-column";
@@ -124,45 +129,43 @@ export default async function ProductsPage({
   return (
     <PanelProvider initialHref={hrefFor({})}>
       <section className="flex flex-col gap-4">
-        <header className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <h1 className="text-[15px] font-semibold tracking-tight">Products</h1>
-          <p className="text-[12px] text-ink-muted">
-            {total} product{total === 1 ? "" : "s"}
-            {filtered ? " match these filters" : ""} · {active.name}
-          </p>
-          <div className="ml-auto flex items-center gap-2">
-            <PendingLink
-              href="/scan"
-              className="inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-2.5 text-[12px] font-medium hover:border-accent hover:text-accent"
-            >
-              Scan
-            </PendingLink>
-            <PendingLink
-              href={labelsHref()}
-              className="inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-2.5 text-[12px] font-medium hover:border-accent hover:text-accent"
-            >
-              Print labels
-            </PendingLink>
-            <PendingLink
-              href="/import"
-              className="inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-2.5 text-[12px] font-medium hover:border-accent hover:text-accent"
-            >
-              Import
-            </PendingLink>
-            {creating ? null : (
-              <PanelLink
-                href={hrefFor({
-                  new: "true",
-                  product: undefined,
-                  edit: undefined,
-                })}
-                className="inline-flex min-h-[36px] items-center rounded bg-accent px-3 text-[12px] font-semibold text-on-accent"
+        <PageHeader
+          title="Products"
+          summary={
+            <>
+              {total} product{total === 1 ? "" : "s"}
+              {filtered ? " match these filters" : ""} · {active.name}
+            </>
+          }
+          actions={
+            <>
+              <PendingLink href="/scan" className={headerActionSecondary}>
+                Scan
+              </PendingLink>
+              <PendingLink
+                href={labelsHref()}
+                className={headerActionSecondary}
               >
-                New product
-              </PanelLink>
-            )}
-          </div>
-        </header>
+                Print labels
+              </PendingLink>
+              <PendingLink href="/import" className={headerActionSecondary}>
+                Import
+              </PendingLink>
+              {creating ? null : (
+                <PanelLink
+                  href={hrefFor({
+                    new: "true",
+                    product: undefined,
+                    edit: undefined,
+                  })}
+                  className={headerActionPrimary}
+                >
+                  New product
+                </PanelLink>
+              )}
+            </>
+          }
+        />
 
         <ResultsBusy>
           <ProductFilters
