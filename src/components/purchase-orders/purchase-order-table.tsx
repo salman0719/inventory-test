@@ -41,7 +41,7 @@ export function PurchaseOrderTable({
 }) {
   return (
     <>
-      <div data-card-rows className="flex min-[600px]:hidden flex-col gap-2">
+      <div data-card-rows className="flex min-[900px]:hidden flex-col gap-2">
         {orders.map((order) => (
           <ListCard
             key={order.id}
@@ -73,7 +73,7 @@ export function PurchaseOrderTable({
 
       <ListCardSkeletons figures={canViewValues ? 3 : 2} />
 
-      <div className="hidden overflow-x-auto rounded border border-line bg-surface min-[600px]:block">
+      <div className="hidden overflow-x-auto rounded border border-line bg-surface min-[900px]:block">
         <table className="w-full min-w-[760px] border-collapse text-[13px]">
           <caption className="sr-only">
             Purchase orders, with supplier, status, received lines, value and

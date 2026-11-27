@@ -32,7 +32,7 @@ export function ProductTable({
 }) {
   return (
     <>
-      <div data-card-rows className="flex min-[600px]:hidden flex-col gap-2">
+      <div data-card-rows className="flex min-[900px]:hidden flex-col gap-2">
         {products.map((product) => (
           <ListCard
             key={product.id}
@@ -83,7 +83,7 @@ export function ProductTable({
 
       <ListCardSkeletons figures={canViewValues ? 3 : 2} />
 
-      <div className="hidden overflow-x-auto rounded border border-line bg-surface min-[600px]:block">
+      <div className="hidden overflow-x-auto rounded border border-line bg-surface min-[900px]:block">
         <table className="w-full min-w-[680px] border-collapse text-[13px]">
           <caption className="sr-only">
             Products, with SKU, category, on hand, reorder level, cost and stock

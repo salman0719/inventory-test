@@ -134,9 +134,9 @@ tbody[data-skeleton] {
 }
 
 /*
- * The same swap for the phone cards. Below 600px the table is not rendered at all,
+ * The same swap for the phone cards. Below 900px the table is not rendered at all,
  * so the card list is the region that steps aside and its skeleton that takes over;
- * from 600px the two above rules do the work and the card skeleton stays hidden.
+ * from 900px the two above rules do the work and the card skeleton stays hidden.
  */
 [data-card-skeleton] {
   display: none;
@@ -146,7 +146,7 @@ tbody[data-skeleton] {
   display: none;
 }
 
-@media (max-width: 599px) {
+@media (max-width: 899px) {
   [data-busy="true"] [data-card-skeleton] {
     display: flex;
   }

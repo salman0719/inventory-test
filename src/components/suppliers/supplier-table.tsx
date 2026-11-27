@@ -23,7 +23,7 @@ export function SupplierTable({
 }) {
   return (
     <>
-      <div data-card-rows className="flex min-[600px]:hidden flex-col gap-2">
+      <div data-card-rows className="flex min-[900px]:hidden flex-col gap-2">
         {suppliers.map((supplier) => (
           <ListCard
             key={supplier.id}
@@ -58,7 +58,7 @@ export function SupplierTable({
 
       <ListCardSkeletons figures={2} />
 
-      <div className="hidden overflow-x-auto rounded border border-line bg-surface min-[600px]:block">
+      <div className="hidden overflow-x-auto rounded border border-line bg-surface min-[900px]:block">
         <table className="w-full min-w-[620px] border-collapse text-[13px]">
           <caption className="sr-only">
             Suppliers, with contact details and the number of products they

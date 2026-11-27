@@ -30,7 +30,7 @@ export function InventoryTable({
 }) {
   return (
     <>
-      <div data-card-rows className="flex min-[600px]:hidden flex-col gap-2">
+      <div data-card-rows className="flex min-[900px]:hidden flex-col gap-2">
         {items.map((item) => {
           const status = stockStatus(item.onHand, item.reorderLevel);
           return (
@@ -83,7 +83,7 @@ export function InventoryTable({
 
       <ListCardSkeletons figures={canViewValues ? 3 : 2} />
 
-      <div className="hidden overflow-x-auto rounded border border-line bg-surface min-[600px]:block">
+      <div className="hidden overflow-x-auto rounded border border-line bg-surface min-[900px]:block">
         <table className="w-full min-w-[700px] border-collapse text-[13px]">
           <caption className="sr-only">
             Inventory, with on-hand quantity, reorder level, stock value and

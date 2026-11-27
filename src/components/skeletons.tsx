@@ -118,7 +118,7 @@ export function FilterBarSkeleton({ fields = 1 }: { fields?: number }) {
 
 /**
  * The phone's cards while a page or filter change is in flight. `globals.css`
- * reveals it from `[data-busy="true"]` below 600px and hides it again once the
+ * reveals it from `[data-busy="true"]` below 900px and hides it again once the
  * rows arrive, the way `tbody[data-skeleton]` works for the table. A route-level
  * skeleton has no busy region, so it passes `alwaysVisible`.
  */
@@ -165,7 +165,7 @@ export function ListCardSkeletons({
 /**
  * A list table: the header row, then `rows` body rows with the name-and-SKU pair in
  * the first column. `minWidth` matches the real table so narrow screens behave the
- * same while it loads. Below 600px the list is cards, so the skeleton is cards too
+ * same while it loads. Below 900px the list is cards, so the skeleton is cards too
  * rather than a 680px table the phone cannot show.
  */
 export function TableSkeleton({
@@ -179,7 +179,7 @@ export function TableSkeleton({
 }) {
   return (
     <>
-      <div className="min-[600px]:hidden">
+      <div className="min-[900px]:hidden">
         <ListCardSkeletons
           alwaysVisible
           count={4}
@@ -187,7 +187,7 @@ export function TableSkeleton({
         />
       </div>
       <div
-        className="hidden overflow-x-auto rounded border border-line bg-surface min-[600px]:block"
+        className="hidden overflow-x-auto rounded border border-line bg-surface min-[900px]:block"
         aria-hidden
       >
         <table
