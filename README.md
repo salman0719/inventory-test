@@ -61,7 +61,9 @@ npm run dev           # reads PORT from .env.local
 
 Quality gates: `npm run check`, `npm run test`, `npm run build`,
 `npm run secrets:check`. Database: `npm run db:generate`, `npm run db:migrate`,
-`npm run db:seed`.
+`npm run db:seed`. To seed an existing account, use
+`npm run db:seed:account -- --help`; it is a dry run by default and requires an
+exact UUID and confirmation phrase before writing.
 
 ## Repository documents
 

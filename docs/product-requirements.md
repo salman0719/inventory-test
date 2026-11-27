@@ -97,7 +97,8 @@ The business selector should be visible and easy to understand. Switching it mus
 
 - Business profile for demo display.
 - Basic units/categories configuration if useful.
-- Demo data reset.
+- No demo data controls in the interface. Seeding an existing account is an
+  operator CLI (`db:seed:account`), not a customer-facing action.
 - No billing/subscription system in this prototype.
 
 ## 5. Demonstration datasets

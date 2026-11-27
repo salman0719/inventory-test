@@ -16,7 +16,8 @@ short version: what is in, what is out, and where decisions are recorded.
   cancelled, full and partial receiving, outstanding quantities.
 - Reports: current stock, low stock, movement history, PO status, valuation, CSV
   export where practical.
-- Settings: business profile, basic units/categories, safe demo data reset.
+- Settings: business profile and basic units/categories. Demo seeding is an
+  operator CLI (`db:seed:account`), not an in-app control.
 - Two seeded, switchable datasets: Demo Cafe and Demo Retail.
 
 ## Out of scope (explicit)

@@ -9,10 +9,11 @@ Keep this file current. Do not report a task as complete until it has been verif
   categories, suppliers, the stock ledger with inventory screens, purchase orders
   with transactional receiving, the dashboard, and reports with CSV export. The
   Supabase account `owner@cafe.test` is linked to the local Demo Cafe, so signing in
-  with it renders real catalogue data. Slice 2 (the demo reset workflow) is
-  committed as `906a7c2`; every Phase 5 slice is now built apart from product
-  images, with product and supplier CSV import built on `feat/csv-import` (H1 and
-  H2). Extension slices A–H are built on stacked feature branches: supplier facts,
+  with it renders real catalogue data. Slice 2's reset function is committed as
+  `906a7c2`; its Settings panel was removed on 2026-11-26 and demo seeding now
+  runs through the guarded `db:seed:account` CLI. Every Phase 5 slice is now built
+  apart from product images, with product and supplier CSV import built on
+  `feat/csv-import` (H1 and H2). Extension slices A–H are built on stacked feature branches: supplier facts,
   receiving discrepancies, the activity log, stocktake, reorder suggestions,
   multiple suppliers per product, barcode/QR scanning, and product and supplier
   CSV import.
@@ -29,7 +30,8 @@ Keep this file current. Do not report a task as complete until it has been verif
   fixes `0023`–`0024` make a partial product update keep fields the file does not
   carry, and make the demo reset clear import history. Hosted migrations
   `0013`–`0024` were applied on 2026-11-26, 13 → 25 tracked. Supplier export and
-  the round-trip remain unbuilt)
+  the round-trip remain unbuilt. Demo reset was removed from Settings on
+  2026-11-26 and replaced by the guarded `db:seed:account` CLI)
 
 ## Phase checklist
 
@@ -95,7 +97,9 @@ Keep this file current. Do not report a task as complete until it has been verif
 - [ ] Image upload
 - [x] Barcode and QR scanning (Slice G, `feat/barcode-qr`; built and walked in a
       browser, Android camera path not tested on a device)
-- [x] Seed and reset (committed `906a7c2`; `private.reset_demo_business` and the Settings panel)
+- [x] Seed and reset (committed `906a7c2`; `private.reset_demo_business` is kept;
+      the Settings panel was removed on 2026-11-26 and seeding now uses
+      `npm run db:seed:account`)
 
 ### Phase 6: Validation
 
@@ -148,6 +152,27 @@ Keep this file current. Do not report a task as complete until it has been verif
 ## Recently completed
 
 Add date, task, verification method, and result.
+
+- **2026-11-26 — Demo reset removed from Settings; guarded account seeding CLI
+  added.** Deleted `src/components/settings/reset-demo-panel.tsx`,
+  `src/app/(app)/settings/actions.ts` and `src/lib/demo.ts`; Settings no longer
+  computes demo counts and has no reset control or copy. Added
+  `db/seed-account.ts` and `npm run db:seed:account`, which targets an existing
+  business UUID with an owner, never creates users or businesses, prints a dry run
+  by default, requires `SEED <name>` or `REPLACE <name>` with `--apply`, requires
+  `--replace` for a non-empty business, refuses a non-loopback URL without
+  `--hosted`, and requires `--production` plus
+  `ALLOW_PRODUCTION_DEMO_SEED=1` in production. It reuses `buildResetPayload` and
+  `private.reset_demo_business` in one transaction. Verified on a disposable local
+  business: empty seed reported 60 products, 9 suppliers, 9 categories, 2 orders
+  and 59 movements; a second run without `--replace`, a missing confirmation and a
+  wrong replacement phrase were each refused; the exact replacement succeeded with
+  60 products/59 movements; the fixture was removed and Demo Cafe stayed at
+  60/59. Also checked the UUID, non-loopback and production refusals. Gates:
+  `npm run lint` 0 errors (2 pre-existing warnings), `npm run typecheck` 0,
+  `format:check` clean, `npm run test` 299 passed in 38 files, `npm run test:db`
+  168 passed in 17 files, `npm run build` 0, `secrets:check ok`. Hosted CLI and a
+  hosted account were not exercised.
 
 - **2026-11-26 — Hosted migrations `0013`–`0024` applied; stage on `main`
   `fca2d18`.**
