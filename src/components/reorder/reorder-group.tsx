@@ -127,14 +127,16 @@ export function ReorderGroup({
               className="flex gap-3 rounded-lg border border-line bg-surface p-3"
             >
               {interactive ? (
-                <input
-                  type="checkbox"
-                  checked={selected.has(row.productId)}
-                  onChange={() => toggle(row.productId)}
-                  disabled={row.onDraft}
-                  aria-label={`Select ${row.name}`}
-                  className="mt-0.5 h-5 w-5 shrink-0 accent-accent disabled:opacity-40"
-                />
+                <label className="flex h-11 w-11 shrink-0 items-start justify-center self-start">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(row.productId)}
+                    onChange={() => toggle(row.productId)}
+                    disabled={row.onDraft}
+                    aria-label={`Select ${row.name}`}
+                    className="mt-0.5 h-5 w-5 accent-accent disabled:opacity-40"
+                  />
+                </label>
               ) : null}
               <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                 <div className="min-w-0">
