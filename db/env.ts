@@ -30,7 +30,7 @@ export function databaseUrl(): string {
 }
 
 /**
- * The hosted owner connection, used only for migrations.
+ * The hosted owner connection, used by migrations and the guarded demo seed.
  *
  * Supavisor exposes the same host on 5432 (session mode) and 6543 (transaction
  * mode). Migrations run on session mode: the whole run uses one pooled client

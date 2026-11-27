@@ -35,6 +35,7 @@
     "db:sync-auth": "tsx db/sync-auth.ts",
     "db:seed": "tsx db/seed.ts",
     "db:seed:hosted": "tsx db/seed-hosted.ts",
+    "db:seed:account": "tsx db/seed-account.ts",
     "new:ports": "tsx scripts/new-ports.ts"
   },
   "dependencies": {

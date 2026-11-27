@@ -12,13 +12,14 @@ import {
 } from "./seed-catalogue";
 
 /**
- * One definition of the demo dataset, shared by `db:seed` and the reset workflow.
+ * One definition of the demo dataset, shared by `db:seed`, `db:seed:hosted` and
+ * the account-level `db:seed:account` command.
  *
- * The seed writes it with the owner connection; the reset sends the same data to
- * `private.reset_demo_business`, which an owner can call from the app. Both paths
- * derive SKUs from the catalogue index, so a reset produces exactly the baseline a
- * fresh seed would: 60 cafe products, 160 retail lines, the same suppliers and the
- * same two demonstration orders.
+ * The seed writes it with the owner connection; the account command sends the same
+ * data to `private.reset_demo_business` with an owner's claims. Both paths derive
+ * SKUs from the catalogue index, so either produces exactly the baseline a fresh
+ * seed would: 60 cafe products, 160 retail lines, the same suppliers and the same
+ * two demonstration orders.
  */
 
 export type DemoBusinessType = "cafe" | "retail";
