@@ -51,7 +51,46 @@ export function CountForm({
     <form action={formAction} className="flex flex-col gap-3">
       <input type="hidden" name="sessionId" value={sessionId} />
 
-      <div className="overflow-x-auto rounded border border-line">
+      <div className="flex flex-col gap-2 min-[900px]:hidden">
+        {lines.map((line) => (
+          <div
+            key={line.id}
+            className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-3"
+          >
+            <div>
+              <div className="text-[13.5px] leading-tight font-semibold">
+                {line.productName}
+              </div>
+              <div className="mt-0.5 font-mono text-[10.5px] text-ink-faint">
+                {line.sku}
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11.5px] text-ink-muted">
+                On hand {formatQuantity(line.expectedQuantity)}{" "}
+                <span className="text-[10.5px] text-ink-faint">
+                  {line.unitOfMeasure}
+                </span>
+              </span>
+              <input
+                inputMode="decimal"
+                aria-label={`Counted quantity for ${line.productName}`}
+                value={counts[line.id] ?? ""}
+                onChange={(event) =>
+                  setCounts((current) => ({
+                    ...current,
+                    [line.id]: event.target.value,
+                  }))
+                }
+                placeholder="—"
+                className="h-11 w-24 rounded border border-line bg-surface px-2 text-right font-mono text-[13px]"
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded border border-line min-[900px]:block">
         <table className="w-full min-w-[520px] border-collapse">
           <thead className="bg-panel">
             <tr>

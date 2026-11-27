@@ -9,7 +9,8 @@ import type {
   StockReportRow,
   ValuationReport,
 } from "@/lib/reports";
-import { StatusLabel } from "@/components/products/status-label";
+import { DataCard } from "@/components/list-card";
+import { StatusChip, StatusLabel } from "@/components/products/status-label";
 import { OrderStatusLabel } from "@/components/purchase-orders/order-status-label";
 
 const TH =
@@ -54,175 +55,251 @@ export function StockReportTable({
   canViewValues?: boolean;
 }) {
   return (
-    <div className="overflow-x-auto rounded border border-line bg-surface">
-      <table className="w-full min-w-[920px] border-collapse text-[13px]">
-        <caption className="sr-only">
-          Products with on-hand, reorder level, stock on order, unit cost, value
-          at cost and stock status
-        </caption>
-        <thead className="border-b border-line bg-panel">
-          <tr>
-            <th scope="col" className={TH}>
-              Product
-            </th>
-            <th scope="col" className={TH}>
-              Category
-            </th>
-            <th scope="col" className={TH}>
-              Supplier
-            </th>
-            <th scope="col" className={`${TH} text-right`}>
-              On hand
-            </th>
-            <th scope="col" className={`${TH} text-right`}>
-              Reorder
-            </th>
-            <th scope="col" className={`${TH} text-right`}>
-              On order
-            </th>
-            {canViewValues ? (
-              <>
-                <th scope="col" className={`${TH} text-right`}>
-                  Cost
-                </th>
-                <th scope="col" className={`${TH} text-right`}>
-                  Value
-                </th>
-              </>
-            ) : null}
-            <th scope="col" className={TH}>
-              Status
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr
-              key={row.id}
-              className="border-b border-line last:border-b-0 hover:bg-panel"
-            >
-              <td className={`${TD} border-l-2 border-transparent`}>
-                <span className="font-medium">{row.name}</span>
-                <span className="ml-2 font-mono text-[11px] text-ink-faint">
-                  {row.sku}
-                </span>
-              </td>
-              <td className={`${TD} text-ink-muted`}>
-                {row.categoryName ?? "—"}
-              </td>
-              <td className={`${TD} text-ink-muted`}>
-                {row.supplierName ?? "—"}
-              </td>
-              <td className={`${TD} text-right font-mono`}>
-                {formatQuantity(row.onHand)}
-                <span className="ml-1 text-[11px] text-ink-faint">
-                  {row.unitOfMeasure}
-                </span>
-              </td>
-              <td className={`${TD} text-right font-mono text-ink-muted`}>
-                {formatQuantity(row.reorderLevel)}
-              </td>
-              <td
-                className={`${TD} text-right font-mono ${
-                  Number(row.onOrder) > 0 ? "text-accent" : "text-ink-faint"
-                }`}
-              >
-                {Number(row.onOrder) > 0 ? formatQuantity(row.onOrder) : "—"}
-              </td>
+    <>
+      <div className="flex flex-col gap-2 min-[900px]:hidden">
+        {rows.map((row) => (
+          <DataCard
+            key={row.id}
+            title={row.name}
+            meta={`${row.sku} · ${row.categoryName ?? "No category"}`}
+            badge={
+              <StatusChip status={stockStatus(row.onHand, row.reorderLevel)} />
+            }
+            figures={[
+              {
+                label: "On hand",
+                value: `${formatQuantity(row.onHand)} ${row.unitOfMeasure}`,
+              },
+              { label: "Reorder", value: formatQuantity(row.reorderLevel) },
+              {
+                label: "On order",
+                value:
+                  Number(row.onOrder) > 0 ? formatQuantity(row.onOrder) : "—",
+              },
+              ...(canViewValues
+                ? [
+                    {
+                      label: "Cost",
+                      value: formatMoney(row.unitCost, currency),
+                    },
+                    {
+                      label: "Value",
+                      value: formatMoney(row.stockValue, currency),
+                    },
+                  ]
+                : []),
+            ]}
+            footer={`Supplier ${row.supplierName ?? "—"}`}
+          />
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded border border-line bg-surface min-[900px]:block">
+        <table className="w-full min-w-[920px] border-collapse text-[13px]">
+          <caption className="sr-only">
+            Products with on-hand, reorder level, stock on order, unit cost,
+            value at cost and stock status
+          </caption>
+          <thead className="border-b border-line bg-panel">
+            <tr>
+              <th scope="col" className={TH}>
+                Product
+              </th>
+              <th scope="col" className={TH}>
+                Category
+              </th>
+              <th scope="col" className={TH}>
+                Supplier
+              </th>
+              <th scope="col" className={`${TH} text-right`}>
+                On hand
+              </th>
+              <th scope="col" className={`${TH} text-right`}>
+                Reorder
+              </th>
+              <th scope="col" className={`${TH} text-right`}>
+                On order
+              </th>
               {canViewValues ? (
                 <>
-                  <td className={`${TD} text-right font-mono text-ink-muted`}>
-                    {formatMoney(row.unitCost, currency)}
-                  </td>
-                  <td className={`${TD} text-right font-mono`}>
-                    {formatMoney(row.stockValue, currency)}
-                  </td>
+                  <th scope="col" className={`${TH} text-right`}>
+                    Cost
+                  </th>
+                  <th scope="col" className={`${TH} text-right`}>
+                    Value
+                  </th>
                 </>
               ) : null}
-              <td className={`${TD} text-ink-muted`}>
-                <StatusLabel
-                  status={stockStatus(row.onHand, row.reorderLevel)}
-                />
-              </td>
+              <th scope="col" className={TH}>
+                Status
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr
+                key={row.id}
+                className="border-b border-line last:border-b-0 hover:bg-panel"
+              >
+                <td className={`${TD} border-l-2 border-transparent`}>
+                  <span className="font-medium">{row.name}</span>
+                  <span className="ml-2 font-mono text-[11px] text-ink-faint">
+                    {row.sku}
+                  </span>
+                </td>
+                <td className={`${TD} text-ink-muted`}>
+                  {row.categoryName ?? "—"}
+                </td>
+                <td className={`${TD} text-ink-muted`}>
+                  {row.supplierName ?? "—"}
+                </td>
+                <td className={`${TD} text-right font-mono`}>
+                  {formatQuantity(row.onHand)}
+                  <span className="ml-1 text-[11px] text-ink-faint">
+                    {row.unitOfMeasure}
+                  </span>
+                </td>
+                <td className={`${TD} text-right font-mono text-ink-muted`}>
+                  {formatQuantity(row.reorderLevel)}
+                </td>
+                <td
+                  className={`${TD} text-right font-mono ${
+                    Number(row.onOrder) > 0 ? "text-accent" : "text-ink-faint"
+                  }`}
+                >
+                  {Number(row.onOrder) > 0 ? formatQuantity(row.onOrder) : "—"}
+                </td>
+                {canViewValues ? (
+                  <>
+                    <td className={`${TD} text-right font-mono text-ink-muted`}>
+                      {formatMoney(row.unitCost, currency)}
+                    </td>
+                    <td className={`${TD} text-right font-mono`}>
+                      {formatMoney(row.stockValue, currency)}
+                    </td>
+                  </>
+                ) : null}
+                <td className={`${TD} text-ink-muted`}>
+                  <StatusLabel
+                    status={stockStatus(row.onHand, row.reorderLevel)}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
 export function MovementReportTable({ rows }: { rows: MovementReportRow[] }) {
   return (
-    <div className="overflow-x-auto rounded border border-line bg-surface">
-      <table className="w-full min-w-[820px] border-collapse text-[13px]">
-        <caption className="sr-only">
-          Stock movements with date, product, type, quantity, reason and
-          reference
-        </caption>
-        <thead className="border-b border-line bg-panel">
-          <tr>
-            <th scope="col" className={TH}>
-              Date
-            </th>
-            <th scope="col" className={TH}>
-              Product
-            </th>
-            <th scope="col" className={TH}>
-              Type
-            </th>
-            <th scope="col" className={`${TH} text-right`}>
-              Quantity
-            </th>
-            <th scope="col" className={TH}>
-              Reason
-            </th>
-            <th scope="col" className={TH}>
-              Reference
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr
-              key={row.id}
-              className="border-b border-line last:border-b-0 hover:bg-panel"
-            >
-              <td
-                className={`${TD} border-l-2 border-transparent font-mono text-[11px] text-ink-faint`}
-              >
-                {formatMoment(row.createdAt)}
-              </td>
-              <td className={TD}>
-                <span>{row.productName}</span>
-                <span className="ml-2 font-mono text-[11px] text-ink-faint">
-                  {row.sku}
-                </span>
-              </td>
-              <td className={`${TD} text-ink-muted`}>
-                {LEDGER_MOVEMENT_LABELS[row.movementType]}
-              </td>
-              <td
-                className={`${TD} text-right font-mono ${
-                  Number(row.quantityDelta) < 0 ? "text-danger" : "text-success"
-                }`}
-              >
-                {formatSignedQuantity(row.quantityDelta)}
-                <span className="ml-1 text-[11px] text-ink-faint">
-                  {row.unitOfMeasure}
-                </span>
-              </td>
-              <td className={`${TD} max-w-[280px] truncate text-ink-muted`}>
-                {row.reason ?? "—"}
-              </td>
-              <td className={`${TD} text-ink-muted`}>
-                {referenceLabel(row.referenceType)}
-              </td>
+    <>
+      <div className="flex flex-col gap-2 min-[900px]:hidden">
+        {rows.map((row) => (
+          <DataCard
+            key={row.id}
+            title={row.productName}
+            meta={`${row.sku} · ${formatMoment(row.createdAt)}`}
+            figures={[
+              {
+                label: "Type",
+                value: LEDGER_MOVEMENT_LABELS[row.movementType],
+              },
+              {
+                label: "Quantity",
+                value: (
+                  <span
+                    className={
+                      Number(row.quantityDelta) < 0
+                        ? "text-danger"
+                        : "text-success"
+                    }
+                  >
+                    {formatSignedQuantity(row.quantityDelta)}{" "}
+                    {row.unitOfMeasure}
+                  </span>
+                ),
+              },
+            ]}
+            footer={`${row.reason ?? "—"} · ${referenceLabel(row.referenceType)}`}
+          />
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded border border-line bg-surface min-[900px]:block">
+        <table className="w-full min-w-[820px] border-collapse text-[13px]">
+          <caption className="sr-only">
+            Stock movements with date, product, type, quantity, reason and
+            reference
+          </caption>
+          <thead className="border-b border-line bg-panel">
+            <tr>
+              <th scope="col" className={TH}>
+                Date
+              </th>
+              <th scope="col" className={TH}>
+                Product
+              </th>
+              <th scope="col" className={TH}>
+                Type
+              </th>
+              <th scope="col" className={`${TH} text-right`}>
+                Quantity
+              </th>
+              <th scope="col" className={TH}>
+                Reason
+              </th>
+              <th scope="col" className={TH}>
+                Reference
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr
+                key={row.id}
+                className="border-b border-line last:border-b-0 hover:bg-panel"
+              >
+                <td
+                  className={`${TD} border-l-2 border-transparent font-mono text-[11px] text-ink-faint`}
+                >
+                  {formatMoment(row.createdAt)}
+                </td>
+                <td className={TD}>
+                  <span>{row.productName}</span>
+                  <span className="ml-2 font-mono text-[11px] text-ink-faint">
+                    {row.sku}
+                  </span>
+                </td>
+                <td className={`${TD} text-ink-muted`}>
+                  {LEDGER_MOVEMENT_LABELS[row.movementType]}
+                </td>
+                <td
+                  className={`${TD} text-right font-mono ${
+                    Number(row.quantityDelta) < 0
+                      ? "text-danger"
+                      : "text-success"
+                  }`}
+                >
+                  {formatSignedQuantity(row.quantityDelta)}
+                  <span className="ml-1 text-[11px] text-ink-faint">
+                    {row.unitOfMeasure}
+                  </span>
+                </td>
+                <td className={`${TD} max-w-[280px] truncate text-ink-muted`}>
+                  {row.reason ?? "—"}
+                </td>
+                <td className={`${TD} text-ink-muted`}>
+                  {referenceLabel(row.referenceType)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
@@ -237,93 +314,132 @@ export function OrderReportTable({
   canViewValues?: boolean;
 }) {
   return (
-    <div className="overflow-x-auto rounded border border-line bg-surface">
-      <table className="w-full min-w-[920px] border-collapse text-[13px]">
-        <caption className="sr-only">
-          Purchase orders with supplier, status, dates, received lines, value
-          and outstanding value
-        </caption>
-        <thead className="border-b border-line bg-panel">
-          <tr>
-            <th scope="col" className={TH}>
-              Order
-            </th>
-            <th scope="col" className={TH}>
-              Supplier
-            </th>
-            <th scope="col" className={TH}>
-              Status
-            </th>
-            <th scope="col" className={TH}>
-              Ordered
-            </th>
-            <th scope="col" className={TH}>
-              Expected
-            </th>
-            <th scope="col" className={`${TH} text-right`}>
-              Lines
-            </th>
-            {canViewValues ? (
-              <>
-                <th scope="col" className={`${TH} text-right`}>
-                  Value
-                </th>
-                <th scope="col" className={`${TH} text-right`}>
-                  Outstanding
-                </th>
-              </>
-            ) : null}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr
-              key={row.id}
-              className="border-b border-line last:border-b-0 hover:bg-panel"
-            >
-              <td
-                className={`${TD} border-l-2 border-transparent font-mono font-medium`}
-              >
-                {row.orderNumber}
-              </td>
-              <td className={`${TD} text-ink-muted`}>{row.supplierName}</td>
-              <td className={`${TD} text-ink-muted`}>
-                <OrderStatusLabel status={row.status} />
-              </td>
-              <td className={`${TD} text-ink-muted`}>
-                {formatDay(row.orderedAt)}
-              </td>
-              <td className={`${TD} text-ink-muted`}>
-                {formatDay(row.expectedDeliveryAt)}
-              </td>
-              <td
-                className={`${TD} text-right font-mono text-[12px] text-ink-muted`}
-              >
-                {row.receivedLines} of {row.lineCount}
-              </td>
+    <>
+      <div className="flex flex-col gap-2 min-[900px]:hidden">
+        {rows.map((row) => (
+          <DataCard
+            key={row.id}
+            title={<span className="font-mono">{row.orderNumber}</span>}
+            meta={row.supplierName}
+            badge={<OrderStatusLabel status={row.status} />}
+            figures={[
+              {
+                label: "Lines",
+                value: `${row.receivedLines} of ${row.lineCount}`,
+              },
+              { label: "Ordered", value: formatDay(row.orderedAt) },
+              {
+                label: "Expected",
+                value: formatDay(row.expectedDeliveryAt),
+              },
+              ...(canViewValues
+                ? [
+                    {
+                      label: "Value",
+                      value: formatMoney(row.totalValue, currency),
+                    },
+                    {
+                      label: "Outstanding",
+                      value:
+                        Number(row.outstandingValue) > 0
+                          ? formatMoney(row.outstandingValue, currency)
+                          : "—",
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded border border-line bg-surface min-[900px]:block">
+        <table className="w-full min-w-[920px] border-collapse text-[13px]">
+          <caption className="sr-only">
+            Purchase orders with supplier, status, dates, received lines, value
+            and outstanding value
+          </caption>
+          <thead className="border-b border-line bg-panel">
+            <tr>
+              <th scope="col" className={TH}>
+                Order
+              </th>
+              <th scope="col" className={TH}>
+                Supplier
+              </th>
+              <th scope="col" className={TH}>
+                Status
+              </th>
+              <th scope="col" className={TH}>
+                Ordered
+              </th>
+              <th scope="col" className={TH}>
+                Expected
+              </th>
+              <th scope="col" className={`${TH} text-right`}>
+                Lines
+              </th>
               {canViewValues ? (
                 <>
-                  <td className={`${TD} text-right font-mono`}>
-                    {formatMoney(row.totalValue, currency)}
-                  </td>
-                  <td
-                    className={`${TD} text-right font-mono ${
-                      Number(row.outstandingValue) > 0
-                        ? "text-warning"
-                        : "text-ink-faint"
-                    }`}
-                  >
-                    {Number(row.outstandingValue) > 0
-                      ? formatMoney(row.outstandingValue, currency)
-                      : "—"}
-                  </td>
+                  <th scope="col" className={`${TH} text-right`}>
+                    Value
+                  </th>
+                  <th scope="col" className={`${TH} text-right`}>
+                    Outstanding
+                  </th>
                 </>
               ) : null}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr
+                key={row.id}
+                className="border-b border-line last:border-b-0 hover:bg-panel"
+              >
+                <td
+                  className={`${TD} border-l-2 border-transparent font-mono font-medium`}
+                >
+                  {row.orderNumber}
+                </td>
+                <td className={`${TD} text-ink-muted`}>{row.supplierName}</td>
+                <td className={`${TD} text-ink-muted`}>
+                  <OrderStatusLabel status={row.status} />
+                </td>
+                <td className={`${TD} text-ink-muted`}>
+                  {formatDay(row.orderedAt)}
+                </td>
+                <td className={`${TD} text-ink-muted`}>
+                  {formatDay(row.expectedDeliveryAt)}
+                </td>
+                <td
+                  className={`${TD} text-right font-mono text-[12px] text-ink-muted`}
+                >
+                  {row.receivedLines} of {row.lineCount}
+                </td>
+                {canViewValues ? (
+                  <>
+                    <td className={`${TD} text-right font-mono`}>
+                      {formatMoney(row.totalValue, currency)}
+                    </td>
+                    <td
+                      className={`${TD} text-right font-mono ${
+                        Number(row.outstandingValue) > 0
+                          ? "text-warning"
+                          : "text-ink-faint"
+                      }`}
+                    >
+                      {Number(row.outstandingValue) > 0
+                        ? formatMoney(row.outstandingValue, currency)
+                        : "—"}
+                    </td>
+                  </>
+                ) : null}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
@@ -353,72 +469,107 @@ export function ValuationReportTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded border border-line bg-surface">
-      <table className="w-full min-w-[520px] border-collapse text-[13px]">
-        <caption className="sr-only">
-          Stock value at cost by category, with each category&rsquo;s share of
-          the total
-        </caption>
-        <thead className="border-b border-line bg-panel">
-          <tr>
-            <th scope="col" className={TH}>
-              Category
-            </th>
-            <th scope="col" className={`${TH} text-right`}>
-              Products
-            </th>
-            <th scope="col" className={`${TH} text-right`}>
-              Value at cost
-            </th>
-            <th scope="col" className={`${TH} text-right`}>
-              Share
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {report.rows.map((row) => {
-            const share =
-              totalCents === 0
-                ? 0
-                : (Math.round(Number(row.value) * 100) / totalCents) * 100;
-            return (
-              <tr
-                key={row.categoryName}
-                className="border-b border-line last:border-b-0 hover:bg-panel"
-              >
-                <td className={`${TD} border-l-2 border-transparent`}>
-                  {row.categoryName}
-                </td>
-                <td className={`${TD} text-right font-mono text-ink-muted`}>
-                  {row.products}
-                </td>
-                <td className={`${TD} text-right font-mono`}>
-                  {formatMoney(row.value, currency)}
-                </td>
-                <td className={`${TD} text-right font-mono text-ink-muted`}>
-                  {share.toFixed(1)}%
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-        <tfoot>
-          <tr className="border-t-2 border-line bg-panel">
-            <th scope="row" className={`${TH} text-ink`}>
-              Total
-            </th>
-            <td className={`${TD} text-right font-mono`}>
-              {report.totalProducts}
-            </td>
-            <td className={`${TD} text-right font-mono font-medium`}>
-              {formatMoney(report.totalValue, currency)}
-            </td>
-            <td className={`${TD} text-right font-mono text-ink-muted`}>
-              100%
-            </td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
+    <>
+      <div className="flex flex-col gap-2 min-[900px]:hidden">
+        {report.rows.map((row) => {
+          const share =
+            totalCents === 0
+              ? 0
+              : (Math.round(Number(row.value) * 100) / totalCents) * 100;
+          return (
+            <DataCard
+              key={row.categoryName}
+              title={row.categoryName}
+              figures={[
+                { label: "Products", value: row.products },
+                {
+                  label: "Value",
+                  value: formatMoney(row.value, currency),
+                },
+                { label: "Share", value: `${share.toFixed(1)}%` },
+              ]}
+            />
+          );
+        })}
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 rounded-lg border border-line bg-panel p-3 text-[11.5px] text-ink-muted">
+          <span className="text-[10px] uppercase tracking-[0.07em]">Total</span>
+          <span className="font-mono text-[12.5px] font-medium text-ink">
+            {report.totalProducts} products
+          </span>
+          <span className="font-mono text-[12.5px] font-medium text-ink">
+            {formatMoney(report.totalValue, currency)}
+          </span>
+          <span className="ml-auto font-mono">100%</span>
+        </div>
+      </div>
+
+      <div className="hidden overflow-x-auto rounded border border-line bg-surface min-[900px]:block">
+        <table className="w-full min-w-[520px] border-collapse text-[13px]">
+          <caption className="sr-only">
+            Stock value at cost by category, with each category&rsquo;s share of
+            the total
+          </caption>
+          <thead className="border-b border-line bg-panel">
+            <tr>
+              <th scope="col" className={TH}>
+                Category
+              </th>
+              <th scope="col" className={`${TH} text-right`}>
+                Products
+              </th>
+              <th scope="col" className={`${TH} text-right`}>
+                Value at cost
+              </th>
+              <th scope="col" className={`${TH} text-right`}>
+                Share
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {report.rows.map((row) => {
+              const share =
+                totalCents === 0
+                  ? 0
+                  : (Math.round(Number(row.value) * 100) / totalCents) * 100;
+              return (
+                <tr
+                  key={row.categoryName}
+                  className="border-b border-line last:border-b-0 hover:bg-panel"
+                >
+                  <td className={`${TD} border-l-2 border-transparent`}>
+                    {row.categoryName}
+                  </td>
+                  <td className={`${TD} text-right font-mono text-ink-muted`}>
+                    {row.products}
+                  </td>
+                  <td className={`${TD} text-right font-mono`}>
+                    {formatMoney(row.value, currency)}
+                  </td>
+                  <td className={`${TD} text-right font-mono text-ink-muted`}>
+                    {share.toFixed(1)}%
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr className="border-t-2 border-line bg-panel">
+              <th scope="row" className={`${TH} text-ink`}>
+                Total
+              </th>
+              <td className={`${TD} text-right font-mono`}>
+                {report.totalProducts}
+              </td>
+              <td className={`${TD} text-right font-mono font-medium`}>
+                {formatMoney(report.totalValue, currency)}
+              </td>
+              <td className={`${TD} text-right font-mono text-ink-muted`}>
+                100%
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </>
   );
 }

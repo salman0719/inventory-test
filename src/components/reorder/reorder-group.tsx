@@ -101,7 +101,106 @@ export function ReorderGroup({
       <form action={formAction}>
         <input type="hidden" name="supplierId" value={group.supplierId} />
 
-        <div className="overflow-x-auto">
+        {interactive ? (
+          <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2 min-[900px]:hidden">
+            <label className="inline-flex min-h-[44px] items-center gap-2 text-[11.5px] text-ink-muted">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleAll}
+                disabled={selectable.length === 0}
+                aria-label={`Select every product to reorder from ${group.supplierName}`}
+                className="h-5 w-5 accent-accent disabled:opacity-40"
+              />
+              Select all
+            </label>
+            <span className="text-[11px] text-ink-faint">
+              {selected.size} selected
+            </span>
+          </div>
+        ) : null}
+
+        <div className="flex flex-col gap-2 p-2 min-[900px]:hidden">
+          {group.rows.map((row) => (
+            <div
+              key={row.productId}
+              className="flex gap-3 rounded-lg border border-line bg-surface p-3"
+            >
+              {interactive ? (
+                <input
+                  type="checkbox"
+                  checked={selected.has(row.productId)}
+                  onChange={() => toggle(row.productId)}
+                  disabled={row.onDraft}
+                  aria-label={`Select ${row.name}`}
+                  className="mt-0.5 h-5 w-5 shrink-0 accent-accent disabled:opacity-40"
+                />
+              ) : null}
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <div className="min-w-0">
+                  <div className="text-[13.5px] leading-tight font-semibold">
+                    {row.name}
+                  </div>
+                  <div className="mt-0.5 font-mono text-[10.5px] text-ink-faint">
+                    {row.sku}
+                    {row.onDraft ? (
+                      <span className="ml-2 text-warning">
+                        On {group.openOrder?.orderNumber}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11.5px] text-ink-muted">
+                  <span>
+                    On hand{" "}
+                    <b className="font-mono text-[12.5px] font-medium text-ink">
+                      {formatQuantity(row.onHand)} {row.unitOfMeasure}
+                    </b>
+                  </span>
+                  <span>
+                    On order{" "}
+                    <b className="font-mono text-[12.5px] font-medium text-ink">
+                      {formatQuantity(row.onOrder)}
+                    </b>
+                  </span>
+                  <span>
+                    Target{" "}
+                    <b className="font-mono text-[12.5px] font-medium text-ink">
+                      {formatQuantity(row.target)}
+                    </b>
+                  </span>
+                </div>
+                <label className="flex items-center justify-between gap-2 text-[11.5px] text-ink-muted">
+                  To order
+                  {interactive ? (
+                    <input
+                      value={
+                        quantities[row.productId] ??
+                        quantityField(row.suggested)
+                      }
+                      onChange={(event) =>
+                        setQuantities((current) => ({
+                          ...current,
+                          [row.productId]: event.target.value,
+                        }))
+                      }
+                      inputMode="decimal"
+                      disabled={row.onDraft}
+                      aria-label={`Quantity to order for ${row.name}`}
+                      className="h-11 w-24 rounded border border-line bg-surface px-2 text-right font-mono text-[13px] disabled:bg-panel disabled:text-ink-faint"
+                    />
+                  ) : (
+                    <span className="font-mono text-[12.5px] text-ink">
+                      {formatQuantity(row.suggested)}
+                    </span>
+                  )}
+                </label>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="hidden overflow-x-auto min-[900px]:block">
           <table className="w-full min-w-[660px] border-collapse text-[12.5px]">
             <caption className="sr-only">
               Reorder suggestions for {group.supplierName}, with on hand, on

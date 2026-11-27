@@ -1,6 +1,7 @@
 import { CountForm } from "@/components/stocktake/count-form";
 import { StartStocktakeForm } from "@/components/stocktake/start-form";
 import { NoBusinessNotice } from "@/components/no-business-notice";
+import { DataCard, ListCard } from "@/components/list-card";
 import { PendingLink } from "@/components/pending-link";
 import { getActiveBusiness } from "@/lib/businesses";
 import { formatQuantity } from "@/lib/product-input";
@@ -129,59 +130,84 @@ export default async function StocktakePage({
         </p>
       )}
 
-      <div className="overflow-x-auto rounded border border-line">
-        <table className="w-full min-w-[600px] border-collapse">
-          <thead className="bg-panel">
-            <tr>
-              <th className={TH}>Sheet</th>
-              <th className={TH}>Started</th>
-              <th className={TH}>Status</th>
-              <th className={`${TH} text-right`}>Counted</th>
-              <th className={`${TH} text-right`}>Adjustment</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sessions.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-2.5 py-10 text-center">
-                  <p className="text-[13px] font-medium">No stocktakes yet</p>
-                  <p className="mx-auto mt-1 max-w-[52ch] text-[12px] text-ink-muted">
-                    Start one above to compare what is on the shelf with what
-                    the ledger holds.
-                  </p>
-                </td>
-              </tr>
-            ) : (
-              sessions.map((session) => (
-                <tr key={session.id} className="border-t border-line">
-                  <td className={TD}>
-                    <PendingLink
-                      href={`/stocktake?session=${session.id}#sheet`}
-                      className="font-mono text-[12px] font-medium hover:text-accent"
-                    >
-                      {session.reference}
-                    </PendingLink>
-                  </td>
-                  <td className={`${TD} text-[12px]`}>
-                    {DATE.format(new Date(session.startedAt))}
-                  </td>
-                  <td className={TD}>
-                    <Status status={session.status} />
-                  </td>
-                  <td className={`${TD} text-right font-mono text-[12px]`}>
-                    {session.countedLines}/{session.lineCount}
-                  </td>
-                  <td className={`${TD} text-right font-mono text-[12px]`}>
-                    {session.status === "completed"
-                      ? `${session.adjustedLines} · ${formatSignedQuantity(session.netDelta)}`
-                      : "—"}
-                  </td>
+      {sessions.length === 0 ? (
+        <div className="rounded border border-line bg-surface px-3 py-10 text-center">
+          <p className="text-[13px] font-medium">No stocktakes yet</p>
+          <p className="mx-auto mt-1 max-w-[52ch] text-[12px] text-ink-muted">
+            Start one above to compare what is on the shelf with what the ledger
+            holds.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-col gap-2 min-[900px]:hidden">
+            {sessions.map((session) => (
+              <ListCard
+                key={session.id}
+                href={`/stocktake?session=${session.id}#sheet`}
+                title={<span className="font-mono">{session.reference}</span>}
+                meta={`Started ${DATE.format(new Date(session.startedAt))}`}
+                badge={<Status status={session.status} />}
+                figures={[
+                  {
+                    label: "Counted",
+                    value: `${session.countedLines}/${session.lineCount}`,
+                  },
+                  {
+                    label: "Adjustment",
+                    value:
+                      session.status === "completed"
+                        ? `${session.adjustedLines} · ${formatSignedQuantity(session.netDelta)}`
+                        : "—",
+                  },
+                ]}
+              />
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto rounded border border-line min-[900px]:block">
+            <table className="w-full min-w-[600px] border-collapse">
+              <thead className="bg-panel">
+                <tr>
+                  <th className={TH}>Sheet</th>
+                  <th className={TH}>Started</th>
+                  <th className={TH}>Status</th>
+                  <th className={`${TH} text-right`}>Counted</th>
+                  <th className={`${TH} text-right`}>Adjustment</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {sessions.map((session) => (
+                  <tr key={session.id} className="border-t border-line">
+                    <td className={TD}>
+                      <PendingLink
+                        href={`/stocktake?session=${session.id}#sheet`}
+                        className="font-mono text-[12px] font-medium hover:text-accent"
+                      >
+                        {session.reference}
+                      </PendingLink>
+                    </td>
+                    <td className={`${TD} text-[12px]`}>
+                      {DATE.format(new Date(session.startedAt))}
+                    </td>
+                    <td className={TD}>
+                      <Status status={session.status} />
+                    </td>
+                    <td className={`${TD} text-right font-mono text-[12px]`}>
+                      {session.countedLines}/{session.lineCount}
+                    </td>
+                    <td className={`${TD} text-right font-mono text-[12px]`}>
+                      {session.status === "completed"
+                        ? `${session.adjustedLines} · ${formatSignedQuantity(session.netDelta)}`
+                        : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       {selectedId !== "" && !detail ? (
         <p className="rounded border border-line bg-panel px-3 py-2 text-[12px] text-ink-muted">
@@ -229,7 +255,39 @@ export default async function StocktakePage({
                     : `${detail.session.countedLines} of ${detail.session.lineCount} counted · not completed`}
                 </p>
 
-                <div className="overflow-x-auto rounded border border-line">
+                <div className="flex flex-col gap-2 min-[900px]:hidden">
+                  {detail.lines.map((line) => (
+                    <DataCard
+                      key={line.id}
+                      title={line.productName}
+                      meta={line.sku}
+                      figures={[
+                        {
+                          label: "On hand at start",
+                          value: formatQuantity(line.expectedQuantity),
+                        },
+                        {
+                          label: "Counted",
+                          value: formatQuantity(line.countedQuantity),
+                        },
+                        ...(detail.session.status === "completed"
+                          ? [
+                              {
+                                label: "Ledger before",
+                                value: formatQuantity(line.onHandBefore),
+                              },
+                              {
+                                label: "Adjustment",
+                                value: formatSignedQuantity(line.appliedDelta),
+                              },
+                            ]
+                          : []),
+                      ]}
+                    />
+                  ))}
+                </div>
+
+                <div className="hidden overflow-x-auto rounded border border-line min-[900px]:block">
                   <table className="w-full min-w-[560px] border-collapse">
                     <thead className="bg-panel">
                       <tr>
