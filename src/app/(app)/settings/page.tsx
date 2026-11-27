@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { CategoryForm } from "@/components/products/category-form";
-import { ResetDemoPanel } from "@/components/settings/reset-demo-panel";
 import { NoBusinessNotice } from "@/components/no-business-notice";
 import { PageHeader } from "@/components/page-header";
 import { getActiveBusiness } from "@/lib/businesses";
-import { canResetDemoData, getDemoCounts } from "@/lib/demo";
 import { listCategories } from "@/lib/products";
 import { getSessionUser } from "@/lib/session";
 
@@ -15,11 +13,7 @@ export default async function SettingsPage() {
   const { active } = await getActiveBusiness(user.id);
   if (!active) return <NoBusinessNotice />;
 
-  const [categories, counts, canReset] = await Promise.all([
-    listCategories(user.id, active.id),
-    getDemoCounts(user.id, active.id),
-    canResetDemoData(user.id, active.id),
-  ]);
+  const categories = await listCategories(user.id, active.id);
 
   return (
     <section className="flex flex-col gap-4">
@@ -129,17 +123,8 @@ export default async function SettingsPage() {
         </div>
       </section>
 
-      {canReset ? (
-        <ResetDemoPanel counts={counts} businessName={active.name} />
-      ) : (
-        <p className="max-w-[60ch] text-[12px] text-ink-muted">
-          Demo data can only be reset by this business&rsquo;s owner.
-        </p>
-      )}
-
       <p className="max-w-[60ch] text-[12px] text-ink-muted">
-        Business name, type and currency are fixed for this prototype; the demo
-        reset only rebuilds the data inside the current business.
+        Business name, type and currency are fixed for this prototype.
       </p>
     </section>
   );
