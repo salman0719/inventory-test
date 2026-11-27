@@ -227,7 +227,10 @@ export function SupplierImportWorkbench({ data }: { data: ImportPageData }) {
 
   return (
     <div className="flex max-w-[980px] flex-col gap-3">
-      <ol className="flex flex-wrap gap-1.5" aria-label="Import steps">
+      <ol
+        className="grid grid-cols-2 gap-1.5 min-[600px]:flex min-[600px]:flex-wrap"
+        aria-label="Import steps"
+      >
         {STEPS.map((label, index) => {
           const number = (index + 1) as Step;
           const current = step === number;
@@ -387,7 +390,65 @@ export function SupplierImportWorkbench({ data }: { data: ImportPageData }) {
             </label>
           </div>
 
-          <div className="table-wrap overflow-x-auto">
+          <ul className="flex flex-col min-[900px]:hidden">
+            {mapping.map((match) => (
+              <li
+                key={match.index}
+                className="flex flex-col gap-1.5 border-b border-line px-3 py-2.5 last:border-0"
+              >
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                  <span className="text-[12px] font-medium">
+                    {headers[match.index]?.trim() || "(blank header)"}
+                  </span>
+                  {match.field ? (
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                        match.source === "header" || match.source === "alias"
+                          ? "bg-success-soft text-success"
+                          : "bg-warning-soft text-warning"
+                      }`}
+                    >
+                      {match.source === "header"
+                        ? "Header"
+                        : match.source === "alias"
+                          ? "Alias"
+                          : "Manual"}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-ink-muted">
+                  <span className="text-ink-faint">Sample </span>
+                  {sampleValues(rows.slice(headerRow), match.index).join(
+                    " · ",
+                  ) || "—"}
+                </p>
+                <label className="flex flex-col gap-1">
+                  <span className={LABEL}>Import as</span>
+                  <select
+                    aria-label={`Import ${headers[match.index] ?? "column"} as`}
+                    value={match.field ?? ""}
+                    onChange={(event) =>
+                      chooseField(
+                        match.index,
+                        event.target.value as SupplierField | "",
+                      )
+                    }
+                    className={`${INPUT} w-full`}
+                  >
+                    <option value="">Ignore this column</option>
+                    {SUPPLIER_FIELDS.map((field) => (
+                      <option key={field.key} value={field.key}>
+                        {field.label}
+                        {field.required ? " (required)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </li>
+            ))}
+          </ul>
+
+          <div className="table-wrap hidden overflow-x-auto min-[900px]:block">
             <table className="w-full min-w-[640px] text-[12px]">
               <thead>
                 <tr className="border-b border-line bg-panel text-left text-[10px] uppercase tracking-[0.07em] text-ink-muted">
@@ -622,50 +683,96 @@ function SupplierReviewStep({
         </div>
       ) : null}
 
-      <div className="table-wrap mx-3 mb-2.5 overflow-x-auto rounded border border-line">
-        <table className="w-full min-w-[560px] text-[12px]">
-          <thead>
-            <tr className="border-b border-line bg-panel text-left text-[10px] uppercase tracking-[0.07em] text-ink-muted">
-              <th className="px-2 py-1.5 font-medium">Row</th>
-              <th className="px-2 py-1.5 font-medium">Supplier</th>
-              <th className="px-2 py-1.5 font-medium">Contact</th>
-              <th className="px-2 py-1.5 font-medium">Email</th>
-              <th className="px-2 py-1.5 text-right font-medium">Lead time</th>
-              <th className="px-2 py-1.5 font-medium">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {preview.map((row) => (
-              <tr
-                key={row.rowNumber}
-                className="border-b border-line last:border-0"
-              >
-                <td className="px-2 py-1.5 font-mono text-[11px] text-ink-muted">
-                  {row.rowNumber}
-                </td>
-                <td className="px-2 py-1.5">{row.name}</td>
-                <td className="px-2 py-1.5">
-                  {row.values?.contactName ?? "—"}
-                </td>
-                <td className="px-2 py-1.5">{row.values?.email ?? "—"}</td>
-                <td className="px-2 py-1.5 text-right font-mono">
-                  {row.values?.leadTimeDays ?? "—"}
-                </td>
-                <td className="px-2 py-1.5">
-                  <span
-                    className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                      row.status === "update"
-                        ? "bg-warning-soft text-warning"
-                        : "bg-success-soft text-success"
-                    }`}
-                  >
-                    {row.status === "update" ? "Update" : "New"}
+      <div className="mx-3 mb-2.5 rounded border border-line">
+        <ul className="flex flex-col min-[900px]:hidden">
+          {preview.map((row) => (
+            <li
+              key={row.rowNumber}
+              className="border-b border-line px-2 py-1.5 last:border-0"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-[12px] font-medium">{row.name}</p>
+                  <p className="text-[11px] text-ink-muted">
+                    {row.values?.contactName ?? "—"}
+                  </p>
+                </div>
+                <span
+                  className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                    row.status === "update"
+                      ? "bg-warning-soft text-warning"
+                      : "bg-success-soft text-success"
+                  }`}
+                >
+                  {row.status === "update" ? "Update" : "New"}
+                </span>
+              </div>
+              <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-ink-muted">
+                <span>
+                  Row <span className="font-mono">{row.rowNumber}</span>
+                </span>
+                <span className="break-all">
+                  Email{" "}
+                  <span className="text-ink">{row.values?.email ?? "—"}</span>
+                </span>
+                <span>
+                  Lead time{" "}
+                  <span className="font-mono text-ink">
+                    {row.values?.leadTimeDays ?? "—"}
                   </span>
-                </td>
+                </span>
+              </p>
+            </li>
+          ))}
+        </ul>
+
+        <div className="table-wrap hidden overflow-x-auto min-[900px]:block">
+          <table className="w-full min-w-[560px] text-[12px]">
+            <thead>
+              <tr className="border-b border-line bg-panel text-left text-[10px] uppercase tracking-[0.07em] text-ink-muted">
+                <th className="px-2 py-1.5 font-medium">Row</th>
+                <th className="px-2 py-1.5 font-medium">Supplier</th>
+                <th className="px-2 py-1.5 font-medium">Contact</th>
+                <th className="px-2 py-1.5 font-medium">Email</th>
+                <th className="px-2 py-1.5 text-right font-medium">
+                  Lead time
+                </th>
+                <th className="px-2 py-1.5 font-medium">Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {preview.map((row) => (
+                <tr
+                  key={row.rowNumber}
+                  className="border-b border-line last:border-0"
+                >
+                  <td className="px-2 py-1.5 font-mono text-[11px] text-ink-muted">
+                    {row.rowNumber}
+                  </td>
+                  <td className="px-2 py-1.5">{row.name}</td>
+                  <td className="px-2 py-1.5">
+                    {row.values?.contactName ?? "—"}
+                  </td>
+                  <td className="px-2 py-1.5">{row.values?.email ?? "—"}</td>
+                  <td className="px-2 py-1.5 text-right font-mono">
+                    {row.values?.leadTimeDays ?? "—"}
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                        row.status === "update"
+                          ? "bg-warning-soft text-warning"
+                          : "bg-success-soft text-success"
+                      }`}
+                    >
+                      {row.status === "update" ? "Update" : "New"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         {importable > preview.length ? (
           <p className="border-t border-line px-2 py-1 text-[11px] text-ink-muted">
             and {importable - preview.length} more valid row
