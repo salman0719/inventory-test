@@ -33,6 +33,18 @@ jobs:
       # Fails when nothing is applied, so an empty or stale migrations folder
       # cannot pass CI again.
       - run: npm run db:migrate:ci
+      # The request path connects as `app_user`, and the label tests call it, so
+      # the role has to exist here. Minting it after the migrations is required:
+      # the script grants it membership in `authenticated`, which they create.
+      # Export the generated URL instead of reusing DATABASE_URL: this is the only
+      # check that logs in as the role the app deploys with. RLS itself is still
+      # enforced under the owner URL (withTenant issues SET LOCAL ROLE
+      # authenticated), but its password login, non-bypassrls attributes and
+      # membership would then never be exercised.
+      - name: create app role for the request path
+        run: |
+          npm run db:app-role:local
+          grep '^DATABASE_URL_APP=' .env.local >> "$GITHUB_ENV"
       # Twice: the seed must be idempotent.
       - run: npm run db:seed && npm run db:seed
       - run: npm run test:run
