@@ -183,6 +183,13 @@
       "when": 1796620800000,
       "tag": "0025_admin_email_casts",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1796707200000,
+      "tag": "0026_categories_delete",
+      "breakpoints": true
     }
   ]
 }
