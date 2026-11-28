@@ -13,9 +13,12 @@ import {
   addProductSupplier,
   createCategory,
   createProduct,
+  deleteCategory,
   getProductPriceHistory,
+  isForeignKeyViolation,
   isUniqueViolation,
   removeProductSupplier,
+  renameCategory,
   setDefaultProductSupplier,
   setProductArchived as archiveProduct,
   setProductCost,
@@ -34,6 +37,8 @@ import { getSessionUser } from "@/lib/session";
 
 export type ProductFormState = { error?: string };
 export type CategoryFormState = { error?: string; ok?: boolean };
+export type CategoryRenameState = { error?: string; ok?: boolean };
+export type CategoryDeleteState = { error?: string; ok?: boolean };
 export type SupplierLinkFormState = { error?: string };
 
 function formValue(formData: FormData, key: string): string {
@@ -301,5 +306,80 @@ export async function addCategory(
 
   revalidatePath("/settings");
   revalidatePath("/products");
+  revalidatePath("/products/categories");
+  return { ok: true };
+}
+
+export async function renameCategoryAction(
+  _previous: CategoryRenameState,
+  formData: FormData,
+): Promise<CategoryRenameState> {
+  const user = await getSessionUser();
+  if (!user) redirect("/sign-in");
+
+  const { active } = await getActiveBusiness(user.id);
+  if (!active) return { error: "No business is available." };
+
+  const parsedId = z.uuid().safeParse(formValue(formData, "id"));
+  const parsedName = categoryNameSchema.safeParse(formValue(formData, "name"));
+  if (!parsedId.success) return { error: "Reload the page and try again." };
+  if (!parsedName.success) {
+    return { error: parsedName.error.issues[0]?.message ?? "Check the name." };
+  }
+
+  try {
+    const renamed = await renameCategory(
+      user.id,
+      active.id,
+      parsedId.data,
+      parsedName.data,
+    );
+    if (!renamed) return { error: "That category is not in this business." };
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      return { error: "That category already exists." };
+    }
+    throw error;
+  }
+
+  revalidatePath("/products");
+  revalidatePath("/products/categories");
+  return { ok: true };
+}
+
+export async function deleteCategoryAction(
+  _previous: CategoryDeleteState,
+  formData: FormData,
+): Promise<CategoryDeleteState> {
+  const user = await getSessionUser();
+  if (!user) redirect("/sign-in");
+
+  const { active } = await getActiveBusiness(user.id);
+  if (!active) return { error: "No business is available." };
+
+  const parsedId = z.uuid().safeParse(formValue(formData, "id"));
+  if (!parsedId.success) return { error: "Reload the page and try again." };
+
+  try {
+    const result = await deleteCategory(user.id, active.id, parsedId.data);
+    if (!result.ok && result.reason === "not-found") {
+      return { error: "That category is not in this business." };
+    }
+    if (!result.ok && result.reason === "in-use") {
+      return {
+        error: "That category is still used by products. Move them first.",
+      };
+    }
+  } catch (error) {
+    if (isForeignKeyViolation(error)) {
+      return {
+        error: "That category is still used by products. Move them first.",
+      };
+    }
+    throw error;
+  }
+
+  revalidatePath("/products");
+  revalidatePath("/products/categories");
   return { ok: true };
 }
