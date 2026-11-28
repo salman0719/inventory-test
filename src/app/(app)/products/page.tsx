@@ -151,6 +151,12 @@ export default async function ProductsPage({
               <PendingLink href="/import" className={headerActionSecondary}>
                 Import
               </PendingLink>
+              <PendingLink
+                href="/products/categories"
+                className={headerActionSecondary}
+              >
+                Categories
+              </PendingLink>
               {creating ? null : (
                 <PanelLink
                   href={hrefFor({

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { Pool, type PoolClient } from "pg";
+import { Pool } from "pg";
 import { databaseUrl } from "../../db/env";
 import {
   deleteCategory,
@@ -28,24 +28,6 @@ const ids = {
   otherCategory: randomUUID(),
   product: randomUUID(),
 };
-
-async function asUser<T>(
-  userId: string,
-  fn: (client: PoolClient) => Promise<T>,
-): Promise<T> {
-  const client = await pool.connect();
-  try {
-    await client.query("begin");
-    await client.query("set local role authenticated");
-    await client.query("select set_config('request.jwt.claims', $1, true)", [
-      JSON.stringify({ sub: userId }),
-    ]);
-    return await fn(client);
-  } finally {
-    await client.query("rollback").catch(() => undefined);
-    client.release();
-  }
-}
 
 beforeAll(async () => {
   const client = await pool.connect();
