@@ -866,7 +866,65 @@ export async function createCategory(
   });
 }
 
+/** Rename a category. Returns false when the id is not in this business. */
+export async function renameCategory(
+  userId: string,
+  businessId: string,
+  categoryId: string,
+  name: string,
+): Promise<boolean> {
+  if (!UUID_PATTERN.test(categoryId)) return false;
+
+  return withTenant(userId, async (client) => {
+    const result = await client.query(
+      `update categories set name = $3 where business_id = $1 and id = $2`,
+      [businessId, categoryId, name],
+    );
+    return (result.rowCount ?? 0) === 1;
+  });
+}
+
+export type DeleteCategoryResult =
+  | { ok: true }
+  | { ok: false; reason: "not-found" | "in-use" };
+
+/**
+ * Delete a category that no product uses. A category with products is refused
+ * by the `products_category_fk` RESTRICT rule, reported here as `in-use`
+ * rather than a server fault.
+ */
+export async function deleteCategory(
+  userId: string,
+  businessId: string,
+  categoryId: string,
+): Promise<DeleteCategoryResult> {
+  if (!UUID_PATTERN.test(categoryId)) return { ok: false, reason: "not-found" };
+
+  try {
+    return await withTenant(userId, async (client) => {
+      const result = await client.query(
+        `delete from categories where business_id = $1 and id = $2`,
+        [businessId, categoryId],
+      );
+      if ((result.rowCount ?? 0) !== 1) {
+        return { ok: false, reason: "not-found" } as const;
+      }
+      return { ok: true } as const;
+    });
+  } catch (error) {
+    if (isForeignKeyViolation(error)) {
+      return { ok: false, reason: "in-use" };
+    }
+    throw error;
+  }
+}
+
 /** A duplicate SKU or category name is a user error, not a server fault. */
 export function isUniqueViolation(error: unknown): boolean {
   return (error as { code?: string } | null)?.code === "23505";
+}
+
+/** A RESTRICT row (a category still on a product) is a user error. */
+export function isForeignKeyViolation(error: unknown): boolean {
+  return (error as { code?: string } | null)?.code === "23503";
 }
