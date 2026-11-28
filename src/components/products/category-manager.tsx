@@ -72,7 +72,10 @@ function CategoryRow({
     <li className="flex flex-col gap-2 px-3 py-2">
       <div className="flex items-center gap-3">
         {editing ? (
-          <form action={renameAction} className="flex flex-1 flex-wrap items-center gap-2">
+          <form
+            action={renameAction}
+            className="flex flex-1 flex-wrap items-center gap-2"
+          >
             <input type="hidden" name="id" value={category.id} />
             <label className="flex min-w-0 flex-1 flex-col gap-1">
               <span className="sr-only">Category name</span>

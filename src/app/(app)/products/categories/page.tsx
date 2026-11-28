@@ -1,8 +1,5 @@
 import { NoBusinessNotice } from "@/components/no-business-notice";
-import {
-  PageHeader,
-  headerActionSecondary,
-} from "@/components/page-header";
+import { PageHeader, headerActionSecondary } from "@/components/page-header";
 import { PendingLink } from "@/components/pending-link";
 import { CategoryManager } from "@/components/products/category-manager";
 import { getActiveBusiness } from "@/lib/businesses";
@@ -30,8 +27,8 @@ export default async function CategoriesPage() {
         title="Categories"
         summary={
           <>
-            {categories.length} categor{categories.length === 1 ? "y" : "ies"}{" "}
-            · {active.name}
+            {categories.length} categor{categories.length === 1 ? "y" : "ies"} ·{" "}
+            {active.name}
           </>
         }
         actions={
@@ -42,9 +39,8 @@ export default async function CategoriesPage() {
       />
 
       <p className="text-[12px] text-ink-muted">
-        Used to group the catalogue and filter the products list. A category
-        can be renamed at any time; it can only be deleted when no product
-        uses it.
+        Used to group the catalogue and filter the products list. A category can
+        be renamed at any time; it can only be deleted when no product uses it.
       </p>
 
       <CategoryManager categories={categories} canEdit={canEdit} />

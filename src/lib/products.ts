@@ -885,8 +885,7 @@ export async function renameCategory(
 }
 
 export type DeleteCategoryResult =
-  | { ok: true }
-  | { ok: false; reason: "not-found" | "in-use" };
+  { ok: true } | { ok: false; reason: "not-found" | "in-use" };
 
 /**
  * Delete a category that no product uses. A category with products is refused

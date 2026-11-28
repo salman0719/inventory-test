@@ -118,7 +118,12 @@ describe("category rename and delete", () => {
 
   it("refuses a duplicate name in the same business", async () => {
     await expect(
-      renameCategory(ids.owner, ids.business, ids.emptyCategory, "fresh produce"),
+      renameCategory(
+        ids.owner,
+        ids.business,
+        ids.emptyCategory,
+        "fresh produce",
+      ),
     ).rejects.toMatchObject({ code: "23505" });
   });
 
@@ -166,8 +171,8 @@ describe("category rename and delete", () => {
     ).resolves.toEqual({ ok: false, reason: "not-found" });
 
     const categories = await listCategories(ids.otherOwner, ids.otherBusiness);
-    expect(categories.some((category) => category.id === ids.usedCategory)).toBe(
-      false,
-    );
+    expect(
+      categories.some((category) => category.id === ids.usedCategory),
+    ).toBe(false);
   });
 });
