@@ -13,6 +13,9 @@ import { CategoryForm } from "./category-form";
 const ROW_BUTTON =
   "inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-2.5 text-[12px] font-medium hover:border-accent hover:text-accent disabled:opacity-60";
 
+const DELETE_BUTTON =
+  "inline-flex min-h-[36px] items-center rounded border border-line bg-surface px-2.5 text-[12px] font-medium text-danger hover:border-danger hover:text-danger disabled:opacity-60";
+
 export function CategoryManager({
   categories,
   canEdit,
@@ -140,7 +143,7 @@ function CategoryRow({
                   <button
                     type="submit"
                     disabled={deletePending}
-                    className={`${ROW_BUTTON} text-danger hover:border-danger`}
+                    className={DELETE_BUTTON}
                     aria-label={`Delete ${category.name}`}
                   >
                     {deletePending ? "Deleting…" : "Delete"}
